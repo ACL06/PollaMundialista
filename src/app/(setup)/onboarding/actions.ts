@@ -27,14 +27,16 @@ export async function saveProfile(data: {
     return { error: 'Sesión expirada. Vuelve a iniciar sesión.' };
   }
 
+  // upsert en lugar de update: crea la fila si el trigger no la creó
   const { error } = await supabase
     .from('profiles')
-    .update({
+    .upsert({
+      id: user.id,
+      email: user.email ?? '',
       nickname: parsed.data.nickname,
       avatar_url: getAvatarUrl(parsed.data.nickname),
       favorite_team: parsed.data.favorite_team ?? null,
-    })
-    .eq('id', user.id);
+    });
 
   if (error) {
     if (error.code === '23505') {
