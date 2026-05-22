@@ -17,11 +17,14 @@ interface VerifyFormProps {
 
 type Status = 'idle' | 'verifying' | 'success' | 'error';
 
+const MAX_ATTEMPTS = 3;
+
 export function VerifyForm({ email }: VerifyFormProps) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
+  const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
   const [isPending, startTransition] = useTransition();
 
   const handleComplete = (code: string) => {
@@ -32,18 +35,29 @@ export function VerifyForm({ email }: VerifyFormProps) {
       const result = await verifyOtp(email, code);
 
       if (result.error) {
+        const newAttempts = attemptsLeft - 1;
+        setAttemptsLeft(newAttempts);
+
+        if (newAttempts <= 0) {
+          // Sin intentos restantes → forzar reenvío desde /login
+          router.push(`/login?reason=otp_blocked`);
+          return;
+        }
+
         setStatus('error');
-        setError(result.error);
-        // Limpiar inputs después de un breve momento para que se vea la animación
+        const remainingMsg =
+          newAttempts === 1
+            ? 'Te queda 1 intento.'
+            : `Te quedan ${newAttempts} intentos.`;
+        setError(`${result.error}. ${remainingMsg}`);
         setTimeout(() => {
           setResetSignal((s) => s + 1);
           setStatus('idle');
-        }, 800);
+        }, 1500);
         return;
       }
 
       setStatus('success');
-      // Pequeño delay para que se vea la animación de éxito
       setTimeout(() => router.push('/home'), 600);
     });
   };
@@ -51,6 +65,7 @@ export function VerifyForm({ email }: VerifyFormProps) {
   const handleResent = () => {
     setError(null);
     setResetSignal((s) => s + 1);
+    setAttemptsLeft(MAX_ATTEMPTS);
   };
 
   return (
