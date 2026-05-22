@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { CheckCircle2 } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Target, Trophy } from 'lucide-react';
 import { WORLD_CUP_TEAMS } from '@/lib/validators/profile';
 
 export const metadata = { title: 'Inicio' };
@@ -55,12 +55,26 @@ export default async function HomePage() {
           <span>Sesión iniciada como {profile?.email ?? user?.email}</span>
         </div>
 
-        <div className="pt-8 border-t border-border max-w-md mx-auto">
-          <h2 className="text-lg font-semibold text-foreground mb-2">Próximamente</h2>
+        <div className="pt-7 mt-6 border-t border-border max-w-md mx-auto flex flex-col gap-4">
+          <h2 className="text-lg font-semibold text-foreground">Próximamente</h2>
           <p className="text-sm text-muted-foreground">
             Pronto podrás ver el calendario del Mundial, hacer tus pronósticos y competir
             con tus amigos en la tabla de posiciones.
           </p>
+          <div className="grid grid-cols-3 gap-3 pt-2">
+            <div className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground">
+              <CalendarDays className="h-[18px] w-[18px] text-tertiary" />
+              <span className="text-[13px] font-medium">Calendario</span>
+            </div>
+            <div className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground">
+              <Target className="h-[18px] w-[18px] text-tertiary" />
+              <span className="text-[13px] font-medium">Pronósticos</span>
+            </div>
+            <div className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground">
+              <Trophy className="h-[18px] w-[18px] text-tertiary" />
+              <span className="text-[13px] font-medium">Ranking</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

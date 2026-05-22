@@ -24,13 +24,13 @@ export default async function OnboardingPage() {
   return (
     <>
       <div className="flex flex-col items-center text-center space-y-3">
-        <Logo variant="full" width={200} height={50} />
+        <Logo variant="full" width={180} height={45} />
         <div className="space-y-1">
           <h1 className="text-xl sm:text-2xl font-semibold text-foreground">
-            ¡Bienvenido!
+            Crea tu perfil
           </h1>
           <p className="text-sm text-muted-foreground">
-            Configura tu perfil para participar
+            Un nickname, un avatar y a jugar.
           </p>
         </div>
       </div>
