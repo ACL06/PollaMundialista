@@ -57,6 +57,10 @@ export const profileSchema = z.object({
     .regex(/^[a-zA-Z0-9_.\-]+$/, 'Solo letras, números, puntos, guiones y guiones bajos')
     .transform((v) => v.trim()),
   favorite_team: z.string().nullable().optional(),
+  avatar_url: z
+    .string()
+    .regex(/^https:\/\/api\.dicebear\.com\//, 'Avatar inválido')
+    .optional(),
 });
 
 export type ProfileInput = z.infer<typeof profileSchema>;

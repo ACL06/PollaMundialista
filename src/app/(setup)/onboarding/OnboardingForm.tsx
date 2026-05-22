@@ -1,23 +1,32 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Trophy, AlertCircle } from 'lucide-react';
+import { User, Trophy, AlertCircle, Check, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { WORLD_CUP_TEAMS } from '@/lib/validators/profile';
-import { getAvatarUrl } from '@/lib/avatar';
+import { getAvatarVariants } from '@/lib/avatar';
 import { cn } from '@/lib/utils';
 import { saveProfile } from './actions';
 
 export function OnboardingForm() {
   const [nickname, setNickname] = useState('');
   const [favoriteTeam, setFavoriteTeam] = useState('');
+  const [generation, setGeneration] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const avatarSeed = nickname.length >= 2 ? nickname : 'default';
-  const avatarUrl = getAvatarUrl(avatarSeed);
+  const avatarVariants = useMemo(
+    () => getAvatarVariants(nickname, generation),
+    [nickname, generation],
+  );
+
+  // Resetear selección cuando cambia el set de variantes
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [nickname, generation]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +36,7 @@ export function OnboardingForm() {
       const result = await saveProfile({
         nickname,
         favorite_team: favoriteTeam || null,
+        avatar_url: avatarVariants[selectedIndex],
       });
       if (result?.error) {
         setError(result.error);
@@ -36,17 +46,60 @@ export function OnboardingForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Avatar preview */}
-      <div className="flex flex-col items-center gap-2">
-        <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-primary/20 bg-muted">
-          <img
-            src={avatarUrl}
-            alt="Vista previa de tu avatar"
-            className="h-full w-full"
-          />
+      {/* Galería de avatares */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-foreground">Elige tu avatar</p>
+          <button
+            type="button"
+            onClick={() => setGeneration((g) => g + 1)}
+            disabled={isPending}
+            className={cn(
+              'inline-flex items-center gap-1.5 text-xs font-medium',
+              'text-tertiary hover:underline',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
+              'rounded px-1',
+              'disabled:opacity-50',
+            )}
+          >
+            <RefreshCw className="h-3 w-3" />
+            Otras opciones
+          </button>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Tu avatar se genera a partir de tu nickname
+        <div className="grid grid-cols-3 gap-3">
+          {avatarVariants.map((url, i) => (
+            <button
+              key={url}
+              type="button"
+              onClick={() => setSelectedIndex(i)}
+              disabled={isPending}
+              aria-label={`Avatar ${i + 1}`}
+              aria-pressed={selectedIndex === i}
+              className={cn(
+                'aspect-square rounded-full overflow-hidden relative',
+                'bg-muted transition-all duration-200',
+                'hover:scale-105 focus-visible:outline-none',
+                selectedIndex === i
+                  ? 'ring-2 ring-primary ring-offset-2 ring-offset-surface'
+                  : 'opacity-60 hover:opacity-100',
+                'disabled:cursor-not-allowed',
+              )}
+            >
+              <img src={url} alt="" className="h-full w-full" />
+              {selectedIndex === i && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute top-0 right-0 h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-sm"
+                >
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </motion.div>
+              )}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground text-center">
+          Tap en uno para seleccionarlo
         </p>
       </div>
 

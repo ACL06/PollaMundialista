@@ -12,6 +12,7 @@ interface ActionResult {
 export async function saveProfile(data: {
   nickname: string;
   favorite_team?: string | null;
+  avatar_url?: string;
 }): Promise<ActionResult> {
   const parsed = profileSchema.safeParse(data);
   if (!parsed.success) {
@@ -27,6 +28,9 @@ export async function saveProfile(data: {
     return { error: 'Sesión expirada. Vuelve a iniciar sesión.' };
   }
 
+  // Si el cliente no envió avatar_url, generar uno por defecto del nickname
+  const avatarUrl = parsed.data.avatar_url ?? getAvatarUrl(parsed.data.nickname);
+
   // upsert en lugar de update: crea la fila si el trigger no la creó
   const { error } = await supabase
     .from('profiles')
@@ -34,7 +38,7 @@ export async function saveProfile(data: {
       id: user.id,
       email: user.email ?? '',
       nickname: parsed.data.nickname,
-      avatar_url: getAvatarUrl(parsed.data.nickname),
+      avatar_url: avatarUrl,
       favorite_team: parsed.data.favorite_team ?? null,
     });
 
