@@ -59,7 +59,7 @@ export function OtpInput({
 
     // Si está completo, ejecutar onComplete
     const code = next.join('');
-    if (code.length === length && !code.includes('')) {
+    if (code.length === length && !next.includes('')) {
       onComplete(code);
     }
   };
