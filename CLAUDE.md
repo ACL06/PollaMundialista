@@ -10,7 +10,10 @@
 
 **Polla Mundialista** es una aplicación web para hacer pronósticos del Mundial de Fútbol 2026 (USA, México, Canadá) entre amigos. Proyecto personal, no comercial.
 
-**Fase actual:** MVP del flujo de autenticación. Aún no se implementan los módulos de pronósticos, partidos, ni rankings — esos vienen después en el roadmap.
+**URL producción:** https://polla-mundialista-six.vercel.app
+**Repositorio:** https://github.com/ACL06/PollaMundialista
+
+**Fase actual:** MVP autenticación + perfil completos. Aún no se implementan los módulos de partidos, pronósticos ni rankings — esos vienen después en el roadmap.
 
 **Disclaimer:** El proyecto NO está afiliado a FIFA. No usar logos, marcas ni mascotas oficiales (ver sección de copyright más abajo).
 
@@ -18,16 +21,27 @@
 
 ## Estado actual
 
-- ✅ Scaffolding inicial del proyecto Next.js 15
-- ✅ Login con OTP por correo funcional (pantallas `/login` y `/verify`)
-- ✅ Conexión con Supabase (Auth + Postgres + RLS)
-- ✅ Logo propio (SVG inline con `currentColor` para temas)
-- ✅ Tema claro/oscuro con `next-themes`
-- ✅ Middleware que protege rutas privadas
-- ✅ Headers de seguridad en `next.config.mjs`
-- ✅ Workflows de GitHub Actions (CI + keep-alive Supabase)
-- ⏳ Pendiente: primer deploy a Vercel funcionando end-to-end
-- ⏳ Pendiente: smoke test con email real (solo funciona con el email registrado en Resend hasta verificar dominio)
+### ✅ Completado
+
+- Scaffolding inicial Next.js 15 + React 19 + TypeScript
+- Login con OTP por correo (`/login` → `/verify`)
+- Conexión Supabase (Auth + Postgres + RLS)
+- Logo propio (SVG inline con `currentColor`)
+- Tema claro/oscuro con `next-themes`
+- Middleware que protege rutas privadas y refresca sesión
+- Headers de seguridad en `next.config.mjs` (incluyendo CSP completa)
+- Workflows GitHub Actions (CI lint/typecheck/build + keep-alive Supabase)
+- **Deploy a Vercel funcionando en producción**
+- **Fase 2 — Perfil completo:** onboarding con nickname (único) + galería de 6 avatares DiceBear + selector de equipo favorito (44 selecciones WC 2026)
+- **Límite de 3 intentos en OTP** con redirect a `/login` y banner explicativo
+- **Vercel Analytics + Speed Insights** activos
+- **Favicon en metadata** apuntando a SVG
+- Validación estricta de `avatar_url` con regex completa de DiceBear
+
+### ⏳ Pendiente
+
+- Verificar dominio en Resend para abrir a otros usuarios (hoy solo el email registrado en Resend recibe OTP)
+- Avanzar al roadmap (Fase 3 en adelante)
 
 ---
 
@@ -36,13 +50,15 @@
 | Capa | Tecnología | Notas |
 |---|---|---|
 | Frontend | Next.js 15 App Router + React 19 + TypeScript | Server Actions para mutations |
-| Estilos | Tailwind CSS 3 + componentes propios | CSS variables para temas |
+| Estilos | Tailwind CSS 3 + componentes propios | CSS variables para temas, paleta tricolor |
 | Auth | `@supabase/ssr` con Email OTP | Cookies HttpOnly automáticas |
 | Base de datos | Supabase Postgres con RLS | Tabla `profiles` con trigger desde `auth.users` |
 | SMTP | Resend (custom SMTP en Supabase) | El default de Supabase es 2 emails/hora — inviable |
-| Animaciones | Framer Motion | Solo donde aporta UX, no decorativo |
+| Animaciones | Framer Motion | Solo donde aporta UX |
 | Iconos | Lucide React | Outline only |
 | Validación | Zod | Schemas en `src/lib/validators/` |
+| Avatares | DiceBear v9 (`avataaars`) | Vía URL, sin SDK |
+| Observabilidad | Vercel Analytics + Speed Insights | Web Vitals y page views |
 | Hosting | Vercel (Hobby/Free) | Auto-deploy en push a main |
 | CI | GitHub Actions | Lint + typecheck + build en PRs |
 
@@ -55,9 +71,11 @@
 - **Email OTP** habilitado, **Confirm email** desactivado
 - **Templates de email editados:** Magic Link (login real) e Invite user (admin)
 - **SMTP custom** con Resend configurado
-- **Tabla `profiles`** creada con RLS, columnas: `id`, `email`, `nickname`, `avatar_url`, `country`, `created_at`, `updated_at`
-- **Trigger `on_auth_user_created`** crea automáticamente perfil al registrarse
-- **Region:** East US (North Virginia)
+- **Tabla `profiles`** con columnas: `id`, `email`, `nickname`, `avatar_url`, `favorite_team`, `country` (legacy, no usado), `created_at`, `updated_at`
+- **Índice único** en `lower(nickname)` para case-insensitive uniqueness
+- **RLS policies:** SELECT, UPDATE, **INSERT** (las tres permiten solo al propio usuario sobre su fila)
+- **Trigger `on_auth_user_created`** crea automáticamente perfil al registrarse — verificado funcional
+- **Región:** East US (North Virginia)
 
 ### Resend
 - **Sender actual:** `onboarding@resend.dev`
@@ -67,7 +85,9 @@
 ### Vercel
 - **Repo:** `ACL06/PollaMundialista`
 - **Branch de producción:** `main`
-- **Preview deployments:** automáticos en PRs
+- **URL producción:** `polla-mundialista-six.vercel.app`
+- **Preview deployments:** automáticos en PRs/branches
+- **Scope:** `alvarocastano6-6261s-projects`
 - **Variables de entorno requeridas en los 3 ambientes:**
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -79,14 +99,19 @@
 ## Decisiones de arquitectura clave
 
 1. **No usar contraseñas, solo OTP por email.** Reduce fricción y elimina vulnerabilidades de password.
-2. **Supabase Auth en vez de Clerk/Auth.js/Firebase.** Es el único proveedor con OTP de 6 dígitos nativo + free tier amplio + Postgres incluido.
+2. **Supabase Auth en vez de Clerk/Auth.js/Firebase.** El único proveedor con OTP de 6 dígitos nativo + free tier amplio + Postgres incluido.
 3. **Server Actions sobre API Routes** para mutations. Idiomático en Next.js 15.
 4. **Three Supabase clients separados** (browser, server, middleware) siguiendo el patrón oficial de `@supabase/ssr`.
-5. **Route groups `(auth)` y `(app)`** para separar layouts sin afectar URLs.
+5. **Route groups `(auth)`, `(setup)` y `(app)`** para separar layouts sin afectar URLs.
 6. **Trigger en Postgres** (no en código) para sincronizar `auth.users` → `public.profiles`. Garantiza atomicidad.
-7. **Logo inline como SVG** (no via `next/image`) para que `currentColor` herede del tema.
-8. **Paleta tricolor (verde primary, rojo secondary, azul tertiary)** evoca a los tres países anfitriones.
-9. **Mensajes de error genéricos** en auth para no leakear si un email existe.
+7. **`upsert` en lugar de `update`** en `saveProfile` como red de seguridad: si el trigger falla, el upsert crea la fila.
+8. **Logo inline como SVG** (no via `next/image`) para que `currentColor` herede del tema.
+9. **Paleta tricolor (verde primary, rojo secondary, azul tertiary)** evoca a los tres países anfitriones.
+10. **Mensajes de error genéricos** en auth para no leakear si un email existe.
+11. **Galería de 6 avatares en lugar de selector M/F.** Más inclusivo, mejor UX, evita categorización binaria.
+12. **3 intentos máximo de OTP** con redirect forzado a `/login` tras agotarlos. Defense in depth contra el rate-limit nativo de Supabase.
+13. **Lista `WORLD_CUP_TEAMS` como constante TypeScript** por ahora. Se migrará a tabla Supabase cuando lleguen `teams` y `matches` en Fase 3.
+14. **CSP completa con `vercel.live` permitido** para que la toolbar de feedback funcione en previews. En producción esos orígenes no se usan.
 
 ---
 
@@ -113,11 +138,36 @@
 
 ### Commits
 - Conventional Commits: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`.
-- En español o inglés, pero consistente dentro de cada commit.
+- En español, mensaje corto en la primera línea + descripción extendida si aplica.
+- **Sin trailer `Co-Authored-By`.** El usuario lo pidió explícitamente.
+- HEREDOC para mensajes multilínea.
 
 ### Branches
 - `main` → producción (protegida).
 - `feat/<slug>` → features individuales.
+- `fix/<slug>` → bugfixes pequeños.
+- `chore/<slug>` → mantenimiento.
+
+---
+
+## Flujo de trabajo (PR → Preview → Merge)
+
+Confirmado y adoptado para todo cambio sustancial:
+
+```
+1. git checkout -b feat/<nombre>
+2. ... cambios ...
+3. git commit -m "feat: ..."
+4. git push -u origin feat/<nombre>
+   └─→ Vercel crea preview automático
+5. Abrir PR en GitHub (branch protection sin reviewers requeridos)
+6. Validar en preview URL
+7. Merge a main (squash merge para historia limpia)
+   └─→ Vercel deploya a producción
+8. Borrar branch local + remota
+```
+
+Fixes pequeños/urgentes pueden ir directo a `main` (bypass autorizado para el owner).
 
 ---
 
@@ -143,19 +193,18 @@ vercel --prod                 # deploy manual a producción
 
 ---
 
-## Roadmap (post-login)
+## Roadmap
 
 Orden sugerido por dependencias técnicas:
 
-1. **Validar deploy en producción** con email real (estado actual).
-2. **Verificar dominio en Resend** antes de compartir la URL públicamente (sin esto, solo el dueño de Resend recibe OTP).
-3. **Fase 2 — Perfil mínimo:** completar nickname, avatar (DiceBear).
-4. **Fase 3 — Catálogo de partidos:** tablas `teams`, `matches`, seed con calendario Mundial 2026.
-5. **Fase 4 — Pronósticos:** tabla `predictions`, UI para predecir, lock al inicio del partido, scoring (3 pts exacto, 1 pt ganador).
-6. **Fase 5 — Rankings:** vista materializada en Postgres + página `/ranking`.
-7. **Fase 6 — Grupos privados:** ligas con código de invitación.
-8. **Fase 7 — Notificaciones:** emails recordatorios via Resend.
-9. **Fase 8 — Panel admin:** registrar resultados oficiales, recálculo automático.
+1. ✅ **Fase 1 — Auth con OTP**
+2. ✅ **Fase 2 — Perfil mínimo** (nickname, avatar galería, equipo favorito)
+3. ⏳ **Fase 3 — Catálogo de partidos:** tablas `teams`, `matches`, seed con calendario Mundial 2026.
+4. **Fase 4 — Pronósticos:** tabla `predictions`, UI para predecir, lock al inicio del partido, scoring (3 pts exacto, 1 pt ganador).
+5. **Fase 5 — Rankings:** vista materializada en Postgres + página `/ranking`.
+6. **Fase 6 — Grupos privados:** ligas con código de invitación.
+7. **Fase 7 — Notificaciones:** emails recordatorios via Resend + verificar dominio Resend antes.
+8. **Fase 8 — Panel admin:** registrar resultados oficiales, recálculo automático.
 
 **No abordar todavía:** pagos, monetización (en Colombia requiere licencia Coljuegos), módulo de chat.
 
@@ -175,9 +224,12 @@ Orden sugerido por dependencias técnicas:
 ### Seguridad
 - `SUPABASE_SERVICE_ROLE_KEY` SOLO server-side, nunca con prefijo `NEXT_PUBLIC_`.
 - `.env.local` siempre en `.gitignore` (verificar antes de commits).
-- RLS activo en todas las tablas desde día 1.
-- Headers de seguridad ya configurados en `next.config.mjs`.
+- RLS activo en todas las tablas desde día 1 (SELECT + UPDATE + INSERT en `profiles`).
+- Headers de seguridad configurados en `next.config.mjs` incluyendo CSP completa.
 - Mensajes genéricos para errores de auth.
+- Validación Zod en cada Server Action.
+- Límite de intentos de OTP (3) con redirect forzado.
+- `avatar_url` validado con regex estricta de DiceBear.
 
 ### Privacidad
 - Aviso de privacidad en footer (Ley 1581 de Colombia aplica).
@@ -193,12 +245,22 @@ Orden sugerido por dependencias técnicas:
 
 ---
 
+## Deuda técnica conocida (no urgente)
+
+- **Rate limiting server-side:** hoy solo se confía en el rate-limit nativo de Supabase + límite de 3 intentos UI. Si se abre a más usuarios, agregar tabla `rate_limit` en Postgres o Upstash Redis.
+- **Lista de equipos como constante TS:** migrar a tabla `teams` en Fase 3.
+- **Font preload warnings:** Next.js precarga 3 fuentes pero algunas páginas solo usan 1-2. Cosmético.
+- **CSP con `'unsafe-inline'`:** requerido por Next.js sin nonce setup. Aceptable para este scope.
+
+---
+
 ## Documentos relacionados (fuera del repo)
 
 Estos archivos los tiene el dueño del proyecto y NO están en el repo:
 
 - `polla-mundialista-arquitectura.md` — documento completo de arquitectura del MVP, decisiones técnicas, roadmap detallado, copyright FIFA.
 - `setup-y-despliegue.md` — guía de setup desde cero (cuentas, servicios, troubleshooting, checklist Go-Live).
+- `conex-project-pmacl1991.txt` — credenciales de conexión a Supabase (gitignored).
 
 Si necesitas información que no esté en este `CLAUDE.md` o en el código, pedir al usuario estos documentos.
 
@@ -212,6 +274,7 @@ Si necesitas información que no esté en este `CLAUDE.md` o en el código, pedi
 - Cuando se haga una decisión técnica, explicar el trade-off brevemente.
 - Antes de cambios grandes, mostrar el plan y pedir confirmación.
 - Después de implementar, sugerir qué probar para validar.
+- Si el usuario cuestiona algo con argumentos, cuestionarlo de vuelta con datos si está equivocado.
 
 ---
 
@@ -223,3 +286,6 @@ Si necesitas información que no esté en este `CLAUDE.md` o en el código, pedi
 - Para nuevas Server Actions, ponerlas en `actions.ts` adyacente a la página que las usa.
 - Cuando se necesite SQL contra Supabase, mostrar el SQL primero y pedir que el usuario lo ejecute en SQL Editor (no se tiene acceso directo a la DB desde acá).
 - Nunca commitear `.env.local`. Nunca commitear secretos.
+- **No incluir `Co-Authored-By` en los mensajes de commit.**
+- Para cambios sustanciales, crear branch `feat/<nombre>`, push, esperar preview Vercel, mergear con squash.
+- Mantener este `CLAUDE.md` actualizado tras hitos importantes — la deuda técnica también se documenta acá.
