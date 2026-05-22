@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const WORLD_CP_TEAMS = [
+export const WORLD_CUP_TEAMS = [
   { code: 'GER', name: 'Alemania', flag: 'DE' },
   { code: 'KSA', name: 'Arabia Saudita', flag: 'SA' },
   { code: 'ALG', name: 'Argelia', flag: 'DZ' },
