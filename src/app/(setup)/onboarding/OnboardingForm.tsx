@@ -157,11 +157,26 @@ export function OnboardingForm() {
             <option value="">Sin equipo favorito</option>
             {WORLD_CUP_TEAMS.map((team) => (
               <option key={team.code} value={team.code}>
-                {team.flag} {team.name}
+                {team.name}
               </option>
             ))}
           </select>
         </div>
+
+        {/* Preview con bandera del equipo seleccionado */}
+        {(() => {
+          const selectedTeam = WORLD_CUP_TEAMS.find((t) => t.code === favoriteTeam);
+          if (!selectedTeam) return null;
+          return (
+            <div className="flex items-center gap-2 pt-1 text-sm text-muted-foreground">
+              <span
+                className={`fi fi-${selectedTeam.flag} rounded-sm`}
+                aria-hidden="true"
+              />
+              <span>{selectedTeam.name}</span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Error */}
