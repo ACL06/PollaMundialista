@@ -50,10 +50,17 @@ export function VerifyForm({ email }: VerifyFormProps) {
             ? 'Te queda 1 intento.'
             : `Te quedan ${newAttempts} intentos.`;
         setError(`${result.error}. ${remainingMsg}`);
+
+        // Reset de inputs a 1.5s para que el usuario pueda reintentar rápido
         setTimeout(() => {
           setResetSignal((s) => s + 1);
           setStatus('idle');
         }, 1500);
+
+        // Mensaje de error visible 5s para que alcance a leerlo
+        setTimeout(() => {
+          setError(null);
+        }, 5000);
         return;
       }
 
@@ -92,7 +99,7 @@ export function VerifyForm({ email }: VerifyFormProps) {
         />
 
         <AnimatePresence mode="wait">
-          {status === 'error' && error && (
+          {error && status !== 'success' && (
             <motion.div
               key="error"
               initial={{ opacity: 0, y: -5 }}
