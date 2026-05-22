@@ -1,0 +1,24 @@
+name: Keep Supabase alive
+
+on:
+  schedule:
+    - cron: '0 12 */6 * *'  # cada 6 días a las 12:00 UTC
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping Supabase
+    runs-on: ubuntu-latest
+    steps:
+      - name: Make a trivial query to keep the project active
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/rest/v1/profiles?select=id&limit=1" \
+            -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}")
+          echo "HTTP status: $response"
+          if [ "$response" -ne 200 ] && [ "$response" -ne 401 ]; then
+            echo "Unexpected status code. Supabase project may be paused or there is an issue."
+            exit 1
+          fi
+          echo "Supabase project is alive."

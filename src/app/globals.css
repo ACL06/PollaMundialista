@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Tipografía */
+    --font-sans: 'Inter Tight', 'Inter', system-ui, sans-serif;
+    --font-display: 'Archivo Black', 'Anton', 'Bebas Neue', 'Impact', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'Geist Mono', monospace;
+
+    /* Light theme — paleta tricolor Mundial 2026 */
+    --background: 60 14% 98%;          /* #FAFAF7 off-white */
+    --foreground: 222 41% 8%;          /* #0B0F1A navy oscuro */
+    --surface: 0 0% 100%;              /* #FFFFFF */
+    --border: 220 13% 91%;             /* #E5E7EB */
+
+    --primary: 145 67% 32%;            /* #1A8754 verde campo — CTA */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 351 100% 42%;         /* #D80027 rojo intenso — acentos/errores */
+    --secondary-foreground: 0 0% 100%;
+
+    --tertiary: 226 73% 48%;           /* #1E4FD9 azul vibrante — links */
+    --tertiary-foreground: 0 0% 100%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    --destructive: 351 100% 42%;
+    --destructive-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    --background: 222 41% 7%;          /* #0B0F1A navy oscuro */
+    --foreground: 60 14% 95%;          /* #F5F5F0 */
+    --surface: 224 35% 12%;            /* #141A2B */
+    --border: 220 14% 18%;             /* #1F2937 */
+
+    --primary: 152 67% 45%;            /* #26C281 verde brillante */
+    --primary-foreground: 222 41% 7%;
+
+    --secondary: 351 100% 61%;         /* #FF3852 rojo brillante */
+    --secondary-foreground: 0 0% 100%;
+
+    --tertiary: 220 100% 62%;          /* #3D7BFF azul brillante */
+    --tertiary-foreground: 0 0% 100%;
+
+    --muted: 220 14% 18%;
+    --muted-foreground: 220 9% 65%;
+
+    --destructive: 351 100% 61%;
+    --destructive-foreground: 0 0% 100%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  /* Fondo con gradiente tricolor sutil para pantallas de auth */
+  .auth-gradient {
+    background:
+      radial-gradient(ellipse at top left, hsl(var(--primary) / 0.08), transparent 50%),
+      radial-gradient(ellipse at bottom right, hsl(var(--tertiary) / 0.08), transparent 50%),
+      radial-gradient(ellipse at center, hsl(var(--secondary) / 0.04), transparent 70%),
+      hsl(var(--background));
+  }
+
+  /* Focus visible mejorado */
+  :focus-visible {
+    @apply outline-none ring-2 ring-tertiary ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer utilities {
+  /* Animación para el dígito OTP cuando se ingresa */
+  .digit-pop {
+    animation: digit-pop 0.2s ease-out;
+  }
+
+  @keyframes digit-pop {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+}
