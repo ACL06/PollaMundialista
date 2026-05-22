@@ -43,8 +43,9 @@ export default async function HomePage() {
             ¡Bienvenido, {profile?.nickname}!
           </h1>
           {team && (
-            <p className="text-muted-foreground text-lg">
-              {team.flag} Hincha de {team.name}
+            <p className="text-muted-foreground text-lg flex items-center justify-center gap-2">
+              <span className={`fi fi-${team.flag} rounded-sm`} aria-hidden="true" />
+              <span>Hincha de {team.name}</span>
             </p>
           )}
         </div>
