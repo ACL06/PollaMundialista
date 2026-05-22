@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Logo } from '@/components/shared/Logo';
+import { TabNav } from '@/components/app/TabNav';
 import { LogoutButton } from './LogoutButton';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -35,6 +36,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </header>
+
+      <TabNav />
 
       <main className="flex-1">{children}</main>
     </div>
