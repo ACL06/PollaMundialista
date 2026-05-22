@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter_Tight, Archivo_Black, JetBrains_Mono } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 
 const inter = Inter_Tight({
@@ -33,6 +34,10 @@ export const metadata: Metadata = {
   authors: [{ name: 'Polla Mundialista' }],
   keywords: ['polla', 'mundial', 'fútbol', 'pronósticos', 'quiniela'],
   formatDetection: { telephone: false, email: false, address: false },
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    shortcut: '/favicon.svg',
+  },
 };
 
 export const viewport: Viewport = {
@@ -54,6 +59,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${display.variable} ${mono.variable}`}>
         <ThemeProvider>{children}</ThemeProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
