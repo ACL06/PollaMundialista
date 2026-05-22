@@ -16,6 +16,3 @@ export const otpSchema = z.object({
     .length(6, 'El código debe tener 6 dígitos')
     .regex(/^\d{6}$/, 'El código solo puede contener números'),
 });
-
-export type EmailInput = z.infer<typeof emailSchema>;
-export type OtpInput = z.infer<typeof otpSchema>;

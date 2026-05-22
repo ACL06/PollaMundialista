@@ -47,8 +47,6 @@ export const WORLD_CUP_TEAMS = [
   { code: 'VEN', name: 'Venezuela', flag: '🇻🇪' },
 ] as const;
 
-export type TeamCode = (typeof WORLD_CUP_TEAMS)[number]['code'];
-
 export const profileSchema = z.object({
   nickname: z
     .string()
@@ -57,10 +55,13 @@ export const profileSchema = z.object({
     .regex(/^[a-zA-Z0-9_.\-]+$/, 'Solo letras, números, puntos, guiones y guiones bajos')
     .transform((v) => v.trim()),
   favorite_team: z.string().nullable().optional(),
+  // Validación estricta: solo URLs de DiceBear con estructura conocida
+  // (versión major.minor + style + /svg + query string)
   avatar_url: z
     .string()
-    .regex(/^https:\/\/api\.dicebear\.com\//, 'Avatar inválido')
+    .regex(
+      /^https:\/\/api\.dicebear\.com\/\d+\.x\/[a-z0-9-]+\/svg\?.+$/,
+      'Avatar inválido',
+    )
     .optional(),
 });
-
-export type ProfileInput = z.infer<typeof profileSchema>;
