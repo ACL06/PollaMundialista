@@ -14,6 +14,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect('/login');
   }
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('nickname')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile?.nickname) {
+    redirect('/onboarding');
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b border-border">
