@@ -34,6 +34,10 @@ export const metadata: Metadata = {
   authors: [{ name: 'Polla Mundialista' }],
   keywords: ['polla', 'mundial', 'fútbol', 'pronósticos', 'quiniela'],
   formatDetection: { telephone: false, email: false, address: false },
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    shortcut: '/favicon.svg',
+  },
 };
 
 export const viewport: Viewport = {
