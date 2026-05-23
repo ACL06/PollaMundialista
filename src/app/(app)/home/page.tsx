@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { CalendarDays, CheckCircle2, Target, Trophy } from 'lucide-react';
 import { WORLD_CUP_TEAMS } from '@/lib/validators/profile';
@@ -56,21 +57,30 @@ export default async function HomePage() {
         </div>
 
         <div className="pt-7 mt-6 border-t border-border max-w-md mx-auto flex flex-col gap-4">
-          <h2 className="text-lg font-semibold text-foreground">Próximamente</h2>
+          <h2 className="text-lg font-semibold text-foreground">Explora</h2>
           <p className="text-sm text-muted-foreground">
-            Pronto podrás ver el calendario del Mundial, hacer tus pronósticos y competir
+            El calendario ya está disponible. Pronto podrás hacer pronósticos y competir
             con tus amigos en la tabla de posiciones.
           </p>
           <div className="grid grid-cols-3 gap-3 pt-2">
-            <div className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground">
+            <Link
+              href="/calendar"
+              className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
               <CalendarDays className="h-[18px] w-[18px] text-tertiary" />
               <span className="text-[13px] font-medium">Calendario</span>
-            </div>
-            <div className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground">
+            </Link>
+            <div
+              className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground opacity-60"
+              aria-label="Pronósticos (próximamente)"
+            >
               <Target className="h-[18px] w-[18px] text-tertiary" />
               <span className="text-[13px] font-medium">Pronósticos</span>
             </div>
-            <div className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground">
+            <div
+              className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground opacity-60"
+              aria-label="Ranking (próximamente)"
+            >
               <Trophy className="h-[18px] w-[18px] text-tertiary" />
               <span className="text-[13px] font-medium">Ranking</span>
             </div>
