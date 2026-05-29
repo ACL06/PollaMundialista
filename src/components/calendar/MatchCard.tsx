@@ -41,8 +41,12 @@ export function MatchCard({ match }: { match: Match }) {
         <MatchStatusBadge status={match.status} />
       </div>
 
-      {/* Columna derecha: equipos + score/vs */}
-      <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
+      {/* Columna derecha: equipos + score/vs.
+       * `minmax(0,1fr)` (en lugar del default `minmax(auto,1fr)`) es clave:
+       * sin esto, una columna 1fr se infla a su contenido intrínseco si es
+       * más largo que el espacio disponible, y el texto de los slots
+       * eliminatorios ("Tercer Lugar Grupos C/D/F/G/H") se salía del card. */}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-4 items-center">
         {match.home_team ? (
           <TeamLabel team={match.home_team} align="right" />
         ) : (
