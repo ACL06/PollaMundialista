@@ -20,7 +20,9 @@ export function BracketSlot({ source, align = 'left', size = 'md' }: BracketSlot
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-2.5 min-w-0',
+        // `flex w-full min-w-0` (en vez de inline-flex) hace que el div ocupe
+        // todo el grid-cell 1fr y respete el truncate del span interno.
+        'flex items-center gap-2.5 min-w-0 w-full',
         align === 'right' ? 'justify-end' : 'justify-start',
       )}
     >
@@ -37,7 +39,7 @@ export function BracketSlot({ source, align = 'left', size = 'md' }: BracketSlot
       </span>
       <span
         className={cn(
-          'text-muted-foreground italic truncate',
+          'text-muted-foreground italic truncate min-w-0',
           size === 'sm' && 'text-[13px]',
           size === 'md' && 'text-[14px]',
           size === 'lg' && 'text-[16px]',

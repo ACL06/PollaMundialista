@@ -22,8 +22,10 @@ export function formatBracketSource(source: string): string {
   // "3ABCDF" — mejor tercero entre varios grupos
   const thirdMatch = source.match(/^3([A-L]+)$/);
   if (thirdMatch) {
-    const groups = thirdMatch[1].split('').join(', ');
-    return `Mejor 3° (${groups})`;
+    // Formato compacto con slash para que entre en una columna estrecha:
+    // "3° de A/B/C/D/F" en vez del más largo "Mejor 3° (A, B, C, D, F)".
+    const groups = thirdMatch[1].split('').join('/');
+    return `3° de ${groups}`;
   }
 
   // "W73" / "L101" — referencia a otro partido
@@ -31,7 +33,7 @@ export function formatBracketSource(source: string): string {
   if (refMatch) {
     const [, kind, num] = refMatch;
     const label = kind === 'W' ? 'Ganador' : 'Perdedor';
-    return `${label} partido ${num}`;
+    return `${label} #${num}`;
   }
 
   return source;
