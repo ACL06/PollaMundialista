@@ -10,7 +10,6 @@ type Filter =
   | 'all'
   | 'today'
   | 'upcoming'
-  | 'group'
   | 'r32'
   | 'r16'
   | 'qf'
@@ -22,7 +21,6 @@ const FILTER_OPTIONS: Array<{ value: Filter; label: string }> = [
   { value: 'all', label: 'Todos' },
   { value: 'today', label: 'Hoy' },
   { value: 'upcoming', label: 'Por jugar' },
-  { value: 'group', label: 'Grupos' },
   { value: 'r32', label: 'Eliminatorias' },
   { value: 'r16', label: 'Octavos de Final' },
   { value: 'qf', label: 'Cuartos de Final' },
@@ -31,8 +29,10 @@ const FILTER_OPTIONS: Array<{ value: Filter; label: string }> = [
   { value: 'final', label: 'Final' },
 ];
 
-// Los 7 valores que mapean directo a `matches.stage`.
-const STAGE_FILTERS = new Set(['group', 'r32', 'r16', 'qf', 'sf', '3rd', 'final']);
+// Filtro "Grupos" se eliminó del calendario: las tablas de posiciones
+// viven en /grupos. Si quieres ver los 72 partidos de grupos en este
+// calendario, usa "Todos" y scrollea hasta antes del 28 de junio.
+const STAGE_FILTERS = new Set(['r32', 'r16', 'qf', 'sf', '3rd', 'final']);
 
 interface CalendarListProps {
   matches: Match[];

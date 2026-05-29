@@ -3,6 +3,7 @@ import { BracketSlot } from './BracketSlot';
 import { ScoreBlock } from './ScoreBlock';
 import { MatchStatusBadge } from './MatchStatusBadge';
 import { formatMatchTime } from '@/lib/format-date';
+import { cn } from '@/lib/utils';
 import type { Match, MatchStage } from '@/lib/types/match';
 
 const STAGE_LABEL: Record<MatchStage, string> = {
@@ -20,7 +21,18 @@ export function MatchCard({ match }: { match: Match }) {
   const hasScore = match.status === 'live' || match.status === 'final';
 
   return (
-    <article className="border border-border bg-surface rounded-lg px-[18px] py-[14px] grid grid-cols-1 sm:grid-cols-[110px_1fr] gap-y-2 sm:gap-x-[18px] font-sans">
+    <article
+      className={cn(
+        'border rounded-lg px-[18px] py-[14px] grid grid-cols-1 sm:grid-cols-[110px_1fr] gap-y-2 sm:gap-x-[18px] font-sans transition-colors',
+        // Color según estado del partido:
+        // - scheduled (default): borde y fondo neutros
+        // - live: borde secondary (rojo) + tinte rojo sutil para que destaque
+        // - final: fondo desaturado y opacity baja, "ya quedó atrás"
+        match.status === 'scheduled' && 'border-border bg-surface',
+        match.status === 'live' && 'border-secondary bg-secondary/5 shadow-[0_0_0_1px_hsl(var(--secondary)/0.25)]',
+        match.status === 'final' && 'border-border bg-muted/40 opacity-75',
+      )}
+    >
       {/* Columna izquierda: hora + status */}
       <div className="flex flex-row sm:flex-col gap-3 sm:gap-1.5 items-center sm:items-start justify-between sm:justify-start">
         <span className="text-[18px] font-semibold text-foreground leading-none">
