@@ -12,6 +12,7 @@ export default async function CalendarPage() {
     .select(
       `
       id, match_number, stage, group_code,
+      bracket_source_home, bracket_source_away,
       kicks_off_at, venue, home_score, away_score, status,
       home_team:teams!matches_home_team_code_fkey(code, name, flag, group_code),
       away_team:teams!matches_away_team_code_fkey(code, name, flag, group_code)
@@ -33,10 +34,11 @@ export default async function CalendarPage() {
 
   // Supabase devuelve home_team/away_team como object[] cuando el join es 1:M.
   // Acá es 1:1 (cada partido tiene un home y un away), pero el tipo generado
-  // puede ser array — normalizamos para que coincida con nuestro tipo Match.
+  // puede ser array — normalizamos. En eliminatorias los equipos vienen NULL
+  // hasta que termine la ronda previa, así que aplicamos `?? null` defensivo.
   const matches = (rows ?? []).map((row) => {
-    const homeTeam = Array.isArray(row.home_team) ? row.home_team[0] : row.home_team;
-    const awayTeam = Array.isArray(row.away_team) ? row.away_team[0] : row.away_team;
+    const homeTeam = Array.isArray(row.home_team) ? (row.home_team[0] ?? null) : (row.home_team ?? null);
+    const awayTeam = Array.isArray(row.away_team) ? (row.away_team[0] ?? null) : (row.away_team ?? null);
     return {
       ...row,
       home_team: homeTeam,

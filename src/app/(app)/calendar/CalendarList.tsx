@@ -6,12 +6,14 @@ import { formatMatchDateLong, formatMatchDateKey } from '@/lib/format-date';
 import { cn } from '@/lib/utils';
 import type { Match } from '@/lib/types/match';
 
-type Filter = 'all' | 'today' | 'upcoming';
+type Filter = 'all' | 'today' | 'upcoming' | 'group' | 'knockout';
 
 const FILTER_OPTIONS: Array<{ value: Filter; label: string }> = [
   { value: 'all', label: 'Todos' },
   { value: 'today', label: 'Hoy' },
   { value: 'upcoming', label: 'Por jugar' },
+  { value: 'group', label: 'Grupos' },
+  { value: 'knockout', label: 'Eliminatorias' },
 ];
 
 interface CalendarListProps {
@@ -31,6 +33,12 @@ export function CalendarList({ matches }: CalendarListProps) {
     }
     if (filter === 'upcoming') {
       return matches.filter((m) => m.status === 'scheduled');
+    }
+    if (filter === 'group') {
+      return matches.filter((m) => m.stage === 'group');
+    }
+    if (filter === 'knockout') {
+      return matches.filter((m) => m.stage !== 'group');
     }
     return matches;
   }, [matches, filter]);

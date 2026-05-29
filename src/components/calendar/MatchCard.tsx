@@ -1,8 +1,19 @@
 import { TeamLabel } from './TeamLabel';
+import { BracketSlot } from './BracketSlot';
 import { ScoreBlock } from './ScoreBlock';
 import { MatchStatusBadge } from './MatchStatusBadge';
 import { formatMatchTime } from '@/lib/format-date';
-import type { Match } from '@/lib/types/match';
+import type { Match, MatchStage } from '@/lib/types/match';
+
+const STAGE_LABEL: Record<MatchStage, string> = {
+  group: 'Grupos',
+  r32: 'Treintaidosavos',
+  r16: 'Octavos',
+  qf: 'Cuartos',
+  sf: 'Semifinal',
+  '3rd': '3er puesto',
+  final: 'Final',
+};
 
 export function MatchCard({ match }: { match: Match }) {
   const kicksOffAt = new Date(match.kicks_off_at);
@@ -20,7 +31,11 @@ export function MatchCard({ match }: { match: Match }) {
 
       {/* Columna derecha: equipos + score/vs */}
       <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
-        <TeamLabel team={match.home_team} align="right" />
+        {match.home_team ? (
+          <TeamLabel team={match.home_team} align="right" />
+        ) : (
+          <BracketSlot source={match.bracket_source_home} align="right" />
+        )}
         {hasScore ? (
           <ScoreBlock home={match.home_score ?? 0} away={match.away_score ?? 0} />
         ) : (
@@ -28,17 +43,25 @@ export function MatchCard({ match }: { match: Match }) {
             vs
           </span>
         )}
-        <TeamLabel team={match.away_team} align="left" />
+        {match.away_team ? (
+          <TeamLabel team={match.away_team} align="left" />
+        ) : (
+          <BracketSlot source={match.bracket_source_away} align="left" />
+        )}
       </div>
 
-      {/* Footer: venue + grupo */}
+      {/* Footer: venue + grupo o fase */}
       <div className="col-span-full flex items-center justify-between gap-3 pt-1.5 border-t border-dashed border-border">
         <span className="text-[12px] text-muted-foreground truncate">{match.venue}</span>
-        {match.group_code && (
+        {match.group_code ? (
           <span className="text-[12px] text-muted-foreground whitespace-nowrap">
             Grupo {match.group_code}
           </span>
-        )}
+        ) : match.stage !== 'group' ? (
+          <span className="text-[12px] text-muted-foreground whitespace-nowrap">
+            {STAGE_LABEL[match.stage]}
+          </span>
+        ) : null}
       </div>
     </article>
   );
