@@ -10,33 +10,25 @@ interface BracketSlotProps {
 
 /**
  * Placeholder que reemplaza a TeamLabel cuando un partido eliminatorio
- * todavía no tiene equipo asignado. Sin icono — el texto en cursiva ya
- * comunica que es un slot por definir, y quitarlo libera espacio para
- * que `line-clamp-2` acomode los labels largos en dos renglones.
+ * todavía no tiene equipo asignado. Span único con `w-full + line-clamp-2`
+ * para que textos largos como "Ganador Octavos de Final" o
+ * "Tercer Lugar Grupos C/D/F/G/H" se acomoden en dos renglones dentro
+ * de su columna del grid en vez de salirse por el borde del card.
  */
 export function BracketSlot({ source, align = 'left', size = 'md' }: BracketSlotProps) {
   const label = source ? formatBracketSource(source) : 'Por definir';
 
   return (
-    <div
+    <span
       className={cn(
-        'flex min-w-0 w-full',
-        align === 'right' ? 'justify-end text-right' : 'justify-start text-left',
+        'block w-full text-muted-foreground italic line-clamp-2 leading-tight',
+        align === 'right' ? 'text-right' : 'text-left',
+        size === 'sm' && 'text-[13px]',
+        size === 'md' && 'text-[14px]',
+        size === 'lg' && 'text-[16px]',
       )}
     >
-      <span
-        className={cn(
-          // line-clamp-2 + leading-tight permite que textos largos
-          // como "Tercer Lugar Grupos C/D/F/G/H" entren completos en
-          // dos renglones, en vez de cortarse en una sola línea.
-          'text-muted-foreground italic line-clamp-2 leading-tight',
-          size === 'sm' && 'text-[13px]',
-          size === 'md' && 'text-[14px]',
-          size === 'lg' && 'text-[16px]',
-        )}
-      >
-        {label}
-      </span>
-    </div>
+      {label}
+    </span>
   );
 }

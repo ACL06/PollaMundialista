@@ -23,7 +23,10 @@ export function MatchCard({ match }: { match: Match }) {
   return (
     <article
       className={cn(
-        'border rounded-lg px-[18px] py-[14px] grid grid-cols-1 sm:grid-cols-[110px_1fr] gap-y-2 sm:gap-x-[18px] font-sans transition-colors',
+        // `minmax(0,1fr)` en la 2da columna evita que el contenido largo de un
+        // BracketSlot ("Ganador Octavos de Final") infle la columna a su
+        // tamaño intrínseco y rompa el ancho del card.
+        'border rounded-lg px-[18px] py-[14px] grid grid-cols-1 sm:grid-cols-[110px_minmax(0,1fr)] gap-y-2 sm:gap-x-[18px] font-sans transition-colors',
         // Color según estado del partido:
         // - scheduled (default): borde y fondo neutros
         // - live: borde secondary (rojo) + tinte rojo sutil para que destaque
