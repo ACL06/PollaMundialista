@@ -48,12 +48,19 @@ export function GroupTable({ groupCode, standings }: GroupTableProps) {
                 key={s.team.code}
                 className={cn(
                   'border-b border-border/50 last:border-b-0',
-                  // Las dos primeras posiciones suelen clasificar directo,
-                  // las marca con una barra lateral sutil de primary
-                  i < 2 && 'border-l-2 border-l-primary/60',
+                  // Las dos primeras posiciones clasifican directo a R32.
+                  // Se marcan con tinte de fondo en vez de border-l porque
+                  // el border-collapse de la tabla hacía que el borde de
+                  // la fila 2 se viera también sobre la fila 3.
+                  i < 2 && 'bg-primary/10',
                 )}
               >
-                <td className="pl-1 pr-2 py-2.5 text-muted-foreground text-xs tabular-nums">
+                <td
+                  className={cn(
+                    'pl-1 pr-2 py-2.5 text-xs tabular-nums',
+                    i < 2 ? 'text-primary font-semibold' : 'text-muted-foreground',
+                  )}
+                >
                   {i + 1}
                 </td>
                 <td className="px-2 py-2.5">
