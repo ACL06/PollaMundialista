@@ -39,7 +39,11 @@ export function BracketSlot({ source, align = 'left', size = 'md' }: BracketSlot
       </span>
       <span
         className={cn(
-          'text-muted-foreground italic truncate min-w-0',
+          // line-clamp-2 + leading-tight permite que textos largos
+          // como "Mejor 3° (C, D, F, G, H)" entren completos en dos
+          // renglones, en vez de cortarse con elipsis o salirse.
+          'text-muted-foreground italic line-clamp-2 leading-tight min-w-0',
+          align === 'right' ? 'text-right' : 'text-left',
           size === 'sm' && 'text-[13px]',
           size === 'md' && 'text-[14px]',
           size === 'lg' && 'text-[16px]',

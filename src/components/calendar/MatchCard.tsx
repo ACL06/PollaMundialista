@@ -7,7 +7,7 @@ import type { Match, MatchStage } from '@/lib/types/match';
 
 const STAGE_LABEL: Record<MatchStage, string> = {
   group: 'Grupos',
-  r32: '32avos', // "Treintaidosavos" no cabe en el chip del footer en mobile
+  r32: 'Treintaidosavos',
   r16: 'Octavos',
   qf: 'Cuartos',
   sf: 'Semifinal',
