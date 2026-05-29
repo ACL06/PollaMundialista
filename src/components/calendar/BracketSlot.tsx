@@ -10,18 +10,18 @@ interface BracketSlotProps {
 
 /**
  * Placeholder que reemplaza a TeamLabel cuando un partido eliminatorio
- * todavía no tiene equipo asignado. Span único con `w-full + line-clamp-2`
- * para que textos largos como "Ganador Octavos de Final" o
- * "Tercer Lugar Grupos C/D/F/G/H" se acomoden en dos renglones dentro
- * de su columna del grid en vez de salirse por el borde del card.
+ * todavía no tiene equipo asignado. Trunca con elipsis si el texto es
+ * más largo que la columna; el texto completo aparece en hover (tooltip
+ * nativo del navegador via `title`).
  */
 export function BracketSlot({ source, align = 'left', size = 'md' }: BracketSlotProps) {
   const label = source ? formatBracketSource(source) : 'Por definir';
 
   return (
     <span
+      title={label}
       className={cn(
-        'block w-full text-muted-foreground italic line-clamp-2 leading-tight',
+        'block w-full text-muted-foreground italic truncate cursor-help',
         align === 'right' ? 'text-right' : 'text-left',
         size === 'sm' && 'text-[13px]',
         size === 'md' && 'text-[14px]',
