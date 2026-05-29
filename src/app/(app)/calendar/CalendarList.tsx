@@ -23,11 +23,11 @@ const FILTER_OPTIONS: Array<{ value: Filter; label: string }> = [
   { value: 'today', label: 'Hoy' },
   { value: 'upcoming', label: 'Por jugar' },
   { value: 'group', label: 'Grupos' },
-  { value: 'r32', label: '32avos' },
-  { value: 'r16', label: 'Octavos' },
-  { value: 'qf', label: 'Cuartos' },
-  { value: 'sf', label: 'Semis' },
-  { value: '3rd', label: '3er puesto' },
+  { value: 'r32', label: 'Eliminatorias' },
+  { value: 'r16', label: 'Octavos de Final' },
+  { value: 'qf', label: 'Cuartos de Final' },
+  { value: 'sf', label: 'Semifinales' },
+  { value: '3rd', label: 'Tercer Puesto' },
   { value: 'final', label: 'Final' },
 ];
 
