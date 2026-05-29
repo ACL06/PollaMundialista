@@ -24,6 +24,7 @@ export function TeamLabel({ team, align = 'left', size = 'md' }: TeamLabelProps)
         aria-hidden="true"
       />
       <span
+        title={team.name}
         className={cn(
           'text-foreground font-medium truncate',
           size === 'sm' && 'text-[13px]',

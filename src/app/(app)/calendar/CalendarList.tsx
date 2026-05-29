@@ -6,13 +6,33 @@ import { formatMatchDateLong, formatMatchDateKey } from '@/lib/format-date';
 import { cn } from '@/lib/utils';
 import type { Match } from '@/lib/types/match';
 
-type Filter = 'all' | 'today' | 'upcoming';
+type Filter =
+  | 'all'
+  | 'today'
+  | 'upcoming'
+  | 'r32'
+  | 'r16'
+  | 'qf'
+  | 'sf'
+  | '3rd'
+  | 'final';
 
 const FILTER_OPTIONS: Array<{ value: Filter; label: string }> = [
   { value: 'all', label: 'Todos' },
   { value: 'today', label: 'Hoy' },
   { value: 'upcoming', label: 'Por jugar' },
+  { value: 'r32', label: 'Eliminatorias' },
+  { value: 'r16', label: 'Octavos de Final' },
+  { value: 'qf', label: 'Cuartos de Final' },
+  { value: 'sf', label: 'Semifinales' },
+  { value: '3rd', label: 'Tercer Puesto' },
+  { value: 'final', label: 'Final' },
 ];
+
+// Filtro "Grupos" se eliminó del calendario: las tablas de posiciones
+// viven en /grupos. Si quieres ver los 72 partidos de grupos en este
+// calendario, usa "Todos" y scrollea hasta antes del 28 de junio.
+const STAGE_FILTERS = new Set(['r32', 'r16', 'qf', 'sf', '3rd', 'final']);
 
 interface CalendarListProps {
   matches: Match[];
@@ -31,6 +51,9 @@ export function CalendarList({ matches }: CalendarListProps) {
     }
     if (filter === 'upcoming') {
       return matches.filter((m) => m.status === 'scheduled');
+    }
+    if (STAGE_FILTERS.has(filter)) {
+      return matches.filter((m) => m.stage === filter);
     }
     return matches;
   }, [matches, filter]);
@@ -59,18 +82,23 @@ export function CalendarList({ matches }: CalendarListProps) {
             {matches.length} {matches.length === 1 ? 'partido' : 'partidos'} programados
           </p>
         </div>
-        <div className="inline-flex gap-1 p-1 bg-muted rounded-full">
+        {/*
+         * Con 10 filtros el "segmented control" original no cabe en una línea.
+         * Cambiamos a chips independientes con flex-wrap: en desktop suelen
+         * caber en una sola fila; en pantallas estrechas bajan a dos.
+         */}
+        <div className="flex flex-wrap gap-1.5 sm:justify-end">
           {FILTER_OPTIONS.map(({ value, label }) => (
             <button
               key={value}
               type="button"
               onClick={() => setFilter(value)}
               className={cn(
-                'px-[14px] py-1.5 rounded-full text-[13px] font-medium transition-all',
+                'px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors',
                 'whitespace-nowrap',
                 filter === value
-                  ? 'bg-surface text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:text-foreground',
               )}
             >
               {label}

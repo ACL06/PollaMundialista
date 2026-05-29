@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CalendarDays, Home } from 'lucide-react';
+import { CalendarDays, Home, ListOrdered } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const tabs = [
   { href: '/home', label: 'Inicio', Icon: Home },
   { href: '/calendar', label: 'Calendario', Icon: CalendarDays },
+  { href: '/grupos', label: 'Fase de grupos', Icon: ListOrdered },
 ] as const;
 
 export function TabNav() {
@@ -15,7 +16,7 @@ export function TabNav() {
 
   return (
     <nav className="border-b border-border bg-background sticky top-0 z-10">
-      <div className="max-w-6xl mx-auto px-5 flex gap-1 overflow-x-auto">
+      <div className="max-w-6xl mx-auto px-5 flex gap-1">
         {tabs.map(({ href, label, Icon }) => {
           const isActive = pathname === href || pathname.startsWith(href + '/');
           return (
