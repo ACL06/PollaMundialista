@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CalendarDays, Home, ListOrdered } from 'lucide-react';
+import { CalendarDays, Home, ListOrdered, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const tabs = [
   { href: '/home', label: 'Inicio', Icon: Home },
   { href: '/calendar', label: 'Calendario', Icon: CalendarDays },
   { href: '/grupos', label: 'Fase de grupos', Icon: ListOrdered },
+  { href: '/pronosticos', label: 'Pronósticos', Icon: Target },
 ] as const;
 
 export function TabNav() {
