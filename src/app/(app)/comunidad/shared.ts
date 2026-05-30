@@ -20,6 +20,35 @@ export interface CommunityScore {
   away_score: number;
 }
 
+export interface ChampionPick {
+  user_id: string;
+  champion_code: string | null;
+}
+
+export type ReactionKey = 'like' | 'laugh' | 'fire' | 'shock';
+
+/** Set de reacciones disponibles (orden de display). */
+export const REACTIONS: ReadonlyArray<{ key: ReactionKey; emoji: string; label: string }> = [
+  { key: 'like', emoji: '👍', label: 'Me gusta' },
+  { key: 'laugh', emoji: '😂', label: 'Jaja' },
+  { key: 'fire', emoji: '🔥', label: 'Crack' },
+  { key: 'shock', emoji: '😱', label: 'No way' },
+];
+
+export const REACTION_EMOJI: Record<ReactionKey, string> = {
+  like: '👍',
+  laugh: '😂',
+  fire: '🔥',
+  shock: '😱',
+};
+
+export interface ReactionRow {
+  reactor_id: string;
+  target_user_id: string;
+  match_id: string;
+  reaction: ReactionKey;
+}
+
 /** Nombre a mostrar: "Nombre Apellidos", con fallback a nickname. */
 export function displayName(p: {
   first_name?: string | null;
