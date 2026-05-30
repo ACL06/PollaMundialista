@@ -4,6 +4,7 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Logo } from '@/components/shared/Logo';
 import { TabNav } from '@/components/app/TabNav';
 import { UserBadge } from '@/components/app/UserBadge';
+import { ProfileMenu } from '@/components/app/ProfileMenu';
 import { WORLD_CUP_TEAMS } from '@/lib/validators/profile';
 import { LogoutButton } from './LogoutButton';
 
@@ -19,7 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('nickname, first_name, last_name, phone, favorite_team')
+    .select('email, nickname, first_name, last_name, phone, favorite_team, avatar_url')
     .eq('id', user.id)
     .single();
 
@@ -58,6 +59,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               favoriteTeam={favoriteTeam}
             />
             <div className="h-6 w-px bg-border" aria-hidden="true" />
+            <ProfileMenu
+              email={profile.email ?? user.email ?? ''}
+              avatarUrl={profile.avatar_url}
+              firstName={profile.first_name}
+              lastName={profile.last_name}
+              nickname={profile.nickname}
+              phone={profile.phone}
+            />
             <ThemeToggle />
             <LogoutButton />
           </div>

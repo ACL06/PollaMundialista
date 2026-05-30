@@ -100,3 +100,15 @@ export const profileSchema = z.object({
     )
     .optional(),
 });
+
+/**
+ * Schema para editar el perfil desde el modal del header: solo los datos
+ * base modificables (el email no se toca). Reusa las mismas reglas de
+ * `profileSchema` vía `.pick()`.
+ */
+export const profileUpdateSchema = profileSchema.pick({
+  first_name: true,
+  last_name: true,
+  phone: true,
+  nickname: true,
+});
