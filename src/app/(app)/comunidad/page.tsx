@@ -4,8 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
 import { Countdown } from '@/components/pronosticos/Countdown';
 import { CommunityView } from './CommunityView';
-import { displayName, type CommunityScore, type PublicProfile } from './shared';
-import type { Match } from '@/lib/types/match';
+import { displayName, type ChampionPick, type CommunityScore, type PublicProfile } from './shared';
+import type { Match, Team } from '@/lib/types/match';
 
 export const metadata = { title: 'Comunidad' };
 
@@ -45,28 +45,33 @@ export default async function ComunidadPage() {
   }
 
   // Post-lock: lectura pública habilitada por RLS.
-  const [matchesResult, scoresResult, predictionsResult, profilesResult] = await Promise.all([
-    supabase
-      .from('matches')
-      .select(
-        `
-        id, match_number, stage, group_code,
-        bracket_source_home, bracket_source_away,
-        kicks_off_at, venue, home_score, away_score, status,
-        home_team:teams!matches_home_team_code_fkey(code, name, flag, group_code),
-        away_team:teams!matches_away_team_code_fkey(code, name, flag, group_code)
-      `,
-      )
-      .eq('stage', 'group')
-      .order('kicks_off_at', { ascending: true }),
-    supabase
-      .from('prediction_group_scores')
-      .select('user_id, match_id, home_score, away_score'),
-    supabase.from('predictions').select('user_id'),
-    supabase
-      .from('public_profiles')
-      .select('id, nickname, first_name, last_name, avatar_url, favorite_team'),
-  ]);
+  const [matchesResult, scoresResult, predictionsResult, profilesResult, teamsResult] =
+    await Promise.all([
+      supabase
+        .from('matches')
+        .select(
+          `
+          id, match_number, stage, group_code,
+          bracket_source_home, bracket_source_away,
+          kicks_off_at, venue, home_score, away_score, status,
+          home_team:teams!matches_home_team_code_fkey(code, name, flag, group_code),
+          away_team:teams!matches_away_team_code_fkey(code, name, flag, group_code)
+        `,
+        )
+        .eq('stage', 'group')
+        .order('kicks_off_at', { ascending: true }),
+      supabase
+        .from('prediction_group_scores')
+        .select('user_id, match_id, home_score, away_score'),
+      supabase.from('predictions').select('user_id, champion_code'),
+      supabase
+        .from('public_profiles')
+        .select('id, nickname, first_name, last_name, avatar_url, favorite_team'),
+      supabase
+        .from('teams')
+        .select('code, name, flag, group_code')
+        .not('group_code', 'is', null),
+    ]);
 
   const groupMatches = (matchesResult.data ?? []).map((row) => {
     const homeTeam = Array.isArray(row.home_team)
@@ -80,11 +85,13 @@ export default async function ComunidadPage() {
 
   const scores = (scoresResult.data ?? []) as CommunityScore[];
   const profiles = (profilesResult.data ?? []) as PublicProfile[];
+  const teams = (teamsResult.data ?? []) as Team[];
+  const championPicks = (predictionsResult.data ?? []) as ChampionPick[];
 
   // Participantes = quienes tienen pronóstico (fila en predictions) o al
   // menos un marcador. Se enlazan a su pronóstico completo.
   const participantIds = new Set<string>([
-    ...((predictionsResult.data ?? []).map((p) => p.user_id as string)),
+    ...championPicks.map((p) => p.user_id),
     ...scores.map((s) => s.user_id),
   ]);
   const participants = profiles
@@ -97,6 +104,8 @@ export default async function ComunidadPage() {
       scores={scores}
       profiles={profiles}
       participants={participants}
+      teams={teams}
+      championPicks={championPicks}
     />
   );
 }

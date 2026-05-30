@@ -20,6 +20,11 @@ export interface CommunityScore {
   away_score: number;
 }
 
+export interface ChampionPick {
+  user_id: string;
+  champion_code: string | null;
+}
+
 /** Nombre a mostrar: "Nombre Apellidos", con fallback a nickname. */
 export function displayName(p: {
   first_name?: string | null;
