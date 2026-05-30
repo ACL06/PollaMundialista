@@ -9,13 +9,18 @@ import {
   formatMatchTime,
 } from '@/lib/format-date';
 import { cn } from '@/lib/utils';
-import type { Match, MatchStatus } from '@/lib/types/match';
+import type { Match, MatchStatus, Team } from '@/lib/types/match';
 import { saveMatchResult, saveTopScorer } from './actions';
+import { KnockoutResultsEditor } from './KnockoutResultsEditor';
 
 interface AdminPanelProps {
   groupMatches: Match[];
+  knockoutMatches: Match[];
+  teams: Team[];
   initialTopScorer: string | null;
 }
+
+type AdminView = 'grupos' | 'eliminatorias';
 
 interface Draft {
   home: string;
@@ -33,7 +38,13 @@ function sanitizeScore(v: string): string {
   return v.replace(/\D/g, '').slice(0, 2);
 }
 
-export function AdminPanel({ groupMatches, initialTopScorer }: AdminPanelProps) {
+export function AdminPanel({
+  groupMatches,
+  knockoutMatches,
+  teams,
+  initialTopScorer,
+}: AdminPanelProps) {
+  const [view, setView] = useState<AdminView>('grupos');
   const [drafts, setDrafts] = useState<Map<string, Draft>>(() => {
     const map = new Map<string, Draft>();
     for (const m of groupMatches) {
@@ -171,6 +182,27 @@ export function AdminPanel({ groupMatches, initialTopScorer }: AdminPanelProps) 
         </div>
       </section>
 
+      {/* Switcher Grupos / Eliminatorias */}
+      <div className="inline-flex gap-1 p-1 bg-muted rounded-lg self-start">
+        {(['grupos', 'eliminatorias'] as AdminView[]).map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setView(v)}
+            className={cn(
+              'px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize',
+              view === v ? 'bg-surface text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {v === 'grupos' ? 'Fase de grupos' : 'Eliminatorias'}
+          </button>
+        ))}
+      </div>
+
+      {view === 'eliminatorias' ? (
+        <KnockoutResultsEditor matches={knockoutMatches} teams={teams} />
+      ) : (
+        <>
       {/* Tabs por día */}
       <div className="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1" role="tablist">
         {days.map((day) => {
@@ -266,6 +298,8 @@ export function AdminPanel({ groupMatches, initialTopScorer }: AdminPanelProps) 
             );
           })}
         </div>
+      )}
+        </>
       )}
     </div>
   );
