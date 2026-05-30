@@ -104,8 +104,16 @@ export function KnockoutResultsEditor({ matches, teams }: KnockoutResultsEditorP
     });
   };
 
-  const persist = (id: string) => {
-    const d = drafts.get(id);
+  // Cambia un campo y persiste con el valor YA calculado (evita stale closure).
+  const changeAndPersist = (id: string, patch: Partial<Draft>) => {
+    const current = drafts.get(id);
+    if (!current) return;
+    update(id, patch);
+    persist(id, { ...current, ...patch });
+  };
+
+  const persist = (id: string, override?: Draft) => {
+    const d = override ?? drafts.get(id);
     if (!d) return;
     if (d.homeCode && d.awayCode && d.homeCode === d.awayCode) {
       setError(id, 'Un equipo no puede jugar contra sí mismo');
@@ -191,10 +199,7 @@ export function KnockoutResultsEditor({ matches, teams }: KnockoutResultsEditorP
                     value={d.homeCode}
                     hint={match.bracket_source_home}
                     teams={sortedTeams}
-                    onChange={(code) => {
-                      update(match.id, { homeCode: code });
-                      setTimeout(() => persist(match.id), 0);
-                    }}
+                    onChange={(code) => changeAndPersist(match.id, { homeCode: code })}
                   />
                   <div className="flex items-center gap-1.5 justify-center pt-0.5">
                     <ScoreInput value={d.home} onChange={(v) => update(match.id, { home: sanitizeScore(v) })} onBlur={() => persist(match.id)} />
@@ -205,10 +210,7 @@ export function KnockoutResultsEditor({ matches, teams }: KnockoutResultsEditorP
                     value={d.awayCode}
                     hint={match.bracket_source_away}
                     teams={sortedTeams}
-                    onChange={(code) => {
-                      update(match.id, { awayCode: code });
-                      setTimeout(() => persist(match.id), 0);
-                    }}
+                    onChange={(code) => changeAndPersist(match.id, { awayCode: code })}
                   />
                 </div>
 

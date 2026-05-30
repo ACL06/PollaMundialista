@@ -107,8 +107,17 @@ export function AdminPanel({
     });
   };
 
-  const persist = (id: string) => {
-    const d = drafts.get(id);
+  // Cambia un campo y persiste con el valor YA calculado — evita el stale
+  // closure de `setState` + leer el state viejo en el mismo tick.
+  const changeAndPersist = (id: string, patch: Partial<Draft>) => {
+    const current = drafts.get(id);
+    if (!current) return;
+    update(id, patch);
+    persist(id, { ...current, ...patch });
+  };
+
+  const persist = (id: string, override?: Draft) => {
+    const d = override ?? drafts.get(id);
     if (!d) return;
     // Si marca final, exige ambos marcadores
     if (d.status === 'final' && (d.home === '' || d.away === '')) {
@@ -267,11 +276,7 @@ export function AdminPanel({
                     <button
                       key={s}
                       type="button"
-                      onClick={() => {
-                        update(match.id, { status: s });
-                        // persistir el cambio de status inmediatamente
-                        setTimeout(() => persist(match.id), 0);
-                      }}
+                      onClick={() => changeAndPersist(match.id, { status: s })}
                       className={cn(
                         'px-2.5 py-1 rounded-full text-[12px] font-medium border transition-colors',
                         d.status === s
