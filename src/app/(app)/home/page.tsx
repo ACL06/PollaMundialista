@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
 import { CalendarDays, CheckCircle2, Target, Trophy } from 'lucide-react';
 import { WORLD_CUP_TEAMS } from '@/lib/validators/profile';
@@ -25,12 +26,16 @@ export default async function HomePage() {
 
         {/* Avatar */}
         <div className="flex justify-center">
-          <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-primary/20 bg-muted">
+          <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-primary/20 bg-muted relative">
             {profile?.avatar_url ? (
-              <img
+              <Image
                 src={profile.avatar_url}
                 alt={`Avatar de ${profile.nickname}`}
+                width={96}
+                height={96}
                 className="h-full w-full"
+                unoptimized
+                priority
               />
             ) : (
               <div className="h-full w-full bg-primary/10" />
