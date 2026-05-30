@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
 import { Countdown } from '@/components/pronosticos/Countdown';
 import { buildRanking, deriveOfficialResults } from '@/lib/scoring';
+import { displayName } from '@/lib/display-name';
 import { RankingView, type RankingRow } from './RankingView';
 import type { Match } from '@/lib/types/match';
 import type {
@@ -20,12 +21,6 @@ interface RankingProfile {
   first_name: string | null;
   last_name: string | null;
   avatar_url: string | null;
-}
-
-function profileName(p?: RankingProfile): string {
-  if (!p) return 'Jugador';
-  const full = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim();
-  return full || p.nickname || 'Jugador';
 }
 
 export default async function RankingPage() {
@@ -115,7 +110,7 @@ export default async function RankingPage() {
     const profile = profileById.get(entry.userId);
     return {
       userId: entry.userId,
-      name: profileName(profile),
+      name: displayName(profile ?? {}),
       avatarUrl: profile?.avatar_url ?? null,
       breakdown: entry.breakdown,
       rank,

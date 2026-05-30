@@ -49,12 +49,6 @@ export interface ReactionRow {
   reaction: ReactionKey;
 }
 
-/** Nombre a mostrar: "Nombre Apellidos", con fallback a nickname. */
-export function displayName(p: {
-  first_name?: string | null;
-  last_name?: string | null;
-  nickname?: string | null;
-}): string {
-  const full = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim();
-  return full || p.nickname || 'Jugador';
-}
+// displayName vive en lib/ (lo comparten Comunidad y Ranking). Se
+// re-exporta aquí para no romper los imports existentes de Comunidad.
+export { displayName } from '@/lib/display-name';
