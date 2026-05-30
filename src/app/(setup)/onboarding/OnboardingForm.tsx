@@ -19,14 +19,25 @@ import { getAvatarVariants } from '@/lib/avatar';
 import { cn } from '@/lib/utils';
 import { saveProfile } from './actions';
 
-/** Permitir solo letras Unicode (incluye acentos y ñ) y espacios. */
-function sanitizeName(value: string): string {
-  return value.replace(/[^\p{L}\s]/gu, '');
-}
+/** Solo letras Unicode (incluye acentos y ñ) y espacios. */
+const NAME_REGEX = /^[\p{L}\s]+$/u;
 
 /** Permitir solo dígitos y limitar a 10 caracteres. */
 function sanitizePhone(value: string): string {
   return value.replace(/\D/g, '').slice(0, 10);
+}
+
+/**
+ * Devuelve el mensaje de error a mostrar inline para un campo de nombre.
+ * El input se deja tal como el usuario lo tipeó (no se filtran caracteres),
+ * pero si contiene algo distinto a letras y espacios, le avisamos.
+ */
+function getNameError(value: string): string | null {
+  if (value.length === 0) return null;
+  if (!NAME_REGEX.test(value)) {
+    return 'Solo se permiten letras y espacios — sin números ni símbolos';
+  }
+  return null;
 }
 
 export function OnboardingForm() {
@@ -69,12 +80,19 @@ export function OnboardingForm() {
     });
   };
 
-  // El botón "Guardar y continuar" se habilita cuando todos los campos
-  // obligatorios tienen un valor mínimo aceptable (la validación estricta
-  // la hace Zod en el server action).
+  // Errores en vivo por campo. Se calculan a partir del valor actual,
+  // sin tocar lo que tipeó el usuario.
+  const firstNameError = getNameError(firstName);
+  const lastNameError = getNameError(lastName);
+
+  // El botón "Guardar y continuar" se habilita solo cuando todos los
+  // campos obligatorios tienen un valor válido. La validación estricta
+  // la repite Zod en el server action.
   const canSubmit =
     firstName.length >= 2 &&
+    !firstNameError &&
     lastName.length >= 2 &&
+    !lastNameError &&
     phone.length === 10 &&
     phone.startsWith('3') &&
     nickname.length >= 3;
@@ -151,16 +169,25 @@ export function OnboardingForm() {
             placeholder="ej: Álvaro"
             value={firstName}
             onChange={(e) => {
-              setFirstName(sanitizeName(e.target.value));
+              setFirstName(e.target.value);
               if (error) setError(null);
             }}
             disabled={isPending}
+            error={!!firstNameError}
             className="pl-10"
             autoComplete="given-name"
             maxLength={50}
             required
           />
         </div>
+        {firstNameError ? (
+          <p className="text-xs text-destructive flex items-center gap-1">
+            <AlertCircle className="h-3 w-3 flex-shrink-0" />
+            {firstNameError}
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">Solo letras y espacios.</p>
+        )}
       </div>
 
       {/* Apellidos */}
@@ -176,16 +203,25 @@ export function OnboardingForm() {
             placeholder="ej: Castaño Pérez"
             value={lastName}
             onChange={(e) => {
-              setLastName(sanitizeName(e.target.value));
+              setLastName(e.target.value);
               if (error) setError(null);
             }}
             disabled={isPending}
+            error={!!lastNameError}
             className="pl-10"
             autoComplete="family-name"
             maxLength={50}
             required
           />
         </div>
+        {lastNameError ? (
+          <p className="text-xs text-destructive flex items-center gap-1">
+            <AlertCircle className="h-3 w-3 flex-shrink-0" />
+            {lastNameError}
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">Solo letras y espacios.</p>
+        )}
       </div>
 
       {/* Celular */}
