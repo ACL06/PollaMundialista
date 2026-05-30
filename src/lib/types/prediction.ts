@@ -36,6 +36,14 @@ export const BRACKET_ROUND_SIZE: Record<PredictionBracketRound, number> = {
 export const BRACKET_R32_GROUP_MIN = 2;
 export const BRACKET_R32_GROUP_MAX = 3;
 
+/**
+ * Cuántos grupos pueden aportar un 3.er equipo a Dieciseisavos.
+ * 12 grupos × 2 fijos = 24; faltan 8 para llegar a 32, así que solo 8
+ * grupos pueden llegar a 3 (los 8 mejores terceros). Cuando ya hay 8
+ * grupos con 3, el 9.º grupo que intente un tercero queda bloqueado.
+ */
+export const BRACKET_R32_MAX_THIRDS = 8;
+
 /** Etiqueta humana de cada ronda. */
 export const BRACKET_ROUND_LABEL: Record<PredictionBracketRound, string> = {
   r32: 'Dieciseisavos de Final',

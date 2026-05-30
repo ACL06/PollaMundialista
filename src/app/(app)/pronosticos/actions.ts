@@ -9,6 +9,7 @@ import {
 import {
   BRACKET_ROUND_SIZE,
   BRACKET_R32_GROUP_MAX,
+  BRACKET_R32_MAX_THIRDS,
   previousRound,
   roundsFrom,
 } from '@/lib/types/prediction';
@@ -97,7 +98,9 @@ export async function saveGroupScore(input: {
  *
  * Al AGREGAR (`selected: true`):
  *   - Rechaza si la ronda ya alcanzó su cupo (32/16/8/4).
- *   - En r32, rechaza si el grupo del equipo ya tiene 3 (regla 2-3).
+ *   - En r32, rechaza si el grupo del equipo ya tiene 3 (máx por grupo) o
+ *     si llevaría su grupo a 3 cuando ya hay 8 grupos con 3 (tope de
+ *     terceros: solo 8 de los 12 grupos aportan un tercer equipo).
  *   - Rechaza si el equipo no está en la ronda anterior (subset).
  *   - Idempotente: si ya estaba, no hace nada.
  *
@@ -151,7 +154,9 @@ export async function toggleBracketTeam(input: {
       return { error: `Ya seleccionaste los ${BRACKET_ROUND_SIZE[round]} de esta ronda` };
     }
 
-    // Regla 2-3 por grupo en Dieciseisavos: máximo 3 equipos del mismo grupo.
+    // Reglas de Dieciseisavos: máximo 3 por grupo y máximo 8 grupos con 3
+    // (los 8 mejores terceros). Calculamos los conteos por grupo con los
+    // equipos ya elegidos en r32 en una sola consulta.
     if (round === 'r32') {
       const { data: teamRow } = await supabase
         .from('teams')
@@ -167,13 +172,32 @@ export async function toggleBracketTeam(input: {
           .eq('round', 'r32');
         const codes = (r32Rows ?? []).map((r) => r.team_code);
         if (codes.length > 0) {
-          const { data: sameGroup } = await supabase
+          const { data: chosen } = await supabase
             .from('teams')
-            .select('code')
-            .eq('group_code', group)
+            .select('code, group_code')
             .in('code', codes);
-          if ((sameGroup?.length ?? 0) >= BRACKET_R32_GROUP_MAX) {
+          const countByGroup = new Map<string, number>();
+          for (const t of chosen ?? []) {
+            if (!t.group_code) continue;
+            countByGroup.set(t.group_code, (countByGroup.get(t.group_code) ?? 0) + 1);
+          }
+          const sameGroupCount = countByGroup.get(group) ?? 0;
+          // Máximo 3 equipos del mismo grupo.
+          if (sameGroupCount >= BRACKET_R32_GROUP_MAX) {
             return { error: `Máximo ${BRACKET_R32_GROUP_MAX} equipos por grupo en Dieciseisavos` };
+          }
+          // Tope de terceros: si este equipo llevaría su grupo a 3, no puede
+          // haber ya 8 grupos con 3.
+          if (sameGroupCount === BRACKET_R32_GROUP_MAX - 1) {
+            let groupsWithMax = 0;
+            for (const c of countByGroup.values()) {
+              if (c >= BRACKET_R32_GROUP_MAX) groupsWithMax += 1;
+            }
+            if (groupsWithMax >= BRACKET_R32_MAX_THIRDS) {
+              return {
+                error: `Solo ${BRACKET_R32_MAX_THIRDS} grupos pueden aportar un tercer equipo`,
+              };
+            }
           }
         }
       }

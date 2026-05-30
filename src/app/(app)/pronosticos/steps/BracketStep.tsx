@@ -9,6 +9,7 @@ import {
   BRACKET_ROUND_SIZE,
   BRACKET_R32_GROUP_MAX,
   BRACKET_R32_GROUP_MIN,
+  BRACKET_R32_MAX_THIRDS,
   previousRound,
   type PredictionBracketRound,
 } from '@/lib/types/prediction';
@@ -53,7 +54,10 @@ export function BracketStep({
     return Array.from(bracket.get(prev) ?? []);
   }, [prev, teams, bracket]);
 
-  const selectedSet = bracket.get(activeRound) ?? new Set<string>();
+  const selectedSet = useMemo(
+    () => bracket.get(activeRound) ?? new Set<string>(),
+    [bracket, activeRound],
+  );
   const target = BRACKET_ROUND_SIZE[activeRound];
   const atCap = selectedSet.size >= target;
   // La regla "2 a 3 por grupo" solo aplica a Dieciseisavos.
@@ -77,6 +81,27 @@ export function BracketStep({
         teams: list.sort((a, b) => a.name.localeCompare(b.name)),
       }));
   }, [poolCodes, teamsByCode]);
+
+  // Resumen de la regla de Dieciseisavos: cuántos grupos llegaron a 3
+  // (tope 8 = los 8 mejores terceros) y cuáles aún no alcanzan el mínimo
+  // de 2. `canAddThird` bloquea el 9.º tercero en la UI.
+  const r32Summary = useMemo(() => {
+    if (!isR32) {
+      return { groupsWithThree: 0, canAddThird: true, incompleteGroups: [] as string[] };
+    }
+    let groupsWithThree = 0;
+    const incompleteGroups: string[] = [];
+    for (const { group, teams: groupTeams } of groupedPool) {
+      const count = groupTeams.filter((t) => selectedSet.has(t.code)).length;
+      if (count >= BRACKET_R32_GROUP_MAX) groupsWithThree += 1;
+      if (count < BRACKET_R32_GROUP_MIN) incompleteGroups.push(group);
+    }
+    return {
+      groupsWithThree,
+      canAddThird: groupsWithThree < BRACKET_R32_MAX_THIRDS,
+      incompleteGroups,
+    };
+  }, [isR32, groupedPool, selectedSet]);
 
   const countColor =
     selectedSet.size === target
@@ -145,8 +170,16 @@ export function BracketStep({
       {/* Regla 2-3 por grupo (solo Dieciseisavos) */}
       {isR32 && (
         <p className="text-xs text-muted-foreground -mt-3">
-          Mínimo {BRACKET_R32_GROUP_MIN} y máximo {BRACKET_R32_GROUP_MAX} por grupo. Los 8
-          grupos con 3 son los que aportan un mejor tercero.
+          Mínimo {BRACKET_R32_GROUP_MIN} por grupo. Hasta {BRACKET_R32_GROUP_MAX} en máximo{' '}
+          {BRACKET_R32_MAX_THIRDS} grupos (los 8 mejores terceros).{' '}
+          <span
+            className={cn(
+              'font-medium tabular-nums',
+              r32Summary.canAddThird ? 'text-foreground' : 'text-amber-500',
+            )}
+          >
+            Terceros: {r32Summary.groupsWithThree}/{BRACKET_R32_MAX_THIRDS}
+          </span>
         </p>
       )}
 
@@ -154,6 +187,18 @@ export function BracketStep({
         <div className="flex items-center gap-2 text-sm text-destructive" role="alert">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {/* Error de mínimo por grupo: cada grupo necesita ≥2 en Dieciseisavos.
+          Solo se muestra una vez el usuario empezó a seleccionar. */}
+      {isR32 && selectedSet.size > 0 && r32Summary.incompleteGroups.length > 0 && (
+        <div className="flex items-start gap-2 text-sm text-destructive" role="alert">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+          <span>
+            Cada grupo necesita mínimo {BRACKET_R32_GROUP_MIN} equipos. Te falta(n):{' '}
+            <span className="font-semibold">{r32Summary.incompleteGroups.join(', ')}</span>.
+          </span>
         </div>
       )}
 
@@ -174,8 +219,15 @@ export function BracketStep({
           {groupedPool.map(({ group, teams: groupTeams }) => {
             const groupSelected = groupTeams.filter((t) => selectedSet.has(t.code)).length;
             const groupAtMax = isR32 && groupSelected >= BRACKET_R32_GROUP_MAX;
-            // En r32 el grupo está "ok" con 2-3; incompleto con 0-1.
+            // En r32 el grupo está "ok" con 2-3; incompleto (error) con 0-1.
             const groupOk = groupSelected >= BRACKET_R32_GROUP_MIN;
+            // No se puede agregar un 3.º si ya hay 8 grupos con 3 (tope de
+            // terceros). Este grupo, con 2, no puede pasar a 3.
+            const thirdBlocked =
+              isR32 &&
+              groupSelected === BRACKET_R32_GROUP_MIN &&
+              !r32Summary.canAddThird;
+            const cannotAdd = groupAtMax || thirdBlocked;
             return (
             <div key={group} className="space-y-2">
               <h3 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -184,7 +236,7 @@ export function BracketStep({
                   <span
                     className={cn(
                       'tabular-nums normal-case font-bold',
-                      groupOk ? 'text-primary' : 'text-amber-500',
+                      groupOk ? 'text-primary' : 'text-destructive',
                     )}
                   >
                     {groupSelected}/{BRACKET_R32_GROUP_MAX}
@@ -195,7 +247,7 @@ export function BracketStep({
                 {groupTeams.map((team) => {
                   const selected = selectedSet.has(team.code);
                   const disabled =
-                    readOnly || (atCap && !selected) || (groupAtMax && !selected);
+                    readOnly || (atCap && !selected) || (cannotAdd && !selected);
                   return (
                     <button
                       key={team.code}
