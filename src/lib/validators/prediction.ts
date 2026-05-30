@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 /**
  * Marcador predicho de un partido individual de fase de grupos.
- * Rango 0-30 alineado con el `check` constraint de la tabla.
+ * Rango 0-99 alineado con el `check` constraint de la tabla.
  */
 export const groupScoreSchema = z.object({
   match_id: z.string().uuid('match_id inválido'),
