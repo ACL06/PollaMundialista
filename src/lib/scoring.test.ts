@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  buildRanking,
   computeScore,
   deriveOfficialResults,
   normalizeScorer,
@@ -380,5 +381,59 @@ describe('deriveOfficialResults', () => {
     expect(r.runnerUp).toBe('BBB');
     expect(r.thirdPlace).toBe('CCC');
     expect(r.topScorer).toBe('Goleador X');
+  });
+});
+
+// ── buildRanking ────────────────────────────────────────────────────
+
+describe('buildRanking', () => {
+  it('agrupa por usuario y ordena por puntaje desc', () => {
+    const predictions: Prediction[] = [
+      makePrediction({ user_id: 'ana', champion_code: 'BRA' }), // acierta campeón → 30
+      makePrediction({ user_id: 'leo', champion_code: 'ARG' }), // no acierta → 0
+    ];
+    const groupScores: PredictionGroupScore[] = [
+      { user_id: 'leo', match_id: 'm1', home_score: 2, away_score: 1 }, // exacto → 5
+    ];
+    const bracket: PredictionBracketEntry[] = [];
+    const official = emptyOfficial({
+      champion: 'BRA',
+      groupScores: new Map([['m1', { home: 2, away: 1 }]]),
+    });
+
+    const ranking = buildRanking(predictions, groupScores, bracket, official);
+    expect(ranking).toHaveLength(2);
+    expect(ranking[0].userId).toBe('ana'); // 30 pts
+    expect(ranking[0].breakdown.total).toBe(30);
+    expect(ranking[1].userId).toBe('leo'); // 5 pts
+    expect(ranking[1].breakdown.total).toBe(5);
+  });
+
+  it('incluye usuarios que solo tienen marcadores o solo bracket', () => {
+    const predictions: Prediction[] = [];
+    const groupScores: PredictionGroupScore[] = [
+      { user_id: 'ana', match_id: 'm1', home_score: 1, away_score: 0 },
+    ];
+    const bracket: PredictionBracketEntry[] = [{ user_id: 'leo', round: 'r32', team_code: 'BRA' }];
+    const official = emptyOfficial({
+      groupScores: new Map([['m1', { home: 1, away: 0 }]]),
+      advancers: { r32: new Set(['BRA']), r16: new Set(), qf: new Set(), sf: new Set() },
+    });
+
+    const ranking = buildRanking(predictions, groupScores, bracket, official);
+    expect(ranking).toHaveLength(2);
+    const ana = ranking.find((r) => r.userId === 'ana')!;
+    const leo = ranking.find((r) => r.userId === 'leo')!;
+    expect(ana.breakdown.total).toBe(5); // marcador exacto
+    expect(leo.breakdown.total).toBe(2); // 1 equipo en r32
+  });
+
+  it('sin resultados oficiales, todos quedan en 0', () => {
+    const predictions: Prediction[] = [
+      makePrediction({ user_id: 'ana', champion_code: 'BRA' }),
+      makePrediction({ user_id: 'leo', champion_code: 'ARG' }),
+    ];
+    const ranking = buildRanking(predictions, [], [], emptyOfficial());
+    expect(ranking.every((r) => r.breakdown.total === 0)).toBe(true);
   });
 });
