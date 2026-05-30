@@ -18,7 +18,6 @@ export function useCountdown(initialSeconds: number = 0) {
   }, [seconds]);
 
   const start = useCallback((s: number) => setSeconds(s), []);
-  const reset = useCallback(() => setSeconds(0), []);
 
-  return { seconds, isActive: seconds > 0, start, reset };
+  return { seconds, isActive: seconds > 0, start };
 }

@@ -5,7 +5,6 @@ interface BracketSlotProps {
   /** Código del bracket (ej. '1A', 'W73'). Si es null se muestra "Por definir". */
   source: string | null;
   align?: 'left' | 'right';
-  size?: 'sm' | 'md' | 'lg';
 }
 
 /**
@@ -14,18 +13,15 @@ interface BracketSlotProps {
  * más largo que la columna; el texto completo aparece en hover (tooltip
  * nativo del navegador via `title`).
  */
-export function BracketSlot({ source, align = 'left', size = 'md' }: BracketSlotProps) {
+export function BracketSlot({ source, align = 'left' }: BracketSlotProps) {
   const label = source ? formatBracketSource(source) : 'Por definir';
 
   return (
     <span
       title={label}
       className={cn(
-        'block w-full text-muted-foreground italic truncate cursor-help',
+        'block w-full text-muted-foreground italic truncate cursor-help text-[14px]',
         align === 'right' ? 'text-right' : 'text-left',
-        size === 'sm' && 'text-[13px]',
-        size === 'md' && 'text-[14px]',
-        size === 'lg' && 'text-[16px]',
       )}
     >
       {label}

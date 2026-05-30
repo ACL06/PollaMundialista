@@ -17,9 +17,13 @@ export async function createClient() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options),
             );
-          } catch {
-            // El `setAll` puede fallar si se llama desde un Server Component.
-            // Si tienes middleware refrescando la sesión, esto es seguro de ignorar.
+          } catch (error) {
+            // El `setAll` puede fallar legítimamente cuando se llama desde
+            // un Server Component (no se pueden mutar cookies fuera de
+            // requests mutadores). Si tienes middleware refrescando la
+            // sesión, ignorarlo es seguro. Pero en Server Actions sí
+            // debería funcionar — si falla ahí, queremos enterarnos.
+            console.error('[supabase/server] setAll cookies falló:', error);
           }
         },
       },
