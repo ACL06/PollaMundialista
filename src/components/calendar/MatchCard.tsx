@@ -8,7 +8,7 @@ import type { Match, MatchStage } from '@/lib/types/match';
 
 const STAGE_LABEL: Record<MatchStage, string> = {
   group: 'Grupos',
-  r32: 'Eliminatorias',
+  r32: 'Dieciseisavos de Final',
   r16: 'Octavos de Final',
   qf: 'Cuartos de Final',
   sf: 'Semifinales',
