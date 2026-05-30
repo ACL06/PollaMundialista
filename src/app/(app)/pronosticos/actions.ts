@@ -5,6 +5,7 @@ import { isPredictionsLocked } from '@/lib/predictions-lock';
 import { groupScoreSchema, bracketToggleSchema } from '@/lib/validators/prediction';
 import {
   BRACKET_ROUND_SIZE,
+  BRACKET_R32_GROUP_MAX,
   previousRound,
   roundsFrom,
 } from '@/lib/types/prediction';
@@ -122,6 +123,34 @@ export async function toggleBracketTeam(input: {
     }
     if ((count ?? 0) >= BRACKET_ROUND_SIZE[round]) {
       return { error: `Ya seleccionaste los ${BRACKET_ROUND_SIZE[round]} de esta ronda` };
+    }
+
+    // Regla 2-3 por grupo en Dieciseisavos: máximo 3 equipos del mismo grupo.
+    if (round === 'r32') {
+      const { data: teamRow } = await supabase
+        .from('teams')
+        .select('group_code')
+        .eq('code', team_code)
+        .maybeSingle();
+      const group = teamRow?.group_code;
+      if (group) {
+        const { data: r32Rows } = await supabase
+          .from('prediction_bracket')
+          .select('team_code')
+          .eq('user_id', user.id)
+          .eq('round', 'r32');
+        const codes = (r32Rows ?? []).map((r) => r.team_code);
+        if (codes.length > 0) {
+          const { data: sameGroup } = await supabase
+            .from('teams')
+            .select('code')
+            .eq('group_code', group)
+            .in('code', codes);
+          if ((sameGroup?.length ?? 0) >= BRACKET_R32_GROUP_MAX) {
+            return { error: `Máximo ${BRACKET_R32_GROUP_MAX} equipos por grupo en Dieciseisavos` };
+          }
+        }
+      }
     }
 
     // Subset: debe estar en la ronda anterior (salvo r32 que no tiene)

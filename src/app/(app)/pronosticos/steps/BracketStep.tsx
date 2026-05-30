@@ -7,6 +7,8 @@ import {
   BRACKET_ROUNDS,
   BRACKET_ROUND_LABEL,
   BRACKET_ROUND_SIZE,
+  BRACKET_R32_GROUP_MAX,
+  BRACKET_R32_GROUP_MIN,
   previousRound,
   type PredictionBracketRound,
 } from '@/lib/types/prediction';
@@ -54,6 +56,8 @@ export function BracketStep({
   const selectedSet = bracket.get(activeRound) ?? new Set<string>();
   const target = BRACKET_ROUND_SIZE[activeRound];
   const atCap = selectedSet.size >= target;
+  // La regla "2 a 3 por grupo" solo aplica a Dieciseisavos.
+  const isR32 = activeRound === 'r32';
 
   // Agrupar el pool por grupo (A-L). Solo mostramos grupos con ≥1 equipo.
   const groupedPool = useMemo(() => {
@@ -138,6 +142,14 @@ export function BracketStep({
         </span>
       </div>
 
+      {/* Regla 2-3 por grupo (solo Dieciseisavos) */}
+      {isR32 && (
+        <p className="text-xs text-muted-foreground -mt-3">
+          Mínimo {BRACKET_R32_GROUP_MIN} y máximo {BRACKET_R32_GROUP_MAX} por grupo. Los 8
+          grupos con 3 son los que aportan un mejor tercero.
+        </p>
+      )}
+
       {error && (
         <div className="flex items-center gap-2 text-sm text-destructive" role="alert">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
@@ -159,15 +171,31 @@ export function BracketStep({
         </div>
       ) : (
         <div className="space-y-5">
-          {groupedPool.map(({ group, teams: groupTeams }) => (
+          {groupedPool.map(({ group, teams: groupTeams }) => {
+            const groupSelected = groupTeams.filter((t) => selectedSet.has(t.code)).length;
+            const groupAtMax = isR32 && groupSelected >= BRACKET_R32_GROUP_MAX;
+            // En r32 el grupo está "ok" con 2-3; incompleto con 0-1.
+            const groupOk = groupSelected >= BRACKET_R32_GROUP_MIN;
+            return (
             <div key={group} className="space-y-2">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <h3 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Grupo {group}
+                {isR32 && (
+                  <span
+                    className={cn(
+                      'tabular-nums normal-case font-bold',
+                      groupOk ? 'text-primary' : 'text-amber-500',
+                    )}
+                  >
+                    {groupSelected}/{BRACKET_R32_GROUP_MAX}
+                  </span>
+                )}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {groupTeams.map((team) => {
                   const selected = selectedSet.has(team.code);
-                  const disabled = readOnly || (atCap && !selected);
+                  const disabled =
+                    readOnly || (atCap && !selected) || (groupAtMax && !selected);
                   return (
                     <button
                       key={team.code}
@@ -211,7 +239,8 @@ export function BracketStep({
                 })}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

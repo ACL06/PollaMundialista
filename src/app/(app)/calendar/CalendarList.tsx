@@ -21,7 +21,7 @@ const FILTER_OPTIONS: Array<{ value: Filter; label: string }> = [
   { value: 'all', label: 'Todos' },
   { value: 'today', label: 'Hoy' },
   { value: 'upcoming', label: 'Por jugar' },
-  { value: 'r32', label: 'Eliminatorias' },
+  { value: 'r32', label: 'Dieciseisavos de Final' },
   { value: 'r16', label: 'Octavos de Final' },
   { value: 'qf', label: 'Cuartos de Final' },
   { value: 'sf', label: 'Semifinales' },

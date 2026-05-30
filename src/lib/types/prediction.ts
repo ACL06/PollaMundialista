@@ -25,9 +25,20 @@ export const BRACKET_ROUND_SIZE: Record<PredictionBracketRound, number> = {
   sf: 4,
 };
 
+/**
+ * En Dieciseisavos (r32) cada grupo aporta entre 2 y 3 equipos:
+ *   - 2 fijos: el 1° y 2° de cada grupo (24 en total)
+ *   - hasta 1 más: si su 3° está entre los 8 mejores terceros
+ * Como 12×2 = 24 y faltan 8 para llegar a 32, exactamente 8 grupos
+ * aportan un tercero. La regla "2 o 3 por grupo + total 32" captura
+ * esto sin necesidad de modelar el ranking de terceros.
+ */
+export const BRACKET_R32_GROUP_MIN = 2;
+export const BRACKET_R32_GROUP_MAX = 3;
+
 /** Etiqueta humana de cada ronda. */
 export const BRACKET_ROUND_LABEL: Record<PredictionBracketRound, string> = {
-  r32: 'Treintaidosavos',
+  r32: 'Dieciseisavos de Final',
   r16: 'Octavos de Final',
   qf: 'Cuartos de Final',
   sf: 'Semifinales',
