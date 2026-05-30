@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { AdminPanel } from './AdminPanel';
-import type { Match } from '@/lib/types/match';
+import type { Match, Team } from '@/lib/types/match';
 
 export const metadata = { title: 'Panel admin' };
 
@@ -20,7 +20,7 @@ export default async function AdminPage() {
     .maybeSingle();
   if (!profile?.is_admin) redirect('/home');
 
-  const [matchesResult, settingsResult] = await Promise.all([
+  const [matchesResult, teamsResult, settingsResult] = await Promise.all([
     supabase
       .from('matches')
       .select(
@@ -32,12 +32,16 @@ export default async function AdminPage() {
         away_team:teams!matches_away_team_code_fkey(code, name, flag, group_code)
       `,
       )
-      .eq('stage', 'group')
-      .order('kicks_off_at', { ascending: true }),
+      .order('match_number', { ascending: true }),
+    supabase
+      .from('teams')
+      .select('code, name, flag, group_code')
+      .not('group_code', 'is', null)
+      .order('group_code', { ascending: true }),
     supabase.from('tournament_settings').select('top_scorer').eq('id', 1).maybeSingle(),
   ]);
 
-  const groupMatches = (matchesResult.data ?? []).map((row) => {
+  const allMatches = (matchesResult.data ?? []).map((row) => {
     const homeTeam = Array.isArray(row.home_team)
       ? (row.home_team[0] ?? null)
       : (row.home_team ?? null);
@@ -47,7 +51,17 @@ export default async function AdminPage() {
     return { ...row, home_team: homeTeam, away_team: awayTeam };
   }) as unknown as Match[];
 
+  const groupMatches = allMatches.filter((m) => m.stage === 'group');
+  const knockoutMatches = allMatches.filter((m) => m.stage !== 'group');
+  const teams = (teamsResult.data ?? []) as Team[];
   const initialTopScorer = (settingsResult.data?.top_scorer as string | undefined) ?? null;
 
-  return <AdminPanel groupMatches={groupMatches} initialTopScorer={initialTopScorer} />;
+  return (
+    <AdminPanel
+      groupMatches={groupMatches}
+      knockoutMatches={knockoutMatches}
+      teams={teams}
+      initialTopScorer={initialTopScorer}
+    />
+  );
 }

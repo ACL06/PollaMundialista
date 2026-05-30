@@ -63,6 +63,56 @@ export async function saveMatchResult(input: {
   return {};
 }
 
+/**
+ * Registra un partido eliminatorio: equipos (home/away, asignables a
+ * medida que se resuelven las rondas) + marcador + status. Solo admins.
+ */
+export async function saveKnockoutMatch(input: {
+  matchId: string;
+  homeTeamCode: string | null;
+  awayTeamCode: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  status: string;
+}): Promise<ActionResult> {
+  const { matchId, homeTeamCode, awayTeamCode, homeScore, awayScore, status } = input;
+
+  if (!VALID_STATUS.has(status)) {
+    return { error: 'Estado inválido' };
+  }
+  const codeOk = (c: string | null) => c === null || /^[A-Z]{2,4}$/.test(c);
+  if (!codeOk(homeTeamCode) || !codeOk(awayTeamCode)) {
+    return { error: 'Código de equipo inválido' };
+  }
+  if (homeTeamCode && awayTeamCode && homeTeamCode === awayTeamCode) {
+    return { error: 'Un equipo no puede jugar contra sí mismo' };
+  }
+  const inRange = (n: number | null) => n === null || (Number.isInteger(n) && n >= 0 && n <= 99);
+  if (!inRange(homeScore) || !inRange(awayScore)) {
+    return { error: 'Marcador fuera de rango (0–99)' };
+  }
+
+  const admin = await requireAdmin();
+  if ('error' in admin) return { error: admin.error };
+
+  const { error } = await admin.supabase
+    .from('matches')
+    .update({
+      home_team_code: homeTeamCode,
+      away_team_code: awayTeamCode,
+      home_score: homeScore,
+      away_score: awayScore,
+      status,
+    })
+    .eq('id', matchId);
+
+  if (error) {
+    console.error('[saveKnockoutMatch]', error.message);
+    return { error: 'No pudimos guardar el partido. Intenta de nuevo.' };
+  }
+  return {};
+}
+
 /** Guarda el goleador oficial del torneo (texto libre, o null para limpiar). */
 export async function saveTopScorer(name: string | null): Promise<ActionResult> {
   const trimmed = name?.trim() || null;
