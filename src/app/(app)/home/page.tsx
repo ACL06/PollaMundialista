@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
-import { CalendarDays, CheckCircle2, ListOrdered, Target, Trophy, Users } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ListOrdered, Settings, Target, Trophy, Users } from 'lucide-react';
 import { WORLD_CUP_TEAMS } from '@/lib/validators/profile';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
 import { PredictionStatusCard } from '@/components/home/PredictionStatusCard';
@@ -19,7 +19,7 @@ export default async function HomePage() {
     await Promise.all([
       supabase
         .from('profiles')
-        .select('email, nickname, avatar_url, favorite_team')
+        .select('email, nickname, avatar_url, favorite_team, is_admin')
         .eq('id', userId)
         .single(),
       supabase
@@ -115,6 +115,16 @@ export default async function HomePage() {
           <ExploreCard href="/comunidad" Icon={Users} label="Comunidad" />
           <ExploreCard href="/ranking" Icon={Trophy} label="Ranking" />
         </div>
+
+        {profile?.is_admin && (
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-2 self-start text-sm font-medium text-tertiary hover:underline"
+          >
+            <Settings className="h-4 w-4" />
+            Panel admin
+          </Link>
+        )}
       </div>
     </div>
   );
