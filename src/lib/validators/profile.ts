@@ -52,7 +52,29 @@ export const WORLD_CUP_TEAMS = [
   { code: 'UZB', name: 'Uzbekistán', flag: 'uz' }
 ] as const;
 
+// Nombres y apellidos: solo letras Unicode (incluye acentos y ñ) y espacios.
+// Explícitamente NO se permiten números, guiones, apóstrofes ni otros símbolos.
+const NAME_REGEX = /^[\p{L}\s]+$/u;
+const NAME_ERROR = 'Solo letras y espacios, sin números ni símbolos';
+
+// Celular colombiano: exactamente 10 dígitos empezando por 3.
+const PHONE_REGEX = /^3\d{9}$/;
+const PHONE_ERROR = 'Debe ser un celular de 10 dígitos que empiece por 3';
+
 export const profileSchema = z.object({
+  first_name: z
+    .string()
+    .min(2, 'Mínimo 2 caracteres')
+    .max(50, 'Máximo 50 caracteres')
+    .regex(NAME_REGEX, NAME_ERROR)
+    .transform((v) => v.trim()),
+  last_name: z
+    .string()
+    .min(2, 'Mínimo 2 caracteres')
+    .max(50, 'Máximo 50 caracteres')
+    .regex(NAME_REGEX, NAME_ERROR)
+    .transform((v) => v.trim()),
+  phone: z.string().regex(PHONE_REGEX, PHONE_ERROR),
   nickname: z
     .string()
     .min(3, 'Mínimo 3 caracteres')

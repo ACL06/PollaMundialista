@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter_Tight, Archivo_Black, JetBrains_Mono } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
+import { Footer } from '@/components/shared/Footer';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import 'flag-icons/css/flag-icons.min.css';
@@ -57,8 +58,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className={`${inter.variable} ${display.variable} ${mono.variable}`}>
-        <ThemeProvider>{children}</ThemeProvider>
+      <body
+        className={`${inter.variable} ${display.variable} ${mono.variable} min-h-screen flex flex-col bg-background`}
+      >
+        <ThemeProvider>
+          {/* Wrapper flex-1 para que el footer quede pegado al fondo
+            * incluso cuando el contenido es corto (login, onboarding). */}
+          <div className="flex-1 flex flex-col">{children}</div>
+          <Footer />
+        </ThemeProvider>
         <Analytics />
         <SpeedInsights />
       </body>

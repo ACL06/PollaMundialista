@@ -10,6 +10,9 @@ interface ActionResult {
 }
 
 export async function saveProfile(data: {
+  first_name: string;
+  last_name: string;
+  phone: string;
   nickname: string;
   favorite_team?: string | null;
   avatar_url?: string;
@@ -37,6 +40,9 @@ export async function saveProfile(data: {
     .upsert({
       id: user.id,
       email: user.email ?? '',
+      first_name: parsed.data.first_name,
+      last_name: parsed.data.last_name,
+      phone: parsed.data.phone,
       nickname: parsed.data.nickname,
       avatar_url: avatarUrl,
       favorite_team: parsed.data.favorite_team ?? null,
