@@ -28,9 +28,6 @@ function profileName(p?: RankingProfile): string {
   return full || p.nickname || 'Jugador';
 }
 
-// TODO(Fase 8): el goleador oficial vendrá de un campo administrable.
-const OFFICIAL_TOP_SCORER: string | null = null;
-
 export default async function RankingPage() {
   const supabase = await createClient();
   const {
@@ -64,24 +61,26 @@ export default async function RankingPage() {
     );
   }
 
-  const [predsRes, scoresRes, bracketRes, matchesRes, profilesRes] = await Promise.all([
-    supabase.from('predictions').select('*'),
-    supabase.from('prediction_group_scores').select('user_id, match_id, home_score, away_score'),
-    supabase.from('prediction_bracket').select('user_id, round, team_code'),
-    supabase
-      .from('matches')
-      .select(
-        `
-        id, match_number, stage, group_code,
-        bracket_source_home, bracket_source_away,
-        kicks_off_at, venue, home_score, away_score, status,
-        home_team:teams!matches_home_team_code_fkey(code, name, flag, group_code),
-        away_team:teams!matches_away_team_code_fkey(code, name, flag, group_code)
-      `,
-      )
-      .order('match_number', { ascending: true }),
-    supabase.from('public_profiles').select('id, nickname, first_name, last_name, avatar_url'),
-  ]);
+  const [predsRes, scoresRes, bracketRes, matchesRes, profilesRes, settingsRes] =
+    await Promise.all([
+      supabase.from('predictions').select('*'),
+      supabase.from('prediction_group_scores').select('user_id, match_id, home_score, away_score'),
+      supabase.from('prediction_bracket').select('user_id, round, team_code'),
+      supabase
+        .from('matches')
+        .select(
+          `
+          id, match_number, stage, group_code,
+          bracket_source_home, bracket_source_away,
+          kicks_off_at, venue, home_score, away_score, status,
+          home_team:teams!matches_home_team_code_fkey(code, name, flag, group_code),
+          away_team:teams!matches_away_team_code_fkey(code, name, flag, group_code)
+        `,
+        )
+        .order('match_number', { ascending: true }),
+      supabase.from('public_profiles').select('id, nickname, first_name, last_name, avatar_url'),
+      supabase.from('tournament_settings').select('top_scorer').eq('id', 1).maybeSingle(),
+    ]);
 
   const predictions = (predsRes.data ?? []) as Prediction[];
   const groupScores = (scoresRes.data ?? []) as PredictionGroupScore[];
@@ -98,7 +97,8 @@ export default async function RankingPage() {
     return { ...row, home_team: homeTeam, away_team: awayTeam };
   }) as unknown as Match[];
 
-  const official = deriveOfficialResults(matches, OFFICIAL_TOP_SCORER);
+  const officialTopScorer = (settingsRes.data?.top_scorer as string | undefined) ?? null;
+  const official = deriveOfficialResults(matches, officialTopScorer);
   const ranking = buildRanking(predictions, groupScores, bracket, official);
   const hasResults = matches.some((m) => m.status === 'final');
 
