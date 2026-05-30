@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TeamLabel } from '@/components/calendar/TeamLabel';
@@ -68,6 +68,19 @@ export function GroupScoresStep({
   const completedCount = savedIds.size;
   const selectedDay = days.find((d) => d.key === selectedDayKey) ?? days[0];
 
+  // Mantener el tab del día seleccionado centrado en el scroll horizontal.
+  // Scroll controlado sobre el contenedor (no scrollIntoView) para no mover
+  // el scroll vertical de la página.
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const activeTabRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const container = tabsRef.current;
+    const active = activeTabRef.current;
+    if (!container || !active) return;
+    const target = active.offsetLeft - (container.clientWidth - active.clientWidth) / 2;
+    container.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+  }, [selectedDay?.key]);
+
   return (
     <div className="space-y-6">
       {/* Header con progreso */}
@@ -91,7 +104,8 @@ export function GroupScoresStep({
 
       {/* Tabs por día */}
       <div
-        className="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1"
+        ref={tabsRef}
+        className="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1 scroll-smooth"
         role="tablist"
         aria-label="Días con partidos"
       >
@@ -102,6 +116,7 @@ export function GroupScoresStep({
           return (
             <button
               key={day.key}
+              ref={isActive ? activeTabRef : undefined}
               type="button"
               role="tab"
               aria-selected={isActive}
