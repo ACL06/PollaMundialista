@@ -4,7 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 import { CalendarDays, CheckCircle2, ListOrdered, Settings, Target, Trophy, Users } from 'lucide-react';
 import { WORLD_CUP_TEAMS } from '@/lib/validators/profile';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
+import { loadRanking } from '@/app/(app)/ranking/load-ranking';
 import { PredictionStatusCard } from '@/components/home/PredictionStatusCard';
+import { GameRules } from '@/components/home/GameRules';
 
 export const metadata = { title: 'Inicio' };
 
@@ -15,7 +17,7 @@ export default async function HomePage() {
   } = await supabase.auth.getUser();
   const userId = user!.id;
 
-  const [profileResult, predictionResult, scoresCountResult, bracketCountResult, lockAt] =
+  const [profileResult, predictionResult, scoresCountResult, bracketCountResult, lockAt, ranking] =
     await Promise.all([
       supabase
         .from('profiles')
@@ -38,6 +40,7 @@ export default async function HomePage() {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId),
       getPredictionsLockAt(),
+      loadRanking(),
     ]);
 
   const profile = profileResult.data;
@@ -46,6 +49,11 @@ export default async function HomePage() {
 
   const isSubmitted = prediction?.locked_at != null;
   const isLocked = isLockedAt(lockAt);
+
+  // "Tu posición" en el ranking: solo cuando ya hay resultados oficiales
+  // (antes, todos estarían empatados en 0 → "#1" para todos, confuso) y
+  // si el usuario participa.
+  const myRow = ranking.hasResults ? ranking.rows.find((r) => r.userId === userId) : undefined;
   const scoresCount = scoresCountResult.count ?? 0;
   const bracketCount = bracketCountResult.count ?? 0;
   const metaCount =
@@ -89,9 +97,20 @@ export default async function HomePage() {
           )}
         </div>
 
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
-          <CheckCircle2 className="h-4 w-4" />
-          <span>Sesión iniciada como {profile?.email ?? user?.email}</span>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {myRow && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-tertiary/10 text-tertiary text-sm font-medium">
+              <Trophy className="h-4 w-4" />
+              <span>
+                Tu posición: <span className="font-bold">#{myRow.rank}</span> de{' '}
+                {ranking.rows.length} · {myRow.breakdown.total} pts
+              </span>
+            </div>
+          )}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
+            <CheckCircle2 className="h-4 w-4" />
+            <span>Sesión iniciada como {profile?.email ?? user?.email}</span>
+          </div>
         </div>
       </div>
 
@@ -104,6 +123,9 @@ export default async function HomePage() {
         bracketCount={bracketCount}
         metaCount={metaCount}
       />
+
+      {/* Reglas del juego */}
+      <GameRules />
 
       {/* Explora */}
       <div className="flex flex-col gap-4">

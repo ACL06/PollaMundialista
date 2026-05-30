@@ -100,7 +100,7 @@
 - **Comunidad: aciertos del día / tabla en vivo** cuando haya resultados (mejora social)
 - **Modal de perfil**: opción de cambiar avatar y equipo favorito (hoy solo los 4 campos base)
 - **Refactors DRY pendientes** (maintainability, no bugs): helper de query de `matches` (7 pages comparten select+normalize), `sanitizeScore`/`sanitizePhone` a `utils`, componente `ScoreInput` unificado
-- **Penales en eliminatorias**: si la final o el 3er puesto empatan en 90' (van a penales), `pickWinner` devuelve `null` → no se otorga campeón/3er. Falta una columna tipo `winner_code` en `matches` + UI admin para registrarlo
+- **Regla: marcadores al minuto 90** (sin prórroga ni penaltis) — confirmado con el usuario. El marcador exacto se evalúa al 90'. Implicación: si la final/3er puesto empatan en 90' (se definen por penales), `pickWinner` no otorga campeón/3er. Es por diseño (no se modelan penales); si se quisiera otorgar, haría falta una columna `winner_code`. Las reglas visibles al usuario están en `src/lib/game-rules.ts`
 - **Dependabot alert #1** (PostCSS XSS) — baja prioridad, dev deps
 
 ---

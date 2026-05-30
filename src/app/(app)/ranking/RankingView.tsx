@@ -1,16 +1,7 @@
 import Image from 'next/image';
 import { Crown, Info, Medal } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ScoreBreakdown } from '@/lib/scoring';
-
-export interface RankingRow {
-  userId: string;
-  name: string;
-  avatarUrl: string | null;
-  breakdown: ScoreBreakdown;
-  /** Posición (ranking de competición: empates comparten número). */
-  rank: number;
-}
+import type { RankingRow } from './types';
 
 interface RankingViewProps {
   rows: RankingRow[];
@@ -20,7 +11,12 @@ interface RankingViewProps {
 }
 
 export function RankingView({ rows, currentUserId, hasResults }: RankingViewProps) {
-  const podium = hasResults ? rows.filter((r) => r.rank <= 3 && r.breakdown.total > 0) : [];
+  // Posiciones del podio presentes (con puntos > 0). Con empates, una
+  // posición puede tener varios jugadores y la siguiente se "salta"
+  // (ranking de competición: dos en 1° → el siguiente es 3°).
+  const podiumRanks = hasResults
+    ? [1, 2, 3].filter((r) => rows.some((row) => row.rank === r && row.breakdown.total > 0))
+    : [];
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col gap-7">
@@ -43,11 +39,16 @@ export function RankingView({ rows, currentUserId, hasResults }: RankingViewProp
         </div>
       )}
 
-      {/* Podio (solo si ya hay puntos) */}
-      {podium.length > 0 && (
-        <section className="grid grid-cols-3 gap-2 sm:gap-3">
-          {orderPodium(podium).map((r) => (
-            <PodiumCard key={r.userId} row={r} isCurrent={r.userId === currentUserId} />
+      {/* Podio (solo si ya hay puntos). Soporta empates por posición. */}
+      {podiumRanks.length > 0 && (
+        <section className="space-y-2">
+          {podiumRanks.map((rank) => (
+            <PodiumTier
+              key={rank}
+              rank={rank}
+              players={rows.filter((r) => r.rank === rank && r.breakdown.total > 0)}
+              currentUserId={currentUserId}
+            />
           ))}
         </section>
       )}
@@ -79,9 +80,7 @@ export function RankingView({ rows, currentUserId, hasResults }: RankingViewProp
                     isCurrent && 'bg-primary/[0.06]',
                   )}
                 >
-                  <td className="pl-4 pr-2 py-2.5 text-muted-foreground tabular-nums">
-                    {r.rank}
-                  </td>
+                  <td className="pl-4 pr-2 py-2.5 text-muted-foreground tabular-nums">{r.rank}</td>
                   <td className="px-2 py-2.5">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <Avatar avatarUrl={r.avatarUrl} size={26} />
@@ -114,42 +113,46 @@ export function RankingView({ rows, currentUserId, hasResults }: RankingViewProp
   );
 }
 
-/** Reordena el top-3 para mostrarlo 2 · 1 · 3 (el campeón al centro). */
-function orderPodium(top: RankingRow[]): RankingRow[] {
-  const first = top.find((r) => r.rank === 1);
-  const second = top.find((r) => r.rank === 2);
-  const third = top.find((r) => r.rank === 3);
-  return [second, first, third].filter((r): r is RankingRow => !!r);
-}
+const TIER_META: Record<number, { label: string; medalClass: string; cardClass: string }> = {
+  1: { label: '1er lugar', medalClass: 'text-amber-500', cardClass: 'border-primary/40 bg-primary/[0.06]' },
+  2: { label: '2do lugar', medalClass: 'text-zinc-400', cardClass: 'border-border bg-surface' },
+  3: { label: '3er lugar', medalClass: 'text-amber-700', cardClass: 'border-border bg-surface' },
+};
 
-function PodiumCard({ row, isCurrent }: { row: RankingRow; isCurrent: boolean }) {
-  const isFirst = row.rank === 1;
+function PodiumTier({
+  rank,
+  players,
+  currentUserId,
+}: {
+  rank: number;
+  players: RankingRow[];
+  currentUserId: string;
+}) {
+  const meta = TIER_META[rank];
+  const Icon = rank === 1 ? Crown : Medal;
   return (
-    <div
-      className={cn(
-        'flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center',
-        isFirst ? 'border-primary/40 bg-primary/[0.06]' : 'border-border bg-surface',
-        isFirst ? 'pt-4' : 'mt-3 sm:mt-5',
-      )}
-    >
-      <div className="relative">
-        <Avatar avatarUrl={row.avatarUrl} size={isFirst ? 56 : 44} />
-        <span className="absolute -top-1 -right-1">
-          {row.rank === 1 ? (
-            <Crown className="h-5 w-5 text-amber-500 fill-amber-400" />
-          ) : (
-            <Medal className={cn('h-4 w-4', row.rank === 2 ? 'text-zinc-400' : 'text-amber-700')} />
-          )}
-        </span>
+    <div className={cn('rounded-xl border p-3 flex items-center gap-3', meta.cardClass)}>
+      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground w-24 flex-shrink-0">
+        <Icon className={cn('h-5 w-5', meta.medalClass)} />
+        {meta.label}
+      </span>
+      <div className="flex flex-wrap gap-3 flex-1 min-w-0">
+        {players.map((p) => (
+          <div key={p.userId} className="flex items-center gap-2 min-w-0">
+            <Avatar avatarUrl={p.avatarUrl} size={32} />
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-foreground truncate">
+                {p.name}
+                {p.userId === currentUserId && <span className="text-primary"> (tú)</span>}
+              </p>
+              <p className="text-xs text-muted-foreground tabular-nums">{p.breakdown.total} pts</p>
+            </div>
+          </div>
+        ))}
+        {players.length > 1 && (
+          <span className="self-center text-[11px] text-muted-foreground italic">empate</span>
+        )}
       </div>
-      <span className="text-[13px] font-medium text-foreground truncate max-w-full">
-        {row.name}
-        {isCurrent && <span className="text-primary"> (tú)</span>}
-      </span>
-      <span className="text-lg font-bold tabular-nums text-foreground">
-        {row.breakdown.total}
-        <span className="text-xs font-normal text-muted-foreground ml-0.5">pts</span>
-      </span>
     </div>
   );
 }
