@@ -5,7 +5,9 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WizardNav, type WizardStep } from './WizardNav';
 import { WelcomeStep } from './steps/WelcomeStep';
+import { GroupScoresStep } from './steps/GroupScoresStep';
 import { PlaceholderStep } from './steps/PlaceholderStep';
+import type { Match } from '@/lib/types/match';
 import type {
   Prediction,
   PredictionBracketEntry,
@@ -24,21 +26,20 @@ interface PredictionWizardProps {
   initialPrediction: Prediction | null;
   initialGroupScores: PredictionGroupScore[];
   initialBracket: PredictionBracketEntry[];
+  groupMatches: Match[];
   lockAt: string | null;
 }
 
 /**
- * Wizard cliente que orquesta los 5 steps del pronóstico. Esta versión
- * (Fase 4B.1) solo tiene el step 1 (Bienvenida) funcional; los demás
- * son placeholders. El state global (prediction, scores, bracket) se
- * mantiene aquí y se irá hidratando step a step en las próximas sub-fases.
+ * Wizard cliente que orquesta los 5 steps del pronóstico. En 4B.2 los
+ * steps 1 (Bienvenida) y 2 (Marcadores) son funcionales; bracket,
+ * cierre y revisión siguen siendo placeholders por ahora.
  */
 export function PredictionWizard({
   initialPrediction,
-  // initialGroupScores e initialBracket aún no se consumen — se usarán
-  // en 4B.2 (marcadores) y 4B.3 (bracket).
   initialGroupScores,
   initialBracket,
+  groupMatches,
   lockAt,
 }: PredictionWizardProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -46,8 +47,7 @@ export function PredictionWizard({
   const isLocked = lockAt ? new Date() >= new Date(lockAt) : false;
   const isSubmitted = initialPrediction?.locked_at != null;
 
-  // `void` para acallar el unused-var hasta que las sub-fases lo consuman.
-  void initialGroupScores;
+  // `void` para acallar el unused-var hasta que el step de bracket lo consuma.
   void initialBracket;
 
   const goNext = () => {
@@ -84,7 +84,12 @@ export function PredictionWizard({
             onContinue={goNext}
           />
         ) : currentStep.key === 'group-scores' ? (
-          <PlaceholderStep stepName="Marcadores de fase de grupos" comingIn="4B.2" />
+          <GroupScoresStep
+            matches={groupMatches}
+            initialScores={initialGroupScores}
+            isLocked={isLocked}
+            isSubmitted={isSubmitted}
+          />
         ) : currentStep.key === 'bracket' ? (
           <PlaceholderStep stepName="Bracket eliminatorio" comingIn="4B.3" />
         ) : currentStep.key === 'closing' ? (
