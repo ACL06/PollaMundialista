@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TeamLabel } from '@/components/calendar/TeamLabel';
@@ -10,44 +10,42 @@ import {
   formatMatchDateLong,
   formatMatchTime,
 } from '@/lib/format-date';
-import { saveGroupScore } from '../actions';
 import type { Match } from '@/lib/types/match';
-import type { PredictionGroupScore } from '@/lib/types/prediction';
 
-interface GroupScoresStepProps {
-  matches: Match[];
-  initialScores: PredictionGroupScore[];
-  isLocked: boolean;
-  isSubmitted: boolean;
-}
-
-/** Estado local de un marcador en edición. */
-interface DraftScore {
+/** Valor en edición de un marcador. Strings para tolerar entrada parcial. */
+export interface GroupScoreDraft {
   home: string;
   away: string;
 }
 
-/** Filtra al tipear: solo dígitos, máximo 2 caracteres. */
-function sanitizeScore(value: string): string {
-  return value.replace(/\D/g, '').slice(0, 2);
-}
-
-function buildInitialDraft(scores: PredictionGroupScore[]): Map<string, DraftScore> {
-  const map = new Map<string, DraftScore>();
-  for (const s of scores) {
-    map.set(s.match_id, { home: String(s.home_score), away: String(s.away_score) });
-  }
-  return map;
+interface GroupScoresStepProps {
+  matches: Match[];
+  draft: Map<string, GroupScoreDraft>;
+  savedIds: Set<string>;
+  errors: Map<string, string>;
+  selectedDayKey: string;
+  onSelectDay: (key: string) => void;
+  onChangeField: (matchId: string, side: 'home' | 'away', value: string) => void;
+  onBlurField: (matchId: string) => void;
+  isLocked: boolean;
+  isSubmitted: boolean;
 }
 
 /**
- * Step 2 del wizard. 72 marcadores predichos agrupados por día.
- * Autosave en `onBlur` de cada input: si los dos lados tienen valor
- * válido (0-30), se persiste en `prediction_group_scores`.
+ * Step 2 del wizard. Componente "dumb": no tiene state propio salvo el
+ * `useMemo` para agrupar los matches por día. Todo el state (draft,
+ * savedIds, errores, día seleccionado) vive en el `PredictionWizard`
+ * para que persista cuando el usuario navega entre steps.
  */
 export function GroupScoresStep({
   matches,
-  initialScores,
+  draft,
+  savedIds,
+  errors,
+  selectedDayKey,
+  onSelectDay,
+  onChangeField,
+  onBlurField,
   isLocked,
   isSubmitted,
 }: GroupScoresStepProps) {
@@ -67,107 +65,8 @@ export function GroupScoresStep({
     return Array.from(grouped.entries()).map(([key, value]) => ({ key, ...value }));
   }, [matches]);
 
-  const [selectedDayKey, setSelectedDayKey] = useState(() => days[0]?.key ?? '');
-  const [draft, setDraft] = useState<Map<string, DraftScore>>(() =>
-    buildInitialDraft(initialScores),
-  );
-  // IDs efectivamente persistidos en BD. Inicializa con los que vinieron
-  // del server y se actualiza tras cada save exitoso. Es el truth source
-  // del badge "Guardado" — no nos basamos en si los inputs tienen valor.
-  const [savedIds, setSavedIds] = useState<Set<string>>(
-    () => new Set(initialScores.map((s) => s.match_id)),
-  );
-  // Errores por partido (matchId → mensaje). Cada partido mantiene su
-  // propio error hasta que se corrija; un save exitoso de OTRO partido
-  // no debe limpiar errores que no le pertenecen.
-  const [errorsByMatch, setErrorsByMatch] = useState<Map<string, string>>(
-    () => new Map(),
-  );
-  const [, startTransition] = useTransition();
-
   const completedCount = savedIds.size;
-
-  const selectedDay = days.find((d) => d.key === selectedDayKey);
-
-  /** Ayuda a mutar errorsByMatch de forma inmutable. */
-  const setErrorFor = (matchId: string, message: string | null) => {
-    setErrorsByMatch((prev) => {
-      const has = prev.has(matchId);
-      if (message === null) {
-        if (!has) return prev;
-        const next = new Map(prev);
-        next.delete(matchId);
-        return next;
-      }
-      if (prev.get(matchId) === message) return prev;
-      const next = new Map(prev);
-      next.set(matchId, message);
-      return next;
-    });
-  };
-
-  const updateField = (matchId: string, side: 'home' | 'away', rawValue: string) => {
-    const cleaned = sanitizeScore(rawValue);
-    setDraft((prev) => {
-      const next = new Map(prev);
-      const current = next.get(matchId) ?? { home: '', away: '' };
-      next.set(matchId, { ...current, [side]: cleaned });
-      return next;
-    });
-    // Al editar, el valor en pantalla deja de coincidir con lo guardado;
-    // quitar del Set hasta que un nuevo save confirme.
-    setSavedIds((prev) => {
-      if (!prev.has(matchId)) return prev;
-      const next = new Set(prev);
-      next.delete(matchId);
-      return next;
-    });
-    // NO limpiamos el error de este partido al tipear — se mantiene
-    // hasta el siguiente blur con valor válido. Así el usuario sigue
-    // viendo el rojo mientras corrige (no parpadea).
-  };
-
-  const persistIfReady = (matchId: string) => {
-    if (readOnly) return;
-    const current = draft.get(matchId);
-    if (!current) return;
-    if (current.home === '' || current.away === '') return; // Aún incompleto
-    const home = Number(current.home);
-    const away = Number(current.away);
-    if (!Number.isInteger(home) || !Number.isInteger(away)) return;
-    if (home < 0 || away < 0 || home > 30 || away > 30) {
-      setErrorFor(matchId, 'Marcador fuera de rango (0–30)');
-      return;
-    }
-
-    startTransition(async () => {
-      const result = await saveGroupScore({
-        match_id: matchId,
-        home_score: home,
-        away_score: away,
-      });
-      if (result.error) {
-        setErrorFor(matchId, result.error);
-        // Defensivo: si fallaba el save, asegurar que NO quede como guardado
-        setSavedIds((prev) => {
-          if (!prev.has(matchId)) return prev;
-          const next = new Set(prev);
-          next.delete(matchId);
-          return next;
-        });
-      } else {
-        setSavedIds((prev) => {
-          if (prev.has(matchId)) return prev;
-          const next = new Set(prev);
-          next.add(matchId);
-          return next;
-        });
-        // Solo limpiamos el error DE ESTE partido — otros con error
-        // mantienen su estado rojo intacto.
-        setErrorFor(matchId, null);
-      }
-    });
-  };
+  const selectedDay = days.find((d) => d.key === selectedDayKey) ?? days[0];
 
   return (
     <div className="space-y-6">
@@ -197,9 +96,8 @@ export function GroupScoresStep({
         aria-label="Días con partidos"
       >
         {days.map((day) => {
-          const isActive = day.key === selectedDayKey;
-          // Contar partidos del día que tienen marcador guardado (no solo
-          // tipeado). Coherente con el badge "Guardado" en cada card.
+          const isActive = day.key === selectedDay?.key;
+          // Contar partidos del día con marcador efectivamente guardado.
           const filled = day.matches.filter((m) => savedIds.has(m.id)).length;
           return (
             <button
@@ -207,7 +105,7 @@ export function GroupScoresStep({
               type="button"
               role="tab"
               aria-selected={isActive}
-              onClick={() => setSelectedDayKey(day.key)}
+              onClick={() => onSelectDay(day.key)}
               className={cn(
                 'flex-shrink-0 px-3 py-2 rounded-md text-xs font-medium transition-colors whitespace-nowrap',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
@@ -245,9 +143,9 @@ export function GroupScoresStep({
                 draft={draft.get(match.id) ?? { home: '', away: '' }}
                 isSaved={savedIds.has(match.id)}
                 readOnly={readOnly}
-                errorMessage={errorsByMatch.get(match.id) ?? null}
-                onChange={(side, value) => updateField(match.id, side, value)}
-                onBlur={() => persistIfReady(match.id)}
+                errorMessage={errors.get(match.id) ?? null}
+                onChange={(side, value) => onChangeField(match.id, side, value)}
+                onBlur={() => onBlurField(match.id)}
               />
             ))}
           </div>
@@ -259,7 +157,7 @@ export function GroupScoresStep({
 
 interface MatchScoreCardProps {
   match: Match;
-  draft: DraftScore;
+  draft: GroupScoreDraft;
   /** True solo si los valores actuales fueron persistidos exitosamente en BD. */
   isSaved: boolean;
   readOnly: boolean;
@@ -334,8 +232,7 @@ function MatchScoreCard({
         )}
       </div>
 
-      {/* Mensaje de error específico de este partido. Persiste hasta que
-       * el blur con valores válidos lo limpie. */}
+      {/* Mensaje de error específico de este partido. */}
       {hasError && (
         <div
           className="col-span-full flex items-center gap-1.5 text-[12px] text-destructive"
@@ -383,7 +280,7 @@ function ScoreInput({ value, onChange, onBlur, disabled, ...rest }: ScoreInputPr
         'w-10 h-9 text-center font-mono font-bold text-[18px] tabular-nums',
         'bg-background border border-border rounded-md',
         'focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-tertiary',
-        'disabled:opacity-60 disabled:cursor-not-allowed',
+        'disabled:opacity-50 disabled:cursor-not-allowed',
       )}
       aria-label={rest['aria-label']}
     />

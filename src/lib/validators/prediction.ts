@@ -15,12 +15,12 @@ export const groupScoreSchema = z.object({
     .number({ required_error: 'Marcador local requerido' })
     .int('Solo enteros')
     .min(0, 'Mínimo 0')
-    .max(30, 'Máximo 30'),
+    .max(99, 'Máximo 99'),
   away_score: z
     .number({ required_error: 'Marcador visitante requerido' })
     .int('Solo enteros')
     .min(0, 'Mínimo 0')
-    .max(30, 'Máximo 30'),
+    .max(99, 'Máximo 99'),
 });
 
 export type GroupScoreInput = z.infer<typeof groupScoreSchema>;
