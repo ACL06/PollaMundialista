@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
-import { CalendarDays, CheckCircle2, Target, Trophy } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ListOrdered, Target, Trophy, Users } from 'lucide-react';
 import { WORLD_CUP_TEAMS } from '@/lib/validators/profile';
+import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
+import { PredictionStatusCard } from '@/components/home/PredictionStatusCard';
 
 export const metadata = { title: 'Inicio' };
 
@@ -11,20 +13,52 @@ export default async function HomePage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const userId = user!.id;
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('email, nickname, avatar_url, favorite_team')
-    .eq('id', user!.id)
-    .single();
+  const [profileResult, predictionResult, scoresCountResult, bracketCountResult, lockAt] =
+    await Promise.all([
+      supabase
+        .from('profiles')
+        .select('email, nickname, avatar_url, favorite_team')
+        .eq('id', userId)
+        .single(),
+      supabase
+        .from('predictions')
+        .select(
+          'locked_at, champion_code, runner_up_code, third_place_code, final_home_score, final_away_score, top_scorer',
+        )
+        .eq('user_id', userId)
+        .maybeSingle(),
+      supabase
+        .from('prediction_group_scores')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId),
+      supabase
+        .from('prediction_bracket')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId),
+      getPredictionsLockAt(),
+    ]);
 
+  const profile = profileResult.data;
+  const prediction = predictionResult.data;
   const team = WORLD_CUP_TEAMS.find((t) => t.code === profile?.favorite_team);
 
-  return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
-      <div className="text-center space-y-6">
+  const isSubmitted = prediction?.locked_at != null;
+  const isLocked = isLockedAt(lockAt);
+  const scoresCount = scoresCountResult.count ?? 0;
+  const bracketCount = bracketCountResult.count ?? 0;
+  const metaCount =
+    (prediction?.champion_code ? 1 : 0) +
+    (prediction?.runner_up_code ? 1 : 0) +
+    (prediction?.third_place_code ? 1 : 0) +
+    (prediction?.final_home_score != null && prediction?.final_away_score != null ? 1 : 0) +
+    (prediction?.top_scorer?.trim() ? 1 : 0);
 
-        {/* Avatar */}
+  return (
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-14 flex flex-col gap-8">
+      {/* Saludo */}
+      <div className="text-center space-y-5">
         <div className="flex justify-center">
           <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-primary/20 bg-muted relative">
             {profile?.avatar_url ? (
@@ -43,7 +77,6 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* Saludo */}
         <div className="space-y-2">
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground">
             ¡Bienvenido, {profile?.nickname}!
@@ -60,38 +93,55 @@ export default async function HomePage() {
           <CheckCircle2 className="h-4 w-4" />
           <span>Sesión iniciada como {profile?.email ?? user?.email}</span>
         </div>
+      </div>
 
-        <div className="pt-7 mt-6 border-t border-border max-w-md mx-auto flex flex-col gap-4">
-          <h2 className="text-lg font-semibold text-foreground">Explora</h2>
-          <p className="text-sm text-muted-foreground">
-            El calendario ya está disponible. Pronto podrás hacer pronósticos y competir
-            con tus amigos en la tabla de posiciones.
-          </p>
-          <div className="grid grid-cols-3 gap-3 pt-2">
-            <Link
-              href="/calendar"
-              className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              <CalendarDays className="h-[18px] w-[18px] text-tertiary" />
-              <span className="text-[13px] font-medium">Calendario</span>
-            </Link>
-            <Link
-              href="/pronosticos"
-              className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              <Target className="h-[18px] w-[18px] text-tertiary" />
-              <span className="text-[13px] font-medium">Pronósticos</span>
-            </Link>
-            <div
-              className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground opacity-60"
-              aria-label="Ranking (próximamente)"
-            >
-              <Trophy className="h-[18px] w-[18px] text-tertiary" />
-              <span className="text-[13px] font-medium">Ranking</span>
-            </div>
-          </div>
+      {/* Estado del pronóstico */}
+      <PredictionStatusCard
+        lockAtIso={lockAt?.toISOString() ?? null}
+        isLocked={isLocked}
+        isSubmitted={isSubmitted}
+        scoresCount={scoresCount}
+        bracketCount={bracketCount}
+        metaCount={metaCount}
+      />
+
+      {/* Explora */}
+      <div className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold text-foreground">Explora</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <ExploreCard href="/calendar" Icon={CalendarDays} label="Calendario" />
+          <ExploreCard href="/grupos" Icon={ListOrdered} label="Fase de grupos" />
+          <ExploreCard href="/pronosticos" Icon={Target} label="Pronósticos" />
+          <ExploreCard href="/comunidad" Icon={Users} label="Comunidad" />
+        </div>
+        <div
+          className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-border text-muted-foreground opacity-70"
+          aria-label="Ranking (próximamente)"
+        >
+          <Trophy className="h-[18px] w-[18px] text-tertiary" />
+          <span className="text-[13px] font-medium">Ranking · próximamente</span>
         </div>
       </div>
     </div>
+  );
+}
+
+function ExploreCard({
+  href,
+  Icon,
+  label,
+}: {
+  href: string;
+  Icon: typeof CalendarDays;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    >
+      <Icon className="h-[18px] w-[18px] text-tertiary" />
+      <span className="text-[13px] font-medium text-center">{label}</span>
+    </Link>
   );
 }
