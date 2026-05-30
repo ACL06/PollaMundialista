@@ -37,3 +37,24 @@ export const bracketToggleSchema = z.object({
 });
 
 export type BracketToggleInput = z.infer<typeof bracketToggleSchema>;
+
+const teamCode = z.string().regex(/^[A-Z]{2,4}$/, 'Código de equipo inválido');
+
+/**
+ * Campos "meta" del pronóstico (step Cierre): campeón, subcampeón,
+ * tercer puesto, marcador exacto de la final (bonus) y goleador.
+ *
+ * Todos opcionales/nullable: el server solo persiste los campos que
+ * llegan definidos (autosave parcial). `null` limpia el campo;
+ * `undefined` lo deja como está.
+ */
+export const predictionMetaSchema = z.object({
+  champion_code: teamCode.nullable().optional(),
+  runner_up_code: teamCode.nullable().optional(),
+  third_place_code: teamCode.nullable().optional(),
+  final_home_score: z.number().int().min(0).max(99).nullable().optional(),
+  final_away_score: z.number().int().min(0).max(99).nullable().optional(),
+  top_scorer: z.string().max(80, 'Máximo 80 caracteres').nullable().optional(),
+});
+
+export type PredictionMetaInput = z.infer<typeof predictionMetaSchema>;
