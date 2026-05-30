@@ -17,11 +17,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('nickname')
+    .select('nickname, first_name, last_name, phone')
     .eq('id', user.id)
     .single();
 
-  if (!profile?.nickname) {
+  // Si falta cualquiera de los datos obligatorios del onboarding, lo
+  // redirigimos a completar el perfil. Defensa en profundidad: la UI
+  // y el server action ya los exigen, pero un perfil parcial nunca
+  // debería poder llegar a /home.
+  if (
+    !profile?.nickname ||
+    !profile?.first_name ||
+    !profile?.last_name ||
+    !profile?.phone
+  ) {
     redirect('/onboarding');
   }
 
