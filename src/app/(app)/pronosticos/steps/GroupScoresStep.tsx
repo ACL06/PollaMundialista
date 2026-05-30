@@ -77,13 +77,34 @@ export function GroupScoresStep({
   const [savedIds, setSavedIds] = useState<Set<string>>(
     () => new Set(initialScores.map((s) => s.match_id)),
   );
-  const [errorMatchId, setErrorMatchId] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Errores por partido (matchId → mensaje). Cada partido mantiene su
+  // propio error hasta que se corrija; un save exitoso de OTRO partido
+  // no debe limpiar errores que no le pertenecen.
+  const [errorsByMatch, setErrorsByMatch] = useState<Map<string, string>>(
+    () => new Map(),
+  );
   const [, startTransition] = useTransition();
 
   const completedCount = savedIds.size;
 
   const selectedDay = days.find((d) => d.key === selectedDayKey);
+
+  /** Ayuda a mutar errorsByMatch de forma inmutable. */
+  const setErrorFor = (matchId: string, message: string | null) => {
+    setErrorsByMatch((prev) => {
+      const has = prev.has(matchId);
+      if (message === null) {
+        if (!has) return prev;
+        const next = new Map(prev);
+        next.delete(matchId);
+        return next;
+      }
+      if (prev.get(matchId) === message) return prev;
+      const next = new Map(prev);
+      next.set(matchId, message);
+      return next;
+    });
+  };
 
   const updateField = (matchId: string, side: 'home' | 'away', rawValue: string) => {
     const cleaned = sanitizeScore(rawValue);
@@ -101,10 +122,9 @@ export function GroupScoresStep({
       next.delete(matchId);
       return next;
     });
-    if (errorMatchId === matchId) {
-      setErrorMatchId(null);
-      setErrorMessage(null);
-    }
+    // NO limpiamos el error de este partido al tipear — se mantiene
+    // hasta el siguiente blur con valor válido. Así el usuario sigue
+    // viendo el rojo mientras corrige (no parpadea).
   };
 
   const persistIfReady = (matchId: string) => {
@@ -116,8 +136,7 @@ export function GroupScoresStep({
     const away = Number(current.away);
     if (!Number.isInteger(home) || !Number.isInteger(away)) return;
     if (home < 0 || away < 0 || home > 30 || away > 30) {
-      setErrorMatchId(matchId);
-      setErrorMessage('Marcador fuera de rango (0–30)');
+      setErrorFor(matchId, 'Marcador fuera de rango (0–30)');
       return;
     }
 
@@ -128,8 +147,7 @@ export function GroupScoresStep({
         away_score: away,
       });
       if (result.error) {
-        setErrorMatchId(matchId);
-        setErrorMessage(result.error);
+        setErrorFor(matchId, result.error);
         // Defensivo: si fallaba el save, asegurar que NO quede como guardado
         setSavedIds((prev) => {
           if (!prev.has(matchId)) return prev;
@@ -144,8 +162,9 @@ export function GroupScoresStep({
           next.add(matchId);
           return next;
         });
-        setErrorMatchId(null);
-        setErrorMessage(null);
+        // Solo limpiamos el error DE ESTE partido — otros con error
+        // mantienen su estado rojo intacto.
+        setErrorFor(matchId, null);
       }
     });
   };
@@ -226,20 +245,12 @@ export function GroupScoresStep({
                 draft={draft.get(match.id) ?? { home: '', away: '' }}
                 isSaved={savedIds.has(match.id)}
                 readOnly={readOnly}
-                hasError={errorMatchId === match.id}
+                errorMessage={errorsByMatch.get(match.id) ?? null}
                 onChange={(side, value) => updateField(match.id, side, value)}
                 onBlur={() => persistIfReady(match.id)}
               />
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Mensaje de error global del último save fallido */}
-      {errorMessage && (
-        <div className="flex items-center gap-2 text-sm text-destructive" role="alert">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
-          <span>{errorMessage}</span>
         </div>
       )}
     </div>
@@ -252,7 +263,8 @@ interface MatchScoreCardProps {
   /** True solo si los valores actuales fueron persistidos exitosamente en BD. */
   isSaved: boolean;
   readOnly: boolean;
-  hasError: boolean;
+  /** Mensaje de error específico de este partido. Null si no hay error. */
+  errorMessage: string | null;
   onChange: (side: 'home' | 'away', value: string) => void;
   onBlur: () => void;
 }
@@ -262,11 +274,12 @@ function MatchScoreCard({
   draft,
   isSaved,
   readOnly,
-  hasError,
+  errorMessage,
   onChange,
   onBlur,
 }: MatchScoreCardProps) {
   const kicksOffAt = new Date(match.kicks_off_at);
+  const hasError = errorMessage !== null;
 
   return (
     <article
@@ -320,6 +333,18 @@ function MatchScoreCard({
           <BracketSlot source={match.bracket_source_away} align="left" />
         )}
       </div>
+
+      {/* Mensaje de error específico de este partido. Persiste hasta que
+       * el blur con valores válidos lo limpie. */}
+      {hasError && (
+        <div
+          className="col-span-full flex items-center gap-1.5 text-[12px] text-destructive"
+          role="alert"
+        >
+          <AlertCircle className="h-3 w-3 flex-shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="col-span-full flex items-center justify-between gap-3 pt-1.5 border-t border-dashed border-border">
