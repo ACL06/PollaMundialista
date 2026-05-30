@@ -54,26 +54,34 @@ export const WORLD_CUP_TEAMS = [
 
 // Nombres y apellidos: solo letras Unicode (incluye acentos y ñ) y espacios.
 // Explícitamente NO se permiten números, guiones, apóstrofes ni otros símbolos.
-const NAME_REGEX = /^[\p{L}\s]+$/u;
+// Exportado porque el form también lo usa para validación inline en vivo.
+export const NAME_REGEX = /^[\p{L}\s]+$/u;
 const NAME_ERROR = 'Solo letras y espacios, sin números ni símbolos';
 
 // Celular colombiano: exactamente 10 dígitos empezando por 3.
 const PHONE_REGEX = /^3\d{9}$/;
 const PHONE_ERROR = 'Debe ser un celular de 10 dígitos que empiece por 3';
 
+// Helper para campos de nombre: trim primero, luego validar largo y regex.
+// Sin el trim previo, alguien escribiendo "  " (solo espacios) pasaba el
+// min(2) y se guardaba como "" tras el .transform — bypass + bucle de
+// redirect en AppLayout porque "" es falsy. El `pipe` aplica las reglas
+// sobre el valor ya transformado.
+const nameField = () =>
+  z
+    .string()
+    .max(50, 'Máximo 50 caracteres')
+    .transform((v) => v.trim())
+    .pipe(
+      z
+        .string()
+        .min(2, 'Mínimo 2 caracteres')
+        .regex(NAME_REGEX, NAME_ERROR),
+    );
+
 export const profileSchema = z.object({
-  first_name: z
-    .string()
-    .min(2, 'Mínimo 2 caracteres')
-    .max(50, 'Máximo 50 caracteres')
-    .regex(NAME_REGEX, NAME_ERROR)
-    .transform((v) => v.trim()),
-  last_name: z
-    .string()
-    .min(2, 'Mínimo 2 caracteres')
-    .max(50, 'Máximo 50 caracteres')
-    .regex(NAME_REGEX, NAME_ERROR)
-    .transform((v) => v.trim()),
+  first_name: nameField(),
+  last_name: nameField(),
   phone: z.string().regex(PHONE_REGEX, PHONE_ERROR),
   nickname: z
     .string()

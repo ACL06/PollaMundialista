@@ -15,11 +15,17 @@ export default async function OnboardingPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('nickname')
+    .select('nickname, first_name, last_name, phone')
     .eq('id', user.id)
     .single();
 
-  if (profile?.nickname) redirect('/home');
+  // Solo bypassear el onboarding si TODOS los campos obligatorios están
+  // completos. Chequear solo `nickname` dejaba a usuarios con perfil
+  // parcial atrapados en bucle (/onboarding → /home → AppLayout rebota
+  // a /onboarding porque falta phone/first_name/etc).
+  const isComplete =
+    profile?.nickname && profile?.first_name && profile?.last_name && profile?.phone;
+  if (isComplete) redirect('/home');
 
   return (
     <>

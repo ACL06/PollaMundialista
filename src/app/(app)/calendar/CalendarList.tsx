@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MatchCard } from '@/components/calendar/MatchCard';
 import { formatMatchDateLong, formatMatchDateKey } from '@/lib/format-date';
 import { cn } from '@/lib/utils';
@@ -41,10 +41,30 @@ interface CalendarListProps {
 export function CalendarList({ matches }: CalendarListProps) {
   const [filter, setFilter] = useState<Filter>('all');
 
+  // `todayKey` se mantiene en estado para que el filtro "Hoy" se actualice
+  // cuando cruza la medianoche (Bogotá). Si calculáramos `new Date()` solo
+  // dentro del useMemo, una pestaña abierta toda la noche quedaría
+  // congelada en el día anterior hasta cambiar de filtro o recargar.
+  const [todayKey, setTodayKey] = useState(() => formatMatchDateKey(new Date()));
+
+  useEffect(() => {
+    const update = () => setTodayKey(formatMatchDateKey(new Date()));
+    // Refrescar al volver a la pestaña (caso más común)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') update();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    // Heartbeat por si la pestaña queda visible cruzando medianoche
+    const interval = window.setInterval(update, 60_000);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.clearInterval(interval);
+    };
+  }, []);
+
   const filtered = useMemo(() => {
     if (filter === 'all') return matches;
     if (filter === 'today') {
-      const todayKey = formatMatchDateKey(new Date());
       return matches.filter(
         (m) => formatMatchDateKey(new Date(m.kicks_off_at)) === todayKey,
       );
@@ -56,7 +76,7 @@ export function CalendarList({ matches }: CalendarListProps) {
       return matches.filter((m) => m.stage === filter);
     }
     return matches;
-  }, [matches, filter]);
+  }, [matches, filter, todayKey]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, { label: string; matches: Match[] }>();

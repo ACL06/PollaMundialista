@@ -14,13 +14,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { WORLD_CUP_TEAMS } from '@/lib/validators/profile';
+import { NAME_REGEX, WORLD_CUP_TEAMS } from '@/lib/validators/profile';
 import { getAvatarVariants } from '@/lib/avatar';
 import { cn } from '@/lib/utils';
 import { saveProfile } from './actions';
-
-/** Solo letras Unicode (incluye acentos y ñ) y espacios. */
-const NAME_REGEX = /^[\p{L}\s]+$/u;
 
 /** Permitir solo dígitos y limitar a 10 caracteres. */
 function sanitizePhone(value: string): string {

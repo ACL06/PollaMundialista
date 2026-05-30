@@ -4,10 +4,9 @@ import type { Team } from '@/lib/types/match';
 interface TeamLabelProps {
   team: Team;
   align?: 'left' | 'right';
-  size?: 'sm' | 'md' | 'lg';
 }
 
-export function TeamLabel({ team, align = 'left', size = 'md' }: TeamLabelProps) {
+export function TeamLabel({ team, align = 'left' }: TeamLabelProps) {
   return (
     <div
       className={cn(
@@ -25,12 +24,7 @@ export function TeamLabel({ team, align = 'left', size = 'md' }: TeamLabelProps)
       />
       <span
         title={team.name}
-        className={cn(
-          'text-foreground font-medium truncate',
-          size === 'sm' && 'text-[13px]',
-          size === 'md' && 'text-[15px]',
-          size === 'lg' && 'text-[18px] font-semibold',
-        )}
+        className="text-foreground font-medium truncate text-[15px]"
       >
         {team.name}
       </span>
