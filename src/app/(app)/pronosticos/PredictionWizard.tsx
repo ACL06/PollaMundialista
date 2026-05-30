@@ -6,13 +6,17 @@ import { cn } from '@/lib/utils';
 import { WizardNav, type WizardStep } from './WizardNav';
 import { WelcomeStep } from './steps/WelcomeStep';
 import { GroupScoresStep, type GroupScoreDraft } from './steps/GroupScoresStep';
+import { BracketStep } from './steps/BracketStep';
 import { PlaceholderStep } from './steps/PlaceholderStep';
-import { saveGroupScore } from './actions';
-import type { Match } from '@/lib/types/match';
-import type {
-  Prediction,
-  PredictionBracketEntry,
-  PredictionGroupScore,
+import { saveGroupScore, toggleBracketTeam } from './actions';
+import type { Match, Team } from '@/lib/types/match';
+import {
+  BRACKET_ROUNDS,
+  roundsFrom,
+  type Prediction,
+  type PredictionBracketEntry,
+  type PredictionBracketRound,
+  type PredictionGroupScore,
 } from '@/lib/types/prediction';
 
 const STEPS = [
@@ -28,6 +32,7 @@ interface PredictionWizardProps {
   initialGroupScores: PredictionGroupScore[];
   initialBracket: PredictionBracketEntry[];
   groupMatches: Match[];
+  teams: Team[];
   lockAt: string | null;
 }
 
@@ -44,6 +49,27 @@ function buildInitialDraft(scores: PredictionGroupScore[]): Map<string, GroupSco
   return map;
 }
 
+/** Construye el mapa round → Set(team_codes) desde las filas iniciales. */
+function buildInitialBracket(
+  entries: PredictionBracketEntry[],
+): Map<PredictionBracketRound, Set<string>> {
+  const map = new Map<PredictionBracketRound, Set<string>>();
+  for (const round of BRACKET_ROUNDS) map.set(round, new Set());
+  for (const e of entries) {
+    map.get(e.round)?.add(e.team_code);
+  }
+  return map;
+}
+
+/** Copia profunda del mapa de bracket (para snapshots de revert). */
+function cloneBracket(
+  map: Map<PredictionBracketRound, Set<string>>,
+): Map<PredictionBracketRound, Set<string>> {
+  const next = new Map<PredictionBracketRound, Set<string>>();
+  for (const [round, set] of map) next.set(round, new Set(set));
+  return next;
+}
+
 /**
  * Wizard cliente que orquesta los 5 steps del pronóstico. El state de
  * cada step (draft, savedIds, errores, tab interno) vive aquí para que
@@ -55,6 +81,7 @@ export function PredictionWizard({
   initialGroupScores,
   initialBracket,
   groupMatches,
+  teams,
   lockAt,
 }: PredictionWizardProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -154,8 +181,44 @@ export function PredictionWizard({
     });
   };
 
-  // `void` mientras los steps siguientes no consumen estos datos.
-  void initialBracket;
+  // ── State del step "Bracket" ─────────────────────────────────────
+  const initialBracketMap = useMemo(
+    () => buildInitialBracket(initialBracket),
+    [initialBracket],
+  );
+  const [bracket, setBracket] = useState(initialBracketMap);
+  const [bracketRound, setBracketRound] = useState<PredictionBracketRound>('r32');
+  const [bracketError, setBracketError] = useState<string | null>(null);
+  const [, startBracketSave] = useTransition();
+
+  const handleBracketToggle = (round: PredictionBracketRound, teamCode: string) => {
+    if (isLocked || isSubmitted) return;
+    const isSelected = bracket.get(round)?.has(teamCode) ?? false;
+    const snapshot = cloneBracket(bracket);
+
+    // Optimista: actualizar local primero.
+    const next = cloneBracket(bracket);
+    if (isSelected) {
+      // Quitar: cascada a esta ronda y todas las posteriores.
+      for (const r of roundsFrom(round)) next.get(r)?.delete(teamCode);
+    } else {
+      next.get(round)?.add(teamCode);
+    }
+    setBracket(next);
+    setBracketError(null);
+
+    startBracketSave(async () => {
+      const result = await toggleBracketTeam({
+        round,
+        team_code: teamCode,
+        selected: !isSelected,
+      });
+      if (result.error) {
+        setBracket(snapshot); // revertir
+        setBracketError(result.error);
+      }
+    });
+  };
 
   const goNext = () => {
     if (currentIndex < STEPS.length - 1) setCurrentIndex(currentIndex + 1);
@@ -204,7 +267,16 @@ export function PredictionWizard({
             isSubmitted={isSubmitted}
           />
         ) : currentStep.key === 'bracket' ? (
-          <PlaceholderStep stepName="Bracket eliminatorio" comingIn="4B.3" />
+          <BracketStep
+            teams={teams}
+            bracket={bracket}
+            activeRound={bracketRound}
+            onSelectRound={setBracketRound}
+            onToggle={handleBracketToggle}
+            error={bracketError}
+            isLocked={isLocked}
+            isSubmitted={isSubmitted}
+          />
         ) : currentStep.key === 'closing' ? (
           <PlaceholderStep stepName="Campeón, goleador y bonus" comingIn="4B.4" />
         ) : (

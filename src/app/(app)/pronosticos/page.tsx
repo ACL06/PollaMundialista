@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getPredictionsLockAt } from '@/lib/predictions-lock';
 import { PredictionWizard } from './PredictionWizard';
-import type { Match } from '@/lib/types/match';
+import type { Match, Team } from '@/lib/types/match';
 import type {
   Prediction,
   PredictionBracketEntry,
@@ -21,7 +21,7 @@ export default async function PronosticosPage() {
   // Carga en paralelo: pronóstico principal, marcadores, bracket,
   // partidos de fase de grupos y lock-at. RLS filtra automáticamente
   // por auth.uid() = user_id en las tablas de predicción.
-  const [predictionResult, scoresResult, bracketResult, matchesResult, lockAt] =
+  const [predictionResult, scoresResult, bracketResult, matchesResult, teamsResult, lockAt] =
     await Promise.all([
       supabase.from('predictions').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('prediction_group_scores').select('*').eq('user_id', user.id),
@@ -39,12 +39,18 @@ export default async function PronosticosPage() {
         )
         .eq('stage', 'group')
         .order('kicks_off_at', { ascending: true }),
+      supabase
+        .from('teams')
+        .select('code, name, flag, group_code')
+        .not('group_code', 'is', null)
+        .order('group_code', { ascending: true }),
       getPredictionsLockAt(),
     ]);
 
   const prediction = (predictionResult.data ?? null) as Prediction | null;
   const groupScores = (scoresResult.data ?? []) as PredictionGroupScore[];
   const bracket = (bracketResult.data ?? []) as PredictionBracketEntry[];
+  const teams = (teamsResult.data ?? []) as Team[];
 
   // Normaliza home_team/away_team a object (Supabase a veces los trae como array).
   const groupMatches = (matchesResult.data ?? []).map((row) => {
@@ -63,6 +69,7 @@ export default async function PronosticosPage() {
       initialGroupScores={groupScores}
       initialBracket={bracket}
       groupMatches={groupMatches}
+      teams={teams}
       lockAt={lockAt?.toISOString() ?? null}
     />
   );
