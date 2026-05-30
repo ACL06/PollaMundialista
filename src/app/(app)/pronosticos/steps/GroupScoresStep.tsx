@@ -71,25 +71,17 @@ export function GroupScoresStep({
   const [draft, setDraft] = useState<Map<string, DraftScore>>(() =>
     buildInitialDraft(initialScores),
   );
+  // IDs efectivamente persistidos en BD. Inicializa con los que vinieron
+  // del server y se actualiza tras cada save exitoso. Es el truth source
+  // del badge "Guardado" — no nos basamos en si los inputs tienen valor.
+  const [savedIds, setSavedIds] = useState<Set<string>>(
+    () => new Set(initialScores.map((s) => s.match_id)),
+  );
   const [errorMatchId, setErrorMatchId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  // Cuántos partidos tienen un marcador completo y válido guardado.
-  const completedCount = useMemo(() => {
-    let n = 0;
-    for (const s of initialScores) {
-      if (
-        typeof s.home_score === 'number' &&
-        typeof s.away_score === 'number' &&
-        s.home_score >= 0 &&
-        s.away_score >= 0
-      ) {
-        n += 1;
-      }
-    }
-    return n;
-  }, [initialScores]);
+  const completedCount = savedIds.size;
 
   const selectedDay = days.find((d) => d.key === selectedDayKey);
 
@@ -99,6 +91,14 @@ export function GroupScoresStep({
       const next = new Map(prev);
       const current = next.get(matchId) ?? { home: '', away: '' };
       next.set(matchId, { ...current, [side]: cleaned });
+      return next;
+    });
+    // Al editar, el valor en pantalla deja de coincidir con lo guardado;
+    // quitar del Set hasta que un nuevo save confirme.
+    setSavedIds((prev) => {
+      if (!prev.has(matchId)) return prev;
+      const next = new Set(prev);
+      next.delete(matchId);
       return next;
     });
     if (errorMatchId === matchId) {
@@ -130,7 +130,20 @@ export function GroupScoresStep({
       if (result.error) {
         setErrorMatchId(matchId);
         setErrorMessage(result.error);
+        // Defensivo: si fallaba el save, asegurar que NO quede como guardado
+        setSavedIds((prev) => {
+          if (!prev.has(matchId)) return prev;
+          const next = new Set(prev);
+          next.delete(matchId);
+          return next;
+        });
       } else {
+        setSavedIds((prev) => {
+          if (prev.has(matchId)) return prev;
+          const next = new Set(prev);
+          next.add(matchId);
+          return next;
+        });
         setErrorMatchId(null);
         setErrorMessage(null);
       }
@@ -166,10 +179,9 @@ export function GroupScoresStep({
       >
         {days.map((day) => {
           const isActive = day.key === selectedDayKey;
-          const filled = day.matches.filter((m) => {
-            const s = draft.get(m.id);
-            return s && s.home !== '' && s.away !== '';
-          }).length;
+          // Contar partidos del día que tienen marcador guardado (no solo
+          // tipeado). Coherente con el badge "Guardado" en cada card.
+          const filled = day.matches.filter((m) => savedIds.has(m.id)).length;
           return (
             <button
               key={day.key}
@@ -212,6 +224,7 @@ export function GroupScoresStep({
                 key={match.id}
                 match={match}
                 draft={draft.get(match.id) ?? { home: '', away: '' }}
+                isSaved={savedIds.has(match.id)}
                 readOnly={readOnly}
                 hasError={errorMatchId === match.id}
                 onChange={(side, value) => updateField(match.id, side, value)}
@@ -236,6 +249,8 @@ export function GroupScoresStep({
 interface MatchScoreCardProps {
   match: Match;
   draft: DraftScore;
+  /** True solo si los valores actuales fueron persistidos exitosamente en BD. */
+  isSaved: boolean;
   readOnly: boolean;
   hasError: boolean;
   onChange: (side: 'home' | 'away', value: string) => void;
@@ -245,12 +260,12 @@ interface MatchScoreCardProps {
 function MatchScoreCard({
   match,
   draft,
+  isSaved,
   readOnly,
   hasError,
   onChange,
   onBlur,
 }: MatchScoreCardProps) {
-  const isComplete = draft.home !== '' && draft.away !== '';
   const kicksOffAt = new Date(match.kicks_off_at);
 
   return (
@@ -258,8 +273,8 @@ function MatchScoreCard({
       className={cn(
         'border rounded-lg px-[18px] py-[14px] grid grid-cols-1 sm:grid-cols-[110px_minmax(0,1fr)] gap-y-2 sm:gap-x-[18px] font-sans transition-colors',
         hasError && 'border-destructive bg-destructive/5',
-        !hasError && isComplete && 'border-primary/40 bg-primary/[0.03]',
-        !hasError && !isComplete && 'border-border bg-surface',
+        !hasError && isSaved && 'border-primary/40 bg-primary/[0.03]',
+        !hasError && !isSaved && 'border-border bg-surface',
       )}
     >
       {/* Hora + check */}
@@ -267,7 +282,7 @@ function MatchScoreCard({
         <span className="text-[18px] font-semibold text-foreground leading-none">
           {formatMatchTime(kicksOffAt)}
         </span>
-        {isComplete && (
+        {isSaved && (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
             <CheckCircle2 className="h-3 w-3" />
             Guardado
