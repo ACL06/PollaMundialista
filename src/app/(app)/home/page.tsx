@@ -70,13 +70,13 @@ export default async function HomePage() {
               <CalendarDays className="h-[18px] w-[18px] text-tertiary" />
               <span className="text-[13px] font-medium">Calendario</span>
             </Link>
-            <div
-              className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground opacity-60"
-              aria-label="Pronósticos (próximamente)"
+            <Link
+              href="/pronosticos"
+              className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <Target className="h-[18px] w-[18px] text-tertiary" />
               <span className="text-[13px] font-medium">Pronósticos</span>
-            </div>
+            </Link>
             <div
               className="flex flex-col items-center gap-2.5 px-3 py-[18px] rounded-lg border border-border bg-surface text-muted-foreground opacity-60"
               aria-label="Ranking (próximamente)"
