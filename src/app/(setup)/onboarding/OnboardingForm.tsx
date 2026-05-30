@@ -2,7 +2,16 @@
 
 import { useState, useTransition, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Trophy, AlertCircle, Check, RefreshCw } from 'lucide-react';
+import {
+  User,
+  Users,
+  Phone,
+  AtSign,
+  Trophy,
+  AlertCircle,
+  Check,
+  RefreshCw,
+} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { WORLD_CUP_TEAMS } from '@/lib/validators/profile';
@@ -10,7 +19,20 @@ import { getAvatarVariants } from '@/lib/avatar';
 import { cn } from '@/lib/utils';
 import { saveProfile } from './actions';
 
+/** Permitir solo letras Unicode (incluye acentos y ñ) y espacios. */
+function sanitizeName(value: string): string {
+  return value.replace(/[^\p{L}\s]/gu, '');
+}
+
+/** Permitir solo dígitos y limitar a 10 caracteres. */
+function sanitizePhone(value: string): string {
+  return value.replace(/\D/g, '').slice(0, 10);
+}
+
 export function OnboardingForm() {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
   const [nickname, setNickname] = useState('');
   const [favoriteTeam, setFavoriteTeam] = useState('');
   const [generation, setGeneration] = useState(0);
@@ -34,6 +56,9 @@ export function OnboardingForm() {
 
     startTransition(async () => {
       const result = await saveProfile({
+        first_name: firstName,
+        last_name: lastName,
+        phone,
         nickname,
         favorite_team: favoriteTeam || null,
         avatar_url: avatarVariants[selectedIndex],
@@ -43,6 +68,16 @@ export function OnboardingForm() {
       }
     });
   };
+
+  // El botón "Guardar y continuar" se habilita cuando todos los campos
+  // obligatorios tienen un valor mínimo aceptable (la validación estricta
+  // la hace Zod en el server action).
+  const canSubmit =
+    firstName.length >= 2 &&
+    lastName.length >= 2 &&
+    phone.length === 10 &&
+    phone.startsWith('3') &&
+    nickname.length >= 3;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -103,13 +138,92 @@ export function OnboardingForm() {
         </p>
       </div>
 
+      {/* Nombre */}
+      <div className="space-y-1.5">
+        <label htmlFor="first_name" className="block text-sm font-medium text-foreground">
+          Nombre <span className="text-destructive">*</span>
+        </label>
+        <div className="relative">
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            id="first_name"
+            type="text"
+            placeholder="ej: Álvaro"
+            value={firstName}
+            onChange={(e) => {
+              setFirstName(sanitizeName(e.target.value));
+              if (error) setError(null);
+            }}
+            disabled={isPending}
+            className="pl-10"
+            autoComplete="given-name"
+            maxLength={50}
+            required
+          />
+        </div>
+      </div>
+
+      {/* Apellidos */}
+      <div className="space-y-1.5">
+        <label htmlFor="last_name" className="block text-sm font-medium text-foreground">
+          Apellidos <span className="text-destructive">*</span>
+        </label>
+        <div className="relative">
+          <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            id="last_name"
+            type="text"
+            placeholder="ej: Castaño Pérez"
+            value={lastName}
+            onChange={(e) => {
+              setLastName(sanitizeName(e.target.value));
+              if (error) setError(null);
+            }}
+            disabled={isPending}
+            className="pl-10"
+            autoComplete="family-name"
+            maxLength={50}
+            required
+          />
+        </div>
+      </div>
+
+      {/* Celular */}
+      <div className="space-y-1.5">
+        <label htmlFor="phone" className="block text-sm font-medium text-foreground">
+          Celular <span className="text-destructive">*</span>
+        </label>
+        <div className="relative">
+          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            id="phone"
+            type="tel"
+            inputMode="numeric"
+            placeholder="3001234567"
+            value={phone}
+            onChange={(e) => {
+              setPhone(sanitizePhone(e.target.value));
+              if (error) setError(null);
+            }}
+            disabled={isPending}
+            className="pl-10"
+            autoComplete="tel-national"
+            maxLength={10}
+            required
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          10 dígitos, debe empezar por 3.
+        </p>
+      </div>
+
       {/* Nickname */}
       <div className="space-y-1.5">
         <label htmlFor="nickname" className="block text-sm font-medium text-foreground">
           Nickname <span className="text-destructive">*</span>
         </label>
         <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             id="nickname"
             type="text"
@@ -201,7 +315,7 @@ export function OnboardingForm() {
         size="lg"
         fullWidth
         loading={isPending}
-        disabled={nickname.length < 3}
+        disabled={!canSubmit}
       >
         Guardar y continuar
       </Button>
