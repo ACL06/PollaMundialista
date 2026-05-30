@@ -24,3 +24,16 @@ export const groupScoreSchema = z.object({
 });
 
 export type GroupScoreInput = z.infer<typeof groupScoreSchema>;
+
+/**
+ * Toggle de un equipo en una ronda del bracket eliminatorio.
+ * `selected: true` agrega; `false` quita (y el server hace cascada a
+ * las rondas posteriores).
+ */
+export const bracketToggleSchema = z.object({
+  round: z.enum(['r32', 'r16', 'qf', 'sf']),
+  team_code: z.string().regex(/^[A-Z]{2,4}$/, 'Código de equipo inválido'),
+  selected: z.boolean(),
+});
+
+export type BracketToggleInput = z.infer<typeof bracketToggleSchema>;

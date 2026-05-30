@@ -14,6 +14,44 @@
 
 export type PredictionBracketRound = 'r32' | 'r16' | 'qf' | 'sf';
 
+/** Orden de las rondas del bracket, de más temprana a más tardía. */
+export const BRACKET_ROUNDS: readonly PredictionBracketRound[] = ['r32', 'r16', 'qf', 'sf'];
+
+/** Cuántos equipos se seleccionan en cada ronda. */
+export const BRACKET_ROUND_SIZE: Record<PredictionBracketRound, number> = {
+  r32: 32,
+  r16: 16,
+  qf: 8,
+  sf: 4,
+};
+
+/** Etiqueta humana de cada ronda. */
+export const BRACKET_ROUND_LABEL: Record<PredictionBracketRound, string> = {
+  r32: 'Treintaidosavos',
+  r16: 'Octavos de Final',
+  qf: 'Cuartos de Final',
+  sf: 'Semifinales',
+};
+
+/**
+ * Devuelve una ronda y todas las posteriores a ella (downstream incluido).
+ * Usado para la cascada: si un equipo deja de clasificar a una ronda,
+ * tampoco puede estar en las siguientes.
+ *   roundsFrom('r16') → ['r16', 'qf', 'sf']
+ */
+export function roundsFrom(round: PredictionBracketRound): PredictionBracketRound[] {
+  const i = BRACKET_ROUNDS.indexOf(round);
+  return [...BRACKET_ROUNDS.slice(i)];
+}
+
+/** La ronda inmediatamente anterior, o null si es la primera (r32). */
+export function previousRound(
+  round: PredictionBracketRound,
+): PredictionBracketRound | null {
+  const i = BRACKET_ROUNDS.indexOf(round);
+  return i > 0 ? BRACKET_ROUNDS[i - 1] : null;
+}
+
 /**
  * Pronóstico principal del usuario.
  * Una sola fila por usuario; `locked_at` se setea cuando envía el
