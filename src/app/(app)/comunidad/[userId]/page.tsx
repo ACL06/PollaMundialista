@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
 import { PredictionView } from '../../pronosticos/PredictionView';
+import { displayName } from '../shared';
 import type { Match, Team } from '@/lib/types/match';
 import type {
   Prediction,
@@ -53,12 +54,19 @@ export default async function ComunidadUserPage({
         .select('code, name, flag, group_code')
         .not('group_code', 'is', null)
         .order('group_code', { ascending: true }),
-      supabase.from('public_profiles').select('id, nickname').eq('id', userId).maybeSingle(),
+      supabase
+        .from('public_profiles')
+        .select('id, nickname, first_name, last_name')
+        .eq('id', userId)
+        .maybeSingle(),
     ]);
 
-  const nickname = (profileResult.data?.nickname as string | undefined) ?? null;
+  const profile = profileResult.data as
+    | { nickname: string | null; first_name: string | null; last_name: string | null }
+    | null;
+  const ownerName = profile ? displayName(profile) : null;
 
-  if (!nickname) {
+  if (!ownerName) {
     return (
       <div className="max-w-xl mx-auto px-5 py-16 text-center flex flex-col items-center gap-4">
         <h1 className="text-2xl font-bold text-foreground">Jugador no encontrado</h1>
@@ -103,7 +111,7 @@ export default async function ComunidadUserPage({
         teams={teams}
         isSubmitted={prediction?.locked_at != null}
         isLocked
-        ownerName={nickname}
+        ownerName={ownerName}
       />
     </div>
   );

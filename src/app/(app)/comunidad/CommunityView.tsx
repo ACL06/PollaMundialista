@@ -12,7 +12,7 @@ import {
 } from '@/lib/format-date';
 import { cn } from '@/lib/utils';
 import type { Match } from '@/lib/types/match';
-import type { CommunityScore, PublicProfile } from './page';
+import { displayName, type CommunityScore, type PublicProfile } from './shared';
 
 interface CommunityViewProps {
   groupMatches: Match[];
@@ -24,7 +24,7 @@ interface CommunityViewProps {
 export function CommunityView({ groupMatches, scores, profiles, participants }: CommunityViewProps) {
   const nameById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const p of profiles) map.set(p.id, p.nickname ?? 'Jugador');
+    for (const p of profiles) map.set(p.id, displayName(p));
     return map;
   }, [profiles]);
 
@@ -88,7 +88,7 @@ export function CommunityView({ groupMatches, scores, profiles, participants }: 
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
               )}
             >
-              <span>{p.nickname ?? 'Jugador'}</span>
+              <span>{displayName(p)}</span>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
             </Link>
           ))}

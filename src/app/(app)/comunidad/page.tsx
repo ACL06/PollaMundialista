@@ -4,23 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
 import { Countdown } from '@/components/pronosticos/Countdown';
 import { CommunityView } from './CommunityView';
+import { displayName, type CommunityScore, type PublicProfile } from './shared';
 import type { Match } from '@/lib/types/match';
 
 export const metadata = { title: 'Comunidad' };
-
-export interface PublicProfile {
-  id: string;
-  nickname: string | null;
-  avatar_url: string | null;
-  favorite_team: string | null;
-}
-
-export interface CommunityScore {
-  user_id: string;
-  match_id: string;
-  home_score: number;
-  away_score: number;
-}
 
 export default async function ComunidadPage() {
   const supabase = await createClient();
@@ -76,7 +63,9 @@ export default async function ComunidadPage() {
       .from('prediction_group_scores')
       .select('user_id, match_id, home_score, away_score'),
     supabase.from('predictions').select('user_id'),
-    supabase.from('public_profiles').select('id, nickname, avatar_url, favorite_team'),
+    supabase
+      .from('public_profiles')
+      .select('id, nickname, first_name, last_name, avatar_url, favorite_team'),
   ]);
 
   const groupMatches = (matchesResult.data ?? []).map((row) => {
@@ -100,7 +89,7 @@ export default async function ComunidadPage() {
   ]);
   const participants = profiles
     .filter((p) => participantIds.has(p.id))
-    .sort((a, b) => (a.nickname ?? '').localeCompare(b.nickname ?? ''));
+    .sort((a, b) => displayName(a).localeCompare(displayName(b)));
 
   return (
     <CommunityView
