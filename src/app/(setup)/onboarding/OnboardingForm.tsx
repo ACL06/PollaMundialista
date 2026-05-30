@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition, useMemo, useEffect } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
@@ -135,7 +136,14 @@ export function OnboardingForm() {
                 'disabled:cursor-not-allowed',
               )}
             >
-              <img src={url} alt="" className="h-full w-full" />
+              <Image
+                src={url}
+                alt=""
+                width={96}
+                height={96}
+                className="h-full w-full"
+                unoptimized
+              />
               {selectedIndex === i && (
                 <motion.div
                   initial={{ scale: 0 }}

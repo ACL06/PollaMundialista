@@ -32,6 +32,22 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  // Avatares vienen de DiceBear como SVG. Para usar `next/image` con
+  // ese origen externo necesitamos:
+  //   - remotePatterns: lista blanca de hosts permitidos
+  //   - dangerouslyAllowSVG: opt-in explícito; los SVG pueden contener
+  //     scripts. Como DiceBear es una fuente controlada (URL armada con
+  //     parámetros desde nuestro código), el riesgo es bajo.
+  //   - contentSecurityPolicy: además sandboxea el SVG para que aunque
+  //     trajera scripts inline, el navegador no los ejecute.
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'api.dicebear.com', pathname: '/**' },
+    ],
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+  },
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
   },
