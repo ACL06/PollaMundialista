@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { getPredictionsLockAt } from '@/lib/predictions-lock';
+import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
 import { PredictionWizard } from './PredictionWizard';
+import { PredictionView } from './PredictionView';
 import type { Match, Team } from '@/lib/types/match';
 import type {
   Prediction,
@@ -62,6 +63,25 @@ export default async function PronosticosPage() {
       : (row.away_team ?? null);
     return { ...row, home_team: homeTeam, away_team: awayTeam };
   }) as unknown as Match[];
+
+  // Si ya envió (one-shot) o el plazo global cerró → vista de solo
+  // lectura. En otro caso, el wizard editable.
+  const isSubmitted = prediction?.locked_at != null;
+  const isLocked = isLockedAt(lockAt);
+
+  if (isSubmitted || isLocked) {
+    return (
+      <PredictionView
+        prediction={prediction}
+        groupScores={groupScores}
+        bracket={bracket}
+        groupMatches={groupMatches}
+        teams={teams}
+        isSubmitted={isSubmitted}
+        isLocked={isLocked}
+      />
+    );
+  }
 
   return (
     <PredictionWizard
