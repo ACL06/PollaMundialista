@@ -69,15 +69,20 @@ export function GroupScoresStep({
   const selectedDay = days.find((d) => d.key === selectedDayKey) ?? days[0];
 
   // Mantener el tab del día seleccionado centrado en el scroll horizontal.
-  // Scroll controlado sobre el contenedor (no scrollIntoView) para no mover
-  // el scroll vertical de la página.
+  // Se calcula el offset del tab DENTRO del contenedor con rects (no
+  // `offsetLeft`, que es relativo al offsetParent y se iba hasta el final).
+  // Scroll controlado del contenedor para no mover el scroll de la página.
   const tabsRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const container = tabsRef.current;
     const active = activeTabRef.current;
     if (!container || !active) return;
-    const target = active.offsetLeft - (container.clientWidth - active.clientWidth) / 2;
+    const containerRect = container.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    // Posición del tab dentro del contenido scrolleable del contenedor.
+    const offsetWithin = activeRect.left - containerRect.left + container.scrollLeft;
+    const target = offsetWithin - (container.clientWidth - active.clientWidth) / 2;
     container.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
   }, [selectedDay?.key]);
 
