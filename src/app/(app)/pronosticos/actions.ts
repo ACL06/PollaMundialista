@@ -1,8 +1,11 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { isPredictionsLocked } from '@/lib/predictions-lock';
-import { groupScoreSchema, bracketToggleSchema } from '@/lib/validators/prediction';
+import {
+  groupScoreSchema,
+  bracketToggleSchema,
+  predictionMetaSchema,
+} from '@/lib/validators/prediction';
 import {
   BRACKET_ROUND_SIZE,
   BRACKET_R32_GROUP_MAX,
@@ -14,16 +17,44 @@ interface ActionResult {
   error?: string;
 }
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
 /**
- * Guarda un marcador predicho para un partido específico de fase de
- * grupos. Usa `upsert` sobre la PK compuesta (user_id, match_id), así
- * que llamar varias veces con el mismo match_id sobreescribe.
+ * Devuelve un mensaje si el usuario NO puede editar su pronóstico:
+ *   - El plazo global ya cerró (kickoff del match #1), o
+ *   - El usuario ya envió su pronóstico (locked_at seteado → one-shot).
+ * Devuelve null si puede editar. Usa el mismo cliente de la action para
+ * no abrir conexiones extra.
+ */
+async function editBlockReason(
+  supabase: SupabaseServerClient,
+  userId: string,
+): Promise<string | null> {
+  const { data: m1 } = await supabase
+    .from('matches')
+    .select('kicks_off_at')
+    .eq('match_number', 1)
+    .maybeSingle();
+  if (m1 && new Date() >= new Date(m1.kicks_off_at)) {
+    return 'El plazo de pronósticos ya cerró';
+  }
+  const { data: pred } = await supabase
+    .from('predictions')
+    .select('locked_at')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (pred?.locked_at) {
+    return 'Ya enviaste tu pronóstico; no se puede modificar';
+  }
+  return null;
+}
+
+/**
+ * Guarda un marcador predicho para un partido de fase de grupos.
+ * `upsert` sobre la PK compuesta (user_id, match_id) → idempotente.
  *
- * Validación en triple barrera:
- *   1. Zod aquí abajo (forma y rango)
- *   2. Lock global vía `isPredictionsLocked()` (defensa explícita)
- *   3. RLS en BD (último filtro: las policies de insert/update chequean
- *      `now() < predictions_lock_at()`)
+ * Validación en capas: Zod (forma/rango) → editBlockReason (lock global
+ * + submit propio) → RLS en BD.
  */
 export async function saveGroupScore(input: {
   match_id: string;
@@ -35,10 +66,6 @@ export async function saveGroupScore(input: {
     return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' };
   }
 
-  if (await isPredictionsLocked()) {
-    return { error: 'El plazo de pronósticos ya cerró' };
-  }
-
   const supabase = await createClient();
   const {
     data: { user },
@@ -46,6 +73,9 @@ export async function saveGroupScore(input: {
   if (!user) {
     return { error: 'Sesión expirada' };
   }
+
+  const blocked = await editBlockReason(supabase, user.id);
+  if (blocked) return { error: blocked };
 
   const { error } = await supabase.from('prediction_group_scores').upsert({
     user_id: user.id,
@@ -67,15 +97,12 @@ export async function saveGroupScore(input: {
  *
  * Al AGREGAR (`selected: true`):
  *   - Rechaza si la ronda ya alcanzó su cupo (32/16/8/4).
+ *   - En r32, rechaza si el grupo del equipo ya tiene 3 (regla 2-3).
  *   - Rechaza si el equipo no está en la ronda anterior (subset).
  *   - Idempotente: si ya estaba, no hace nada.
  *
  * Al QUITAR (`selected: false`):
- *   - Elimina el equipo de esta ronda y de TODAS las posteriores
- *     (cascada): no puede estar en cuartos quien dejó de estar en
- *     octavos.
- *
- * Triple barrera de validación: Zod, lock global, y RLS en BD.
+ *   - Elimina el equipo de esta ronda y de TODAS las posteriores (cascada).
  */
 export async function toggleBracketTeam(input: {
   round: 'r32' | 'r16' | 'qf' | 'sf';
@@ -88,10 +115,6 @@ export async function toggleBracketTeam(input: {
   }
   const { round, team_code, selected } = parsed.data;
 
-  if (await isPredictionsLocked()) {
-    return { error: 'El plazo de pronósticos ya cerró' };
-  }
-
   const supabase = await createClient();
   const {
     data: { user },
@@ -99,6 +122,9 @@ export async function toggleBracketTeam(input: {
   if (!user) {
     return { error: 'Sesión expirada' };
   }
+
+  const blocked = await editBlockReason(supabase, user.id);
+  if (blocked) return { error: blocked };
 
   if (selected) {
     // ¿Ya estaba? → no-op idempotente
@@ -189,5 +215,80 @@ export async function toggleBracketTeam(input: {
     console.error('[toggleBracketTeam] delete', error.message);
     return { error: 'No pudimos guardar. Intenta de nuevo.' };
   }
+  return {};
+}
+
+/**
+ * Guarda los campos "meta" del pronóstico (campeón, subcampeón, tercer
+ * puesto, marcador exacto de la final, goleador). Solo persiste los
+ * campos que llegan definidos — `null` limpia, `undefined` no toca.
+ * `upsert` sobre la PK user_id.
+ */
+export async function savePredictionMeta(input: {
+  champion_code?: string | null;
+  runner_up_code?: string | null;
+  third_place_code?: string | null;
+  final_home_score?: number | null;
+  final_away_score?: number | null;
+  top_scorer?: string | null;
+}): Promise<ActionResult> {
+  const parsed = predictionMetaSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: 'Sesión expirada' };
+  }
+
+  const blocked = await editBlockReason(supabase, user.id);
+  if (blocked) return { error: blocked };
+
+  // Solo incluir las claves definidas (las que el cliente quiso tocar).
+  const row: Record<string, unknown> = { user_id: user.id };
+  for (const [key, value] of Object.entries(parsed.data)) {
+    if (value !== undefined) row[key] = value;
+  }
+
+  const { error } = await supabase.from('predictions').upsert(row);
+  if (error) {
+    console.error('[savePredictionMeta]', error.message);
+    return { error: 'No pudimos guardar. Intenta de nuevo.' };
+  }
+
+  return {};
+}
+
+/**
+ * Envío definitivo del pronóstico: setea `locked_at = now()`. A partir
+ * de ahí el pronóstico es inmutable (one-shot), enforzado por:
+ *   - editBlockReason en las demás actions (no más edición)
+ *   - trigger `predictions_locked_at_immutable` en BD
+ * Rechaza si ya está enviado o si el plazo global ya cerró.
+ */
+export async function submitPrediction(): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: 'Sesión expirada' };
+  }
+
+  const blocked = await editBlockReason(supabase, user.id);
+  if (blocked) return { error: blocked };
+
+  const { error } = await supabase
+    .from('predictions')
+    .upsert({ user_id: user.id, locked_at: new Date().toISOString() });
+  if (error) {
+    console.error('[submitPrediction]', error.message);
+    return { error: 'No pudimos enviar tu pronóstico. Intenta de nuevo.' };
+  }
+
   return {};
 }
