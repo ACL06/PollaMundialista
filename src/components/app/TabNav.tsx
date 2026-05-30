@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CalendarDays, Home, ListOrdered, Target } from 'lucide-react';
+import { CalendarDays, Home, ListOrdered, Target, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const tabs = [
@@ -10,6 +10,7 @@ const tabs = [
   { href: '/calendar', label: 'Calendario', Icon: CalendarDays },
   { href: '/grupos', label: 'Fase de grupos', Icon: ListOrdered },
   { href: '/pronosticos', label: 'Pronósticos', Icon: Target },
+  { href: '/comunidad', label: 'Comunidad', Icon: Users },
 ] as const;
 
 export function TabNav() {
@@ -17,7 +18,9 @@ export function TabNav() {
 
   return (
     <nav className="border-b border-border bg-background sticky top-0 z-10">
-      <div className="max-w-6xl mx-auto px-5 flex gap-1">
+      {/* overflow-x-auto: con 5 pestañas no caben en mobile; en desktop sí
+        * (sin scrollbar visible). */}
+      <div className="max-w-6xl mx-auto px-5 flex gap-1 overflow-x-auto">
         {tabs.map(({ href, label, Icon }) => {
           const isActive = pathname === href || pathname.startsWith(href + '/');
           return (

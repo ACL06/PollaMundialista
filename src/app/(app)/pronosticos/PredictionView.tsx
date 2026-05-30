@@ -25,6 +25,11 @@ interface PredictionViewProps {
   isSubmitted: boolean;
   /** El plazo global ya cerró (kickoff del match #1). */
   isLocked: boolean;
+  /**
+   * Si se pasa, es el pronóstico de OTRO usuario (vista Comunidad) y el
+   * encabezado dice "Pronóstico de {ownerName}". Si se omite, es el propio.
+   */
+  ownerName?: string;
 }
 
 /**
@@ -40,7 +45,9 @@ export function PredictionView({
   teams,
   isSubmitted,
   isLocked,
+  ownerName,
 }: PredictionViewProps) {
+  const isOwn = !ownerName;
   const teamsByCode = new Map(teams.map((t) => [t.code, t]));
 
   // Marcadores: match_id → score
@@ -85,12 +92,12 @@ export function PredictionView({
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col gap-7">
       <header className="space-y-3">
         <h1 className="text-[28px] sm:text-[32px] font-bold tracking-tight text-foreground">
-          Mi pronóstico
+          {isOwn ? 'Mi pronóstico' : `Pronóstico de ${ownerName}`}
         </h1>
         {isSubmitted ? (
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
             <CheckCircle2 className="h-4 w-4" />
-            Enviado · definitivo
+            {isOwn ? 'Enviado · definitivo' : 'Enviado'}
           </div>
         ) : (
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/10 text-destructive text-sm font-medium">
@@ -99,9 +106,11 @@ export function PredictionView({
           </div>
         )}
         <p className="text-sm text-muted-foreground">
-          {isLocked
-            ? 'El torneo ya comenzó. Este es tu pronóstico final, no se puede modificar.'
-            : 'Ya enviaste tu pronóstico. Quedó registrado como definitivo.'}
+          {!isOwn
+            ? 'Visible para todos porque el plazo de pronósticos ya cerró.'
+            : isLocked
+              ? 'El torneo ya comenzó. Este es tu pronóstico final, no se puede modificar.'
+              : 'Ya enviaste tu pronóstico. Quedó registrado como definitivo.'}
         </p>
       </header>
 
