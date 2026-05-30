@@ -291,3 +291,47 @@ function pickWinner(m: Match): { winner: string | null; loser: string | null } {
   if (m.home_score < m.away_score) return { winner: away, loser: home };
   return { winner: null, loser: null }; // empate sin datos de penales
 }
+
+/** Entrada del ranking: el desglose de puntos de un usuario. */
+export interface RankingEntry {
+  userId: string;
+  breakdown: ScoreBreakdown;
+}
+
+/**
+ * Agrupa las predicciones de todos los usuarios y calcula el puntaje de
+ * cada uno contra los resultados oficiales. Devuelve la lista ordenada
+ * de mayor a menor puntaje (desempate alfabético por userId, estable;
+ * el orden de presentación final lo decide la vista con los nombres).
+ *
+ * Función pura — recibe arrays planos (tal como salen de las tablas) y
+ * los OfficialResults ya derivados.
+ */
+export function buildRanking(
+  predictions: Prediction[],
+  groupScores: PredictionGroupScore[],
+  bracket: PredictionBracketEntry[],
+  official: OfficialResults,
+): RankingEntry[] {
+  const byUser = new Map<string, UserPrediction>();
+  const ensure = (userId: string): UserPrediction => {
+    let up = byUser.get(userId);
+    if (!up) {
+      up = { prediction: null, groupScores: [], bracket: [] };
+      byUser.set(userId, up);
+    }
+    return up;
+  };
+
+  for (const p of predictions) ensure(p.user_id).prediction = p;
+  for (const s of groupScores) ensure(s.user_id).groupScores.push(s);
+  for (const b of bracket) ensure(b.user_id).bracket.push(b);
+
+  const entries: RankingEntry[] = Array.from(byUser.entries()).map(([userId, up]) => ({
+    userId,
+    breakdown: computeScore(up, official),
+  }));
+
+  entries.sort((a, b) => b.breakdown.total - a.breakdown.total || a.userId.localeCompare(b.userId));
+  return entries;
+}

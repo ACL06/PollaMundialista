@@ -108,18 +108,12 @@ export default async function HomePage() {
       {/* Explora */}
       <div className="flex flex-col gap-4">
         <h2 className="text-lg font-semibold text-foreground">Explora</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <ExploreCard href="/calendar" Icon={CalendarDays} label="Calendario" />
           <ExploreCard href="/grupos" Icon={ListOrdered} label="Fase de grupos" />
           <ExploreCard href="/pronosticos" Icon={Target} label="Pronósticos" />
           <ExploreCard href="/comunidad" Icon={Users} label="Comunidad" />
-        </div>
-        <div
-          className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-border text-muted-foreground opacity-70"
-          aria-label="Ranking (próximamente)"
-        >
-          <Trophy className="h-[18px] w-[18px] text-tertiary" />
-          <span className="text-[13px] font-medium">Ranking · próximamente</span>
+          <ExploreCard href="/ranking" Icon={Trophy} label="Ranking" />
         </div>
       </div>
     </div>
