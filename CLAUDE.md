@@ -13,7 +13,7 @@
 **URL producción:** https://polla-mundialista-six.vercel.app
 **Repositorio:** https://github.com/ACL06/PollaMundialista
 
-**Fase actual:** MVP funcionalmente completo de punta a punta para fase de grupos. Auth, perfil, calendario, tablas de grupos, wizard de pronósticos (5 steps + submit), vista read-only, Comunidad (transparencia + reacciones), Ranking y panel admin de resultados están en producción. El sistema "se enciende" cuando el admin carga resultados oficiales. Falta: panel admin de eliminatorias (8.2), grupos privados (6), notificaciones (7).
+**Fase actual:** MVP completo de punta a punta. Auth, perfil (+ modal de edición), calendario, tablas de grupos, wizard de pronósticos (5 steps + submit), vista read-only, Comunidad (transparencia + reacciones), Ranking y panel admin completo (grupos + eliminatorias + goleador) están en producción. El sistema "se enciende" cuando el admin carga resultados oficiales. Falta solo el roadmap extra: grupos privados (6), notificaciones (7).
 
 **Disclaimer:** El proyecto NO está afiliado a FIFA. No usar logos, marcas ni mascotas oficiales (ver sección de copyright más abajo).
 
@@ -62,7 +62,7 @@
 - **Indicadores en /home** (Fase 4E, `PredictionStatusCard`): countdown + progreso (X/137) + CTA según estado
 
 #### Scoring (Fase 4D)
-- Motor TS puro `src/lib/scoring.ts` con **tests Vitest** (`scoring.test.ts`):
+- Motor TS puro `src/lib/scoring.ts` con **tests Vitest** (`scoring.test.ts`, 26 tests):
   - `computeScore(user, official)` → desglose + total (máx **643**)
   - `deriveOfficialResults(matches, topScorer)` → construye resultados oficiales desde `matches`
   - `buildRanking(...)` → agrupa por usuario, ordena
@@ -80,19 +80,27 @@
 - `/comunidad/[userId]`: pronóstico completo de cualquiera (reusa `PredictionView`)
 - Vista `public_profiles` (solo columnas no sensibles) para mostrar nombres/avatares sin exponer phone/email
 
-#### Panel admin (Fase 8.1)
-- `/admin`: gated por flag `is_admin` (server-side + en cada action via `requireAdmin()` + RLS)
-- Edita marcador + status de los 72 partidos de grupos (autosave) y el goleador oficial (`tournament_settings`)
-- Link "Panel admin" en /home visible solo para admins
-- Esto "enciende" scoring, ranking y tablas de grupos
+#### Panel admin (Fase 8.1 + 8.2)
+- `/admin`: gated por flag `is_admin` (server-side + en cada action via `requireAdmin()` + RLS). Link "Panel admin" en /home solo para admins.
+- Switcher **Fase de grupos / Eliminatorias**.
+  - Grupos: marcador + status de los 72 partidos (autosave) + goleador oficial (`tournament_settings`).
+  - Eliminatorias (`KnockoutResultsEditor`): por ronda, asignar equipos home/away (de los 48, con hint del `bracket_source`) + marcador + status.
+- Patrón de guardado: `changeAndPersist(id, patch)` calcula el draft nuevo y lo persiste directo (evita el stale-closure de setState+leer-viejo que tuvo un bug en 8.2, ya corregido).
+- Esto "enciende" scoring, ranking, tablas de grupos y aciertos en Comunidad.
+
+#### Tests (Vitest)
+- `scoring.test.ts` (26): reglas de scoring, deriveOfficialResults, buildRanking, pronóstico perfecto = 643.
+- `compute-standings.test.ts`, `format-bracket-source.test.ts`, `predictions-lock.test.ts`, `validators/profile.test.ts`, `validators/prediction.test.ts`.
+- **52 tests en total**, corren en CI (`npm test`).
 
 ### ⏳ Pendiente / Roadmap
 
-- **Fase 8.2** — Panel admin eliminatorias (asignar equipos a cada ronda + marcadores)
 - **Fase 6** — Grupos privados con código de invitación
 - **Fase 7** — Notificaciones por email (Resend) + **verificar dominio en Resend** (hoy solo el email registrado recibe OTP)
 - **Comunidad: aciertos del día / tabla en vivo** cuando haya resultados (mejora social)
 - **Modal de perfil**: opción de cambiar avatar y equipo favorito (hoy solo los 4 campos base)
+- **Refactors DRY pendientes** (maintainability, no bugs): helper de query de `matches` (7 pages comparten select+normalize), `sanitizeScore`/`sanitizePhone` a `utils`, componente `ScoreInput` unificado
+- **Penales en eliminatorias**: si la final o el 3er puesto empatan en 90' (van a penales), `pickWinner` devuelve `null` → no se otorga campeón/3er. Falta una columna tipo `winner_code` en `matches` + UI admin para registrarlo
 - **Dependabot alert #1** (PostCSS XSS) — baja prioridad, dev deps
 
 ---
