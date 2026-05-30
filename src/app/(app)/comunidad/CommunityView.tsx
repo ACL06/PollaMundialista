@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronRight, Crown, Flame, Users } from 'lucide-react';
+import { ChevronRight, Crown, Flame, SmilePlus, Users } from 'lucide-react';
 import { TeamLabel } from '@/components/calendar/TeamLabel';
 import { BracketSlot } from '@/components/calendar/BracketSlot';
 import {
@@ -13,7 +13,17 @@ import {
 } from '@/lib/format-date';
 import { cn } from '@/lib/utils';
 import type { Match, Team } from '@/lib/types/match';
-import { displayName, type ChampionPick, type CommunityScore, type PublicProfile } from './shared';
+import {
+  displayName,
+  REACTIONS,
+  REACTION_EMOJI,
+  type ChampionPick,
+  type CommunityScore,
+  type PublicProfile,
+  type ReactionKey,
+  type ReactionRow,
+} from './shared';
+import { toggleReaction } from './actions';
 
 interface CommunityViewProps {
   groupMatches: Match[];
@@ -22,6 +32,13 @@ interface CommunityViewProps {
   participants: PublicProfile[];
   teams: Team[];
   championPicks: ChampionPick[];
+  reactions: ReactionRow[];
+  currentUserId: string;
+}
+
+/** Clave de un pronóstico concreto: el de {targetUserId} en {matchId}. */
+function reactionKeyOf(targetUserId: string, matchId: string): string {
+  return `${targetUserId}|${matchId}`;
 }
 
 type Outcome = 'home' | 'draw' | 'away';
@@ -39,7 +56,45 @@ export function CommunityView({
   participants,
   teams,
   championPicks,
+  reactions,
+  currentUserId,
 }: CommunityViewProps) {
+  // Estado de reacciones: clave `target|match` → Map<reactorId, ReactionKey>.
+  const [reactionState, setReactionState] = useState<Map<string, Map<string, ReactionKey>>>(
+    () => {
+      const map = new Map<string, Map<string, ReactionKey>>();
+      for (const r of reactions) {
+        const k = reactionKeyOf(r.target_user_id, r.match_id);
+        if (!map.has(k)) map.set(k, new Map());
+        map.get(k)!.set(r.reactor_id, r.reaction);
+      }
+      return map;
+    },
+  );
+  // Qué fila tiene el selector de emojis abierto (`target|match`), o null.
+  const [openPicker, setOpenPicker] = useState<string | null>(null);
+  const [, startReact] = useTransition();
+
+  const handleReact = (targetUserId: string, matchId: string, reaction: ReactionKey) => {
+    if (targetUserId === currentUserId) return;
+    const k = reactionKeyOf(targetUserId, matchId);
+    const snapshot = reactionState;
+
+    // Optimista
+    const nextOuter = new Map(reactionState);
+    const inner = new Map(nextOuter.get(k) ?? []);
+    if (inner.get(currentUserId) === reaction) inner.delete(currentUserId);
+    else inner.set(currentUserId, reaction);
+    nextOuter.set(k, inner);
+    setReactionState(nextOuter);
+    setOpenPicker(null);
+
+    startReact(async () => {
+      const res = await toggleReaction({ targetUserId, matchId, reaction });
+      if (res.error) setReactionState(snapshot); // revertir
+    });
+  };
+
   const profileById = useMemo(() => {
     const map = new Map<string, PublicProfile>();
     for (const p of profiles) map.set(p.id, p);
@@ -211,6 +266,11 @@ export function CommunityView({
               match={match}
               preds={predictionsByMatch.get(match.id) ?? []}
               profileById={profileById}
+              reactionState={reactionState}
+              currentUserId={currentUserId}
+              openPicker={openPicker}
+              setOpenPicker={setOpenPicker}
+              onReact={handleReact}
             />
           ))}
         </div>
@@ -223,9 +283,23 @@ interface MatchPredictionsProps {
   match: Match;
   preds: Array<{ userId: string; home: number; away: number }>;
   profileById: Map<string, PublicProfile>;
+  reactionState: Map<string, Map<string, ReactionKey>>;
+  currentUserId: string;
+  openPicker: string | null;
+  setOpenPicker: (key: string | null) => void;
+  onReact: (targetUserId: string, matchId: string, reaction: ReactionKey) => void;
 }
 
-function MatchPredictions({ match, preds, profileById }: MatchPredictionsProps) {
+function MatchPredictions({
+  match,
+  preds,
+  profileById,
+  reactionState,
+  currentUserId,
+  openPicker,
+  setOpenPicker,
+  onReact,
+}: MatchPredictionsProps) {
   // Consenso 1X2
   const counts = { home: 0, draw: 0, away: 0 };
   for (const p of preds) counts[outcomeOf(p.home, p.away)] += 1;
@@ -314,21 +388,95 @@ function MatchPredictions({ match, preds, profileById }: MatchPredictionsProps) 
           {sorted.map((p) => {
             const profile = profileById.get(p.userId);
             const isRebel = hasClearFavorite && outcomeOf(p.home, p.away) !== modal;
+            const rk = reactionKeyOf(p.userId, match.id);
+            const inner = reactionState.get(rk);
+            const isOwn = p.userId === currentUserId;
+
+            // Conteo por emoji + cuál eligió el usuario actual
+            const counts = new Map<ReactionKey, number>();
+            let myReaction: ReactionKey | undefined;
+            if (inner) {
+              for (const [reactor, key] of inner) {
+                counts.set(key, (counts.get(key) ?? 0) + 1);
+                if (reactor === currentUserId) myReaction = key;
+              }
+            }
+            const isPickerOpen = openPicker === rk;
+
             return (
-              <li key={p.userId} className="flex items-center gap-2.5 px-4 py-2">
-                {profile && <Avatar profile={profile} size={22} />}
-                <span className="text-[14px] text-foreground truncate flex-1">
-                  {displayName(profile ?? {})}
-                </span>
-                {isRebel && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-500">
-                    <Flame className="h-3 w-3" />
-                    va solo
+              <li key={p.userId} className="px-4 py-2">
+                <div className="flex items-center gap-2.5">
+                  {profile && <Avatar profile={profile} size={22} />}
+                  <span className="text-[14px] text-foreground truncate flex-1">
+                    {displayName(profile ?? {})}
                   </span>
-                )}
-                <span className="font-mono font-bold text-[15px] tabular-nums text-foreground whitespace-nowrap">
-                  {p.home} – {p.away}
-                </span>
+                  {isRebel && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-500">
+                      <Flame className="h-3 w-3" />
+                      va solo
+                    </span>
+                  )}
+                  <span className="font-mono font-bold text-[15px] tabular-nums text-foreground whitespace-nowrap">
+                    {p.home} – {p.away}
+                  </span>
+                </div>
+
+                {/* Reacciones: conteos + botón para reaccionar */}
+                <div className="flex items-center gap-1.5 flex-wrap pl-[34px] mt-1">
+                  {REACTIONS.filter((r) => (counts.get(r.key) ?? 0) > 0).map((r) => (
+                    <button
+                      key={r.key}
+                      type="button"
+                      disabled={isOwn}
+                      onClick={() => onReact(p.userId, match.id, r.key)}
+                      className={cn(
+                        'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[12px] tabular-nums border transition-colors',
+                        myReaction === r.key
+                          ? 'border-primary bg-primary/10 text-foreground'
+                          : 'border-border bg-surface text-muted-foreground hover:text-foreground',
+                        isOwn && 'cursor-default',
+                      )}
+                    >
+                      <span>{r.emoji}</span>
+                      <span>{counts.get(r.key)}</span>
+                    </button>
+                  ))}
+
+                  {!isOwn && (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setOpenPicker(isPickerOpen ? null : rk)}
+                        aria-label="Reaccionar"
+                        className={cn(
+                          'inline-flex items-center justify-center h-6 w-6 rounded-full border transition-colors',
+                          'border-border bg-surface text-muted-foreground hover:text-foreground',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
+                        )}
+                      >
+                        <SmilePlus className="h-3.5 w-3.5" />
+                      </button>
+                      {isPickerOpen && (
+                        <div className="absolute z-10 left-0 mt-1 flex gap-1 p-1 rounded-lg border border-border bg-surface shadow-md">
+                          {REACTIONS.map((r) => (
+                            <button
+                              key={r.key}
+                              type="button"
+                              title={r.label}
+                              onClick={() => onReact(p.userId, match.id, r.key)}
+                              className={cn(
+                                'h-8 w-8 rounded-md text-[18px] leading-none transition-transform hover:scale-110',
+                                myReaction === r.key && 'bg-primary/10',
+                              )}
+                            >
+                              {r.emoji}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </li>
             );
           })}

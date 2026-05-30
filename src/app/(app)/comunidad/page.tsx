@@ -4,7 +4,13 @@ import { createClient } from '@/lib/supabase/server';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
 import { Countdown } from '@/components/pronosticos/Countdown';
 import { CommunityView } from './CommunityView';
-import { displayName, type ChampionPick, type CommunityScore, type PublicProfile } from './shared';
+import {
+  displayName,
+  type ChampionPick,
+  type CommunityScore,
+  type PublicProfile,
+  type ReactionRow,
+} from './shared';
 import type { Match, Team } from '@/lib/types/match';
 
 export const metadata = { title: 'Comunidad' };
@@ -45,8 +51,14 @@ export default async function ComunidadPage() {
   }
 
   // Post-lock: lectura pública habilitada por RLS.
-  const [matchesResult, scoresResult, predictionsResult, profilesResult, teamsResult] =
-    await Promise.all([
+  const [
+    matchesResult,
+    scoresResult,
+    predictionsResult,
+    profilesResult,
+    teamsResult,
+    reactionsResult,
+  ] = await Promise.all([
       supabase
         .from('matches')
         .select(
@@ -71,6 +83,9 @@ export default async function ComunidadPage() {
         .from('teams')
         .select('code, name, flag, group_code')
         .not('group_code', 'is', null),
+      supabase
+        .from('prediction_reactions')
+        .select('reactor_id, target_user_id, match_id, reaction'),
     ]);
 
   const groupMatches = (matchesResult.data ?? []).map((row) => {
@@ -87,6 +102,7 @@ export default async function ComunidadPage() {
   const profiles = (profilesResult.data ?? []) as PublicProfile[];
   const teams = (teamsResult.data ?? []) as Team[];
   const championPicks = (predictionsResult.data ?? []) as ChampionPick[];
+  const reactions = (reactionsResult.data ?? []) as ReactionRow[];
 
   // Participantes = quienes tienen pronóstico (fila en predictions) o al
   // menos un marcador. Se enlazan a su pronóstico completo.
@@ -106,6 +122,8 @@ export default async function ComunidadPage() {
       participants={participants}
       teams={teams}
       championPicks={championPicks}
+      reactions={reactions}
+      currentUserId={user.id}
     />
   );
 }
