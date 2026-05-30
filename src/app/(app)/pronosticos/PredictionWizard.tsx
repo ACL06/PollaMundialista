@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WizardNav, type WizardStep } from './WizardNav';
 import { WelcomeStep } from './steps/WelcomeStep';
-import { GroupScoresStep } from './steps/GroupScoresStep';
+import { GroupScoresStep, type GroupScoreDraft } from './steps/GroupScoresStep';
 import { PlaceholderStep } from './steps/PlaceholderStep';
+import { saveGroupScore } from './actions';
 import type { Match } from '@/lib/types/match';
 import type {
   Prediction,
@@ -30,10 +31,24 @@ interface PredictionWizardProps {
   lockAt: string | null;
 }
 
+/** Permitir solo dígitos y limitar a 2 caracteres (rango 0-99). */
+function sanitizeScore(value: string): string {
+  return value.replace(/\D/g, '').slice(0, 2);
+}
+
+function buildInitialDraft(scores: PredictionGroupScore[]): Map<string, GroupScoreDraft> {
+  const map = new Map<string, GroupScoreDraft>();
+  for (const s of scores) {
+    map.set(s.match_id, { home: String(s.home_score), away: String(s.away_score) });
+  }
+  return map;
+}
+
 /**
- * Wizard cliente que orquesta los 5 steps del pronóstico. En 4B.2 los
- * steps 1 (Bienvenida) y 2 (Marcadores) son funcionales; bracket,
- * cierre y revisión siguen siendo placeholders por ahora.
+ * Wizard cliente que orquesta los 5 steps del pronóstico. El state de
+ * cada step (draft, savedIds, errores, tab interno) vive aquí para que
+ * sobreviva a la navegación entre steps. Los steps son componentes
+ * "dumb" — reciben props y disparan callbacks.
  */
 export function PredictionWizard({
   initialPrediction,
@@ -47,7 +62,99 @@ export function PredictionWizard({
   const isLocked = lockAt ? new Date() >= new Date(lockAt) : false;
   const isSubmitted = initialPrediction?.locked_at != null;
 
-  // `void` para acallar el unused-var hasta que el step de bracket lo consuma.
+  // ── State del step "Marcadores" ──────────────────────────────────
+  // Sube al wizard para persistir cuando el usuario cambia de step.
+  const initialDraft = useMemo(() => buildInitialDraft(initialGroupScores), [initialGroupScores]);
+  const initialSavedIds = useMemo(
+    () => new Set(initialGroupScores.map((s) => s.match_id)),
+    [initialGroupScores],
+  );
+
+  const [groupScoresDraft, setGroupScoresDraft] = useState<Map<string, GroupScoreDraft>>(initialDraft);
+  const [groupScoresSavedIds, setGroupScoresSavedIds] = useState<Set<string>>(initialSavedIds);
+  const [groupScoresErrors, setGroupScoresErrors] = useState<Map<string, string>>(() => new Map());
+  const [groupScoresSelectedDay, setGroupScoresSelectedDay] = useState<string>('');
+  const [, startGroupScoreSave] = useTransition();
+
+  /** Modifica errorsByMatch de forma inmutable. */
+  const setGroupScoreError = (matchId: string, message: string | null) => {
+    setGroupScoresErrors((prev) => {
+      const has = prev.has(matchId);
+      if (message === null) {
+        if (!has) return prev;
+        const next = new Map(prev);
+        next.delete(matchId);
+        return next;
+      }
+      if (prev.get(matchId) === message) return prev;
+      const next = new Map(prev);
+      next.set(matchId, message);
+      return next;
+    });
+  };
+
+  const handleGroupScoreChange = (
+    matchId: string,
+    side: 'home' | 'away',
+    rawValue: string,
+  ) => {
+    const cleaned = sanitizeScore(rawValue);
+    setGroupScoresDraft((prev) => {
+      const next = new Map(prev);
+      const current = next.get(matchId) ?? { home: '', away: '' };
+      next.set(matchId, { ...current, [side]: cleaned });
+      return next;
+    });
+    setGroupScoresSavedIds((prev) => {
+      if (!prev.has(matchId)) return prev;
+      const next = new Set(prev);
+      next.delete(matchId);
+      return next;
+    });
+    // El error de ESTE partido se mantiene hasta el siguiente blur con
+    // valor válido. No se limpia al tipear para evitar parpadeo.
+  };
+
+  const handleGroupScoreBlur = (matchId: string) => {
+    if (isLocked || isSubmitted) return;
+    const current = groupScoresDraft.get(matchId);
+    if (!current) return;
+    if (current.home === '' || current.away === '') return; // Aún incompleto
+    const home = Number(current.home);
+    const away = Number(current.away);
+    if (!Number.isInteger(home) || !Number.isInteger(away)) return;
+    if (home < 0 || away < 0 || home > 99 || away > 99) {
+      setGroupScoreError(matchId, 'Marcador fuera de rango (0–99)');
+      return;
+    }
+
+    startGroupScoreSave(async () => {
+      const result = await saveGroupScore({
+        match_id: matchId,
+        home_score: home,
+        away_score: away,
+      });
+      if (result.error) {
+        setGroupScoreError(matchId, result.error);
+        setGroupScoresSavedIds((prev) => {
+          if (!prev.has(matchId)) return prev;
+          const next = new Set(prev);
+          next.delete(matchId);
+          return next;
+        });
+      } else {
+        setGroupScoresSavedIds((prev) => {
+          if (prev.has(matchId)) return prev;
+          const next = new Set(prev);
+          next.add(matchId);
+          return next;
+        });
+        setGroupScoreError(matchId, null);
+      }
+    });
+  };
+
+  // `void` mientras los steps siguientes no consumen estos datos.
   void initialBracket;
 
   const goNext = () => {
@@ -86,7 +193,13 @@ export function PredictionWizard({
         ) : currentStep.key === 'group-scores' ? (
           <GroupScoresStep
             matches={groupMatches}
-            initialScores={initialGroupScores}
+            draft={groupScoresDraft}
+            savedIds={groupScoresSavedIds}
+            errors={groupScoresErrors}
+            selectedDayKey={groupScoresSelectedDay}
+            onSelectDay={setGroupScoresSelectedDay}
+            onChangeField={handleGroupScoreChange}
+            onBlurField={handleGroupScoreBlur}
             isLocked={isLocked}
             isSubmitted={isSubmitted}
           />

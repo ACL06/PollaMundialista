@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TeamLabel } from '@/components/calendar/TeamLabel';
@@ -10,44 +10,42 @@ import {
   formatMatchDateLong,
   formatMatchTime,
 } from '@/lib/format-date';
-import { saveGroupScore } from '../actions';
 import type { Match } from '@/lib/types/match';
-import type { PredictionGroupScore } from '@/lib/types/prediction';
 
-interface GroupScoresStepProps {
-  matches: Match[];
-  initialScores: PredictionGroupScore[];
-  isLocked: boolean;
-  isSubmitted: boolean;
-}
-
-/** Estado local de un marcador en edición. */
-interface DraftScore {
+/** Valor en edición de un marcador. Strings para tolerar entrada parcial. */
+export interface GroupScoreDraft {
   home: string;
   away: string;
 }
 
-/** Filtra al tipear: solo dígitos, máximo 2 caracteres. */
-function sanitizeScore(value: string): string {
-  return value.replace(/\D/g, '').slice(0, 2);
-}
-
-function buildInitialDraft(scores: PredictionGroupScore[]): Map<string, DraftScore> {
-  const map = new Map<string, DraftScore>();
-  for (const s of scores) {
-    map.set(s.match_id, { home: String(s.home_score), away: String(s.away_score) });
-  }
-  return map;
+interface GroupScoresStepProps {
+  matches: Match[];
+  draft: Map<string, GroupScoreDraft>;
+  savedIds: Set<string>;
+  errors: Map<string, string>;
+  selectedDayKey: string;
+  onSelectDay: (key: string) => void;
+  onChangeField: (matchId: string, side: 'home' | 'away', value: string) => void;
+  onBlurField: (matchId: string) => void;
+  isLocked: boolean;
+  isSubmitted: boolean;
 }
 
 /**
- * Step 2 del wizard. 72 marcadores predichos agrupados por día.
- * Autosave en `onBlur` de cada input: si los dos lados tienen valor
- * válido (0-30), se persiste en `prediction_group_scores`.
+ * Step 2 del wizard. Componente "dumb": no tiene state propio salvo el
+ * `useMemo` para agrupar los matches por día. Todo el state (draft,
+ * savedIds, errores, día seleccionado) vive en el `PredictionWizard`
+ * para que persista cuando el usuario navega entre steps.
  */
 export function GroupScoresStep({
   matches,
-  initialScores,
+  draft,
+  savedIds,
+  errors,
+  selectedDayKey,
+  onSelectDay,
+  onChangeField,
+  onBlurField,
   isLocked,
   isSubmitted,
 }: GroupScoresStepProps) {
@@ -67,75 +65,8 @@ export function GroupScoresStep({
     return Array.from(grouped.entries()).map(([key, value]) => ({ key, ...value }));
   }, [matches]);
 
-  const [selectedDayKey, setSelectedDayKey] = useState(() => days[0]?.key ?? '');
-  const [draft, setDraft] = useState<Map<string, DraftScore>>(() =>
-    buildInitialDraft(initialScores),
-  );
-  const [errorMatchId, setErrorMatchId] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
-
-  // Cuántos partidos tienen un marcador completo y válido guardado.
-  const completedCount = useMemo(() => {
-    let n = 0;
-    for (const s of initialScores) {
-      if (
-        typeof s.home_score === 'number' &&
-        typeof s.away_score === 'number' &&
-        s.home_score >= 0 &&
-        s.away_score >= 0
-      ) {
-        n += 1;
-      }
-    }
-    return n;
-  }, [initialScores]);
-
-  const selectedDay = days.find((d) => d.key === selectedDayKey);
-
-  const updateField = (matchId: string, side: 'home' | 'away', rawValue: string) => {
-    const cleaned = sanitizeScore(rawValue);
-    setDraft((prev) => {
-      const next = new Map(prev);
-      const current = next.get(matchId) ?? { home: '', away: '' };
-      next.set(matchId, { ...current, [side]: cleaned });
-      return next;
-    });
-    if (errorMatchId === matchId) {
-      setErrorMatchId(null);
-      setErrorMessage(null);
-    }
-  };
-
-  const persistIfReady = (matchId: string) => {
-    if (readOnly) return;
-    const current = draft.get(matchId);
-    if (!current) return;
-    if (current.home === '' || current.away === '') return; // Aún incompleto
-    const home = Number(current.home);
-    const away = Number(current.away);
-    if (!Number.isInteger(home) || !Number.isInteger(away)) return;
-    if (home < 0 || away < 0 || home > 30 || away > 30) {
-      setErrorMatchId(matchId);
-      setErrorMessage('Marcador fuera de rango (0–30)');
-      return;
-    }
-
-    startTransition(async () => {
-      const result = await saveGroupScore({
-        match_id: matchId,
-        home_score: home,
-        away_score: away,
-      });
-      if (result.error) {
-        setErrorMatchId(matchId);
-        setErrorMessage(result.error);
-      } else {
-        setErrorMatchId(null);
-        setErrorMessage(null);
-      }
-    });
-  };
+  const completedCount = savedIds.size;
+  const selectedDay = days.find((d) => d.key === selectedDayKey) ?? days[0];
 
   return (
     <div className="space-y-6">
@@ -165,18 +96,16 @@ export function GroupScoresStep({
         aria-label="Días con partidos"
       >
         {days.map((day) => {
-          const isActive = day.key === selectedDayKey;
-          const filled = day.matches.filter((m) => {
-            const s = draft.get(m.id);
-            return s && s.home !== '' && s.away !== '';
-          }).length;
+          const isActive = day.key === selectedDay?.key;
+          // Contar partidos del día con marcador efectivamente guardado.
+          const filled = day.matches.filter((m) => savedIds.has(m.id)).length;
           return (
             <button
               key={day.key}
               type="button"
               role="tab"
               aria-selected={isActive}
-              onClick={() => setSelectedDayKey(day.key)}
+              onClick={() => onSelectDay(day.key)}
               className={cn(
                 'flex-shrink-0 px-3 py-2 rounded-md text-xs font-medium transition-colors whitespace-nowrap',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
@@ -212,21 +141,14 @@ export function GroupScoresStep({
                 key={match.id}
                 match={match}
                 draft={draft.get(match.id) ?? { home: '', away: '' }}
+                isSaved={savedIds.has(match.id)}
                 readOnly={readOnly}
-                hasError={errorMatchId === match.id}
-                onChange={(side, value) => updateField(match.id, side, value)}
-                onBlur={() => persistIfReady(match.id)}
+                errorMessage={errors.get(match.id) ?? null}
+                onChange={(side, value) => onChangeField(match.id, side, value)}
+                onBlur={() => onBlurField(match.id)}
               />
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Mensaje de error global del último save fallido */}
-      {errorMessage && (
-        <div className="flex items-center gap-2 text-sm text-destructive" role="alert">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
-          <span>{errorMessage}</span>
         </div>
       )}
     </div>
@@ -235,9 +157,12 @@ export function GroupScoresStep({
 
 interface MatchScoreCardProps {
   match: Match;
-  draft: DraftScore;
+  draft: GroupScoreDraft;
+  /** True solo si los valores actuales fueron persistidos exitosamente en BD. */
+  isSaved: boolean;
   readOnly: boolean;
-  hasError: boolean;
+  /** Mensaje de error específico de este partido. Null si no hay error. */
+  errorMessage: string | null;
   onChange: (side: 'home' | 'away', value: string) => void;
   onBlur: () => void;
 }
@@ -245,21 +170,22 @@ interface MatchScoreCardProps {
 function MatchScoreCard({
   match,
   draft,
+  isSaved,
   readOnly,
-  hasError,
+  errorMessage,
   onChange,
   onBlur,
 }: MatchScoreCardProps) {
-  const isComplete = draft.home !== '' && draft.away !== '';
   const kicksOffAt = new Date(match.kicks_off_at);
+  const hasError = errorMessage !== null;
 
   return (
     <article
       className={cn(
         'border rounded-lg px-[18px] py-[14px] grid grid-cols-1 sm:grid-cols-[110px_minmax(0,1fr)] gap-y-2 sm:gap-x-[18px] font-sans transition-colors',
         hasError && 'border-destructive bg-destructive/5',
-        !hasError && isComplete && 'border-primary/40 bg-primary/[0.03]',
-        !hasError && !isComplete && 'border-border bg-surface',
+        !hasError && isSaved && 'border-primary/40 bg-primary/[0.03]',
+        !hasError && !isSaved && 'border-border bg-surface',
       )}
     >
       {/* Hora + check */}
@@ -267,7 +193,7 @@ function MatchScoreCard({
         <span className="text-[18px] font-semibold text-foreground leading-none">
           {formatMatchTime(kicksOffAt)}
         </span>
-        {isComplete && (
+        {isSaved && (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
             <CheckCircle2 className="h-3 w-3" />
             Guardado
@@ -306,6 +232,17 @@ function MatchScoreCard({
         )}
       </div>
 
+      {/* Mensaje de error específico de este partido. */}
+      {hasError && (
+        <div
+          className="col-span-full flex items-center gap-1.5 text-[12px] text-destructive"
+          role="alert"
+        >
+          <AlertCircle className="h-3 w-3 flex-shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       {/* Footer */}
       <div className="col-span-full flex items-center justify-between gap-3 pt-1.5 border-t border-dashed border-border">
         <span className="text-[12px] text-muted-foreground truncate">{match.venue}</span>
@@ -343,7 +280,7 @@ function ScoreInput({ value, onChange, onBlur, disabled, ...rest }: ScoreInputPr
         'w-10 h-9 text-center font-mono font-bold text-[18px] tabular-nums',
         'bg-background border border-border rounded-md',
         'focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-tertiary',
-        'disabled:opacity-60 disabled:cursor-not-allowed',
+        'disabled:opacity-50 disabled:cursor-not-allowed',
       )}
       aria-label={rest['aria-label']}
     />
