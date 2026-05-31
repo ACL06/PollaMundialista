@@ -83,8 +83,8 @@ export function ReviewStep({
         ))}
         <SummaryRow label="Campeón" value={teamName(champion)} highlight={!!champion} />
         <SummaryRow label="Subcampeón" value={teamName(runnerUp)} />
-        <SummaryRow label="Tercer puesto" value={teamName(third)} />
-        <SummaryRow label="Marcador final (bonus)" value={finalScore} />
+        <SummaryRow label="Tercer lugar" value={teamName(third)} />
+        <SummaryRow label="Marcador final · campeón–subcampeón (bonus)" value={finalScore} />
         <SummaryRow label="Goleador" value={topScorer.trim() || '—'} />
       </dl>
 

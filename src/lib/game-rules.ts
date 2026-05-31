@@ -39,7 +39,7 @@ export const GAME_RULES: GameRule[] = [
     label: 'Cada equipo que clasifica a una ronda eliminatoria',
     points: '2 · 3 · 5 · 8',
     detail:
-      'Por cada equipo que pusiste en una ronda y de verdad llegó: Dieciseisavos 2 pts, Octavos 3, Cuartos 5, Semifinales 8 (cada uno). Ejemplo: pusiste a Brasil en Cuartos y llegó → +5. Mientras más avanza la ronda, más vale cada acierto.',
+      'Por cada equipo que pusiste en una ronda y de verdad llegó: Eliminatorias de 32 2 pts, Octavos de Final 3, Cuartos de Final 5, Semifinales 8 (cada uno). Ejemplo: pusiste a Brasil en Cuartos y llegó → +5. Mientras más avanza la ronda, más vale cada acierto.',
   },
   {
     id: 'finalists',
@@ -57,17 +57,17 @@ export const GAME_RULES: GameRule[] = [
   },
   {
     id: 'third',
-    label: 'Acertar el tercer puesto',
+    label: 'Acertar el tercer lugar',
     points: '15 pts',
     detail:
-      'Aciertas quién gana el partido por el tercer puesto. Ejemplo: predices a Croacia de tercero y gana ese partido → +15.',
+      'Aciertas quién gana el partido por el tercer lugar. Ejemplo: predices a Croacia de tercero y gana ese partido → +15.',
   },
   {
     id: 'final-score',
     label: 'Marcador exacto de la final (bonus)',
     points: '15 pts',
     detail:
-      'Aciertas el marcador de la final al minuto 90 (sin penaltis). No importa el orden: si predices 2–1 y termina 1–2, cuenta igual → +15.',
+      'Aciertas cuántos goles marca cada uno de tus finalistas en la final al minuto 90 (sin penaltis). Cuenta solo si tu campeón y tu subcampeón son de verdad los que juegan la final y le pones a cada uno su marcador exacto. Ejemplo: dices que tu campeón le gana 2–1 a tu subcampeón y la final termina justo así → +15. Si te equivocas en el marcador de algún equipo, o si uno de tus finalistas no llega a la final, no suma.',
   },
   {
     id: 'top-scorer',

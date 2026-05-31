@@ -82,7 +82,7 @@ export function ClosingStep({
           <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <span>
             Primero elige tus <span className="font-medium text-foreground">Semifinalistas</span>{' '}
-            en el paso del bracket. El campeón, subcampeón y tercer puesto se eligen entre
+            en el paso del bracket. El campeón, subcampeón y tercer lugar se eligen entre
             esos 4 equipos.
           </span>
         </div>
@@ -110,7 +110,7 @@ export function ClosingStep({
             emptyHint="Elige primero al campeón."
           />
           <PodiumPicker
-            label="Tercer puesto"
+            label="Tercer lugar"
             Icon={Medal}
             iconClass="text-amber-700"
             pool={thirdPool}
@@ -130,23 +130,29 @@ export function ClosingStep({
           <span className="text-xs font-normal text-muted-foreground">(bonus)</span>
         </h3>
         <p className="text-xs text-muted-foreground">
-          El marcador de los 90&apos; (sin prórroga ni penales).
+          Los goles de tu campeón y tu subcampeón en los 90&apos; (sin prórroga ni penales).
+          Suma solo si aciertas el marcador <span className="font-medium text-foreground">en
+          el orden correcto</span>.
         </p>
-        <div className="flex items-center gap-2">
-          <ScoreBox
+        <div className="flex items-end gap-3">
+          <FinalScoreSide
+            label="Tu campeón"
+            team={champion ? (teamsByCode.get(champion) ?? null) : null}
             value={finalHome}
             onChange={(v) => onChangeFinalScore('home', v)}
             onBlur={onBlurFinalScore}
             disabled={readOnly}
-            ariaLabel="Goles del local en la final"
+            ariaLabel="Goles de tu campeón en la final"
           />
-          <span className="text-muted-foreground font-mono">–</span>
-          <ScoreBox
+          <span className="text-muted-foreground font-mono pb-2.5">–</span>
+          <FinalScoreSide
+            label="Tu subcampeón"
+            team={runnerUp ? (teamsByCode.get(runnerUp) ?? null) : null}
             value={finalAway}
             onChange={(v) => onChangeFinalScore('away', v)}
             onBlur={onBlurFinalScore}
             disabled={readOnly}
-            ariaLabel="Goles del visitante en la final"
+            ariaLabel="Goles de tu subcampeón en la final"
           />
         </div>
       </div>
@@ -249,6 +255,58 @@ function PodiumPicker({
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+interface FinalScoreSideProps {
+  /** Texto cuando aún no hay equipo elegido ("Tu campeón" / "Tu subcampeón"). */
+  label: string;
+  /** Equipo elegido (campeón o subcampeón), o null si todavía no se eligió. */
+  team: Team | null;
+  value: string;
+  onChange: (v: string) => void;
+  onBlur: () => void;
+  disabled: boolean;
+  ariaLabel: string;
+}
+
+/** Una columna del marcador de la final: bandera + nombre encima de la caja. */
+function FinalScoreSide({
+  label,
+  team,
+  value,
+  onChange,
+  onBlur,
+  disabled,
+  ariaLabel,
+}: FinalScoreSideProps) {
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground max-w-[110px]">
+        {team ? (
+          <>
+            <span
+              className={cn(
+                `fi fi-${team.flag} rounded-sm flex-shrink-0`,
+                'shadow-[0_0_0_1px_hsl(var(--border))]',
+              )}
+              style={{ width: 18, height: 13 }}
+              aria-hidden="true"
+            />
+            <span className="truncate text-foreground">{team.name}</span>
+          </>
+        ) : (
+          <span className="italic">{label}</span>
+        )}
+      </span>
+      <ScoreBox
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        disabled={disabled}
+        ariaLabel={ariaLabel}
+      />
     </div>
   );
 }

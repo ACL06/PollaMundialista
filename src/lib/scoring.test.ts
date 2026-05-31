@@ -43,6 +43,8 @@ function emptyOfficial(overrides: Partial<OfficialResults> = {}): OfficialResult
     advancers: { r32: new Set(), r16: new Set(), qf: new Set(), sf: new Set() },
     finalists: new Set(),
     finalScore: null,
+    finalHomeCode: null,
+    finalAwayCode: null,
     champion: null,
     runnerUp: null,
     thirdPlace: null,
@@ -174,33 +176,146 @@ describe('computeScore — podio y extras', () => {
     expect(computeScore(user, actual).champion).toBe(30);
   });
 
-  it('tercer puesto correcto = 15', () => {
+  it('tercer lugar correcto = 15', () => {
     const user = emptyUser({ prediction: makePrediction({ third_place_code: 'CCC' }) });
     const actual = emptyOfficial({ thirdPlace: 'CCC' });
     expect(computeScore(user, actual).thirdPlace).toBe(15);
   });
 
-  it('marcador exacto final: par NO ordenado cuenta (2-1 vs 1-2)', () => {
+  it('marcador final estricto, en orden y con finalistas correctos = 15', () => {
+    // Tu campeón AAA (local en la final) marca 2; tu subcampeón BBB marca 1.
     const user = emptyUser({
-      prediction: makePrediction({ final_home_score: 2, final_away_score: 1 }),
+      prediction: makePrediction({
+        champion_code: 'AAA',
+        runner_up_code: 'BBB',
+        final_home_score: 2,
+        final_away_score: 1,
+      }),
     });
-    const actual = emptyOfficial({ finalScore: { home: 1, away: 2 } });
+    const actual = emptyOfficial({
+      finalScore: { home: 2, away: 1 },
+      finalHomeCode: 'AAA',
+      finalAwayCode: 'BBB',
+    });
+    expect(computeScore(user, actual).finalExact).toBe(15);
+  });
+
+  it('marcador final por equipo, sin importar local/visitante oficial = 15', () => {
+    // Tu campeón AAA fue visitante (away=2) y tu subcampeón BBB local (home=1):
+    // se compara por equipo, así que igual acierta.
+    const user = emptyUser({
+      prediction: makePrediction({
+        champion_code: 'AAA',
+        runner_up_code: 'BBB',
+        final_home_score: 2, // goles de tu campeón
+        final_away_score: 1, // goles de tu subcampeón
+      }),
+    });
+    const actual = emptyOfficial({
+      finalScore: { home: 1, away: 2 },
+      finalHomeCode: 'BBB',
+      finalAwayCode: 'AAA',
+    });
+    expect(computeScore(user, actual).finalExact).toBe(15);
+  });
+
+  it('marcador final en orden invertido NO cuenta = 0', () => {
+    // Le pones 1 a tu campeón y 2 a tu subcampeón, pero AAA marcó 2 y BBB 1.
+    const user = emptyUser({
+      prediction: makePrediction({
+        champion_code: 'AAA',
+        runner_up_code: 'BBB',
+        final_home_score: 1,
+        final_away_score: 2,
+      }),
+    });
+    const actual = emptyOfficial({
+      finalScore: { home: 2, away: 1 },
+      finalHomeCode: 'AAA',
+      finalAwayCode: 'BBB',
+    });
+    expect(computeScore(user, actual).finalExact).toBe(0);
+  });
+
+  it('marcador final con finalista equivocado NO cuenta aunque la pizarra coincida = 0', () => {
+    // El 2-1 coincide, pero tu subcampeón ZZZ no jugó la final.
+    const user = emptyUser({
+      prediction: makePrediction({
+        champion_code: 'AAA',
+        runner_up_code: 'ZZZ',
+        final_home_score: 2,
+        final_away_score: 1,
+      }),
+    });
+    const actual = emptyOfficial({
+      finalScore: { home: 2, away: 1 },
+      finalHomeCode: 'AAA',
+      finalAwayCode: 'BBB',
+    });
+    expect(computeScore(user, actual).finalExact).toBe(0);
+  });
+
+  it('marcador final empate exacto a 90 entre tus finalistas = 15', () => {
+    const user = emptyUser({
+      prediction: makePrediction({
+        champion_code: 'AAA',
+        runner_up_code: 'BBB',
+        final_home_score: 1,
+        final_away_score: 1,
+      }),
+    });
+    const actual = emptyOfficial({
+      finalScore: { home: 1, away: 1 },
+      finalHomeCode: 'AAA',
+      finalAwayCode: 'BBB',
+    });
     expect(computeScore(user, actual).finalExact).toBe(15);
   });
 
   it('marcador exacto final equivocado = 0', () => {
     const user = emptyUser({
-      prediction: makePrediction({ final_home_score: 3, final_away_score: 0 }),
+      prediction: makePrediction({
+        champion_code: 'AAA',
+        runner_up_code: 'BBB',
+        final_home_score: 3,
+        final_away_score: 0,
+      }),
     });
-    const actual = emptyOfficial({ finalScore: { home: 1, away: 1 } });
+    const actual = emptyOfficial({
+      finalScore: { home: 1, away: 1 },
+      finalHomeCode: 'AAA',
+      finalAwayCode: 'BBB',
+    });
+    expect(computeScore(user, actual).finalExact).toBe(0);
+  });
+
+  it('marcador final sin elegir finalistas NO cuenta = 0', () => {
+    // Aunque la pizarra coincida, sin campeón/subcampeón no hay a quién asignar.
+    const user = emptyUser({
+      prediction: makePrediction({ final_home_score: 2, final_away_score: 1 }),
+    });
+    const actual = emptyOfficial({
+      finalScore: { home: 2, away: 1 },
+      finalHomeCode: 'AAA',
+      finalAwayCode: 'BBB',
+    });
     expect(computeScore(user, actual).finalExact).toBe(0);
   });
 
   it('marcador final incompleto (un lado null) = 0', () => {
     const user = emptyUser({
-      prediction: makePrediction({ final_home_score: 2, final_away_score: null }),
+      prediction: makePrediction({
+        champion_code: 'AAA',
+        runner_up_code: 'BBB',
+        final_home_score: 2,
+        final_away_score: null,
+      }),
     });
-    const actual = emptyOfficial({ finalScore: { home: 2, away: 1 } });
+    const actual = emptyOfficial({
+      finalScore: { home: 2, away: 1 },
+      finalHomeCode: 'AAA',
+      finalAwayCode: 'BBB',
+    });
     expect(computeScore(user, actual).finalExact).toBe(0);
   });
 
@@ -272,6 +387,8 @@ describe('computeScore — casos límite', () => {
       },
       finalists: new Set([sf[0], sf[1]]),
       finalScore: { home: 2, away: 1 },
+      finalHomeCode: sf[0],
+      finalAwayCode: sf[1],
       champion: sf[0],
       runnerUp: sf[1],
       thirdPlace: sf[2],
@@ -377,6 +494,8 @@ describe('deriveOfficialResults', () => {
     expect(r.advancers.r32.has('BBB')).toBe(true);
     expect(r.finalists).toEqual(new Set(['AAA', 'BBB']));
     expect(r.finalScore).toEqual({ home: 3, away: 1 });
+    expect(r.finalHomeCode).toBe('AAA');
+    expect(r.finalAwayCode).toBe('BBB');
     expect(r.champion).toBe('AAA');
     expect(r.runnerUp).toBe('BBB');
     expect(r.thirdPlace).toBe('CCC');

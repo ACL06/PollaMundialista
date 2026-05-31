@@ -14,14 +14,14 @@ import type { Match } from '@/lib/types/match';
  * Reglas (máximo teórico 643):
  *   - Marcador exacto de grupos: 5 (× 72 = 360)
  *   - Solo resultado (gana/empata) sin marcador exacto: 2
- *   - Clasificado a Dieciseisavos: 2 c/u (× 32 = 64)
- *   - Clasificado a Octavos: 3 c/u (× 16 = 48)
- *   - Clasificado a Cuartos: 5 c/u (× 8 = 40)
+ *   - Clasificado a Eliminatorias de 32: 2 c/u (× 32 = 64)
+ *   - Clasificado a Octavos de Final: 3 c/u (× 16 = 48)
+ *   - Clasificado a Cuartos de Final: 5 c/u (× 8 = 40)
  *   - Clasificado a Semifinales: 8 c/u (× 4 = 32)
  *   - Finalista (campeón + subcampeón que llegan a la final): 12 c/u (× 2 = 24)
- *   - Tercer puesto correcto: 15
+ *   - Tercer lugar correcto: 15
  *   - Campeón correcto: 30
- *   - Marcador exacto de la final: 15
+ *   - Marcador exacto de la final (estricto, por equipo): 15
  *   - Goleador: 15
  */
 
@@ -46,6 +46,9 @@ export interface OfficialResults {
   finalists: Set<string>;
   /** Marcador oficial de la final (90'), o null si no se ha jugado. */
   finalScore: { home: number; away: number } | null;
+  /** Equipos local/visitante de la final (orientación de `finalScore`). */
+  finalHomeCode: string | null;
+  finalAwayCode: string | null;
   champion: string | null;
   runnerUp: string | null;
   thirdPlace: string | null;
@@ -140,7 +143,7 @@ export function computeScore(user: UserPrediction, actual: OfficialResults): Sco
     if (actual.finalists.has(code)) finalistsPts += SCORING.finalist;
   }
 
-  // ── Tercer puesto / Campeón ───────────────────────────────────────
+  // ── Tercer lugar / Campeón ────────────────────────────────────────
   const thirdPts =
     user.prediction?.third_place_code &&
     user.prediction.third_place_code === actual.thirdPlace
@@ -152,16 +155,36 @@ export function computeScore(user: UserPrediction, actual: OfficialResults): Sco
       ? SCORING.champion
       : 0;
 
-  // ── Marcador exacto de la final (bonus) ───────────────────────────
-  // El usuario predijo un marcador sin asignar equipos (dos cajas X–Y),
-  // así que se compara como par NO ordenado: acertar la "pizarra" basta.
+  // ── Marcador exacto de la final (bonus, estricto y en orden) ───────
+  // El usuario asigna goles a SU campeón (final_home_score) y a SU
+  // subcampeón (final_away_score). Suma solo si AMBOS finalistas predichos
+  // jugaron de verdad la final y el marcador que le puso a cada uno coincide
+  // con los goles reales de ESE equipo. Acertar la "pizarra" no basta: hay
+  // que clavar el marcador por equipo (un empate a 90' definido por penales
+  // cuenta si se predijo ese empate exacto entre esos dos equipos).
   let finalExactPts = 0;
   const ph = user.prediction?.final_home_score;
   const pa = user.prediction?.final_away_score;
-  if (ph != null && pa != null && actual.finalScore) {
-    const predPair = [ph, pa].sort((a, b) => a - b);
-    const realPair = [actual.finalScore.home, actual.finalScore.away].sort((a, b) => a - b);
-    if (predPair[0] === realPair[0] && predPair[1] === realPair[1]) {
+  const champ = user.prediction?.champion_code;
+  const runner = user.prediction?.runner_up_code;
+  if (
+    ph != null &&
+    pa != null &&
+    champ &&
+    runner &&
+    actual.finalScore &&
+    actual.finalHomeCode &&
+    actual.finalAwayCode
+  ) {
+    const goalsOf = (code: string): number | null =>
+      code === actual.finalHomeCode
+        ? actual.finalScore!.home
+        : code === actual.finalAwayCode
+          ? actual.finalScore!.away
+          : null;
+    const champGoals = goalsOf(champ);
+    const runnerGoals = goalsOf(runner);
+    if (champGoals != null && runnerGoals != null && ph === champGoals && pa === runnerGoals) {
       finalExactPts = SCORING.finalExact;
     }
   }
@@ -232,6 +255,8 @@ export function deriveOfficialResults(
   };
   const finalists = new Set<string>();
   let finalScore: { home: number; away: number } | null = null;
+  let finalHomeCode: string | null = null;
+  let finalAwayCode: string | null = null;
   let champion: string | null = null;
   let runnerUp: string | null = null;
   let thirdPlace: string | null = null;
@@ -259,6 +284,8 @@ export function deriveOfficialResults(
       if (awayCode) finalists.add(awayCode);
       if (hasScore) {
         finalScore = { home: m.home_score as number, away: m.away_score as number };
+        finalHomeCode = homeCode;
+        finalAwayCode = awayCode;
         const result = pickWinner(m);
         champion = result.winner;
         runnerUp = result.loser;
@@ -275,6 +302,8 @@ export function deriveOfficialResults(
     advancers,
     finalists,
     finalScore,
+    finalHomeCode,
+    finalAwayCode,
     champion,
     runnerUp,
     thirdPlace,

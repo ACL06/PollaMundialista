@@ -21,11 +21,11 @@ const FILTER_OPTIONS: Array<{ value: Filter; label: string }> = [
   { value: 'all', label: 'Todos' },
   { value: 'today', label: 'Hoy' },
   { value: 'upcoming', label: 'Por jugar' },
-  { value: 'r32', label: 'Dieciseisavos de Final' },
+  { value: 'r32', label: 'Eliminatorias de 32' },
   { value: 'r16', label: 'Octavos de Final' },
   { value: 'qf', label: 'Cuartos de Final' },
   { value: 'sf', label: 'Semifinales' },
-  { value: '3rd', label: 'Tercer Puesto' },
+  { value: '3rd', label: 'Tercer lugar' },
   { value: 'final', label: 'Final' },
 ];
 

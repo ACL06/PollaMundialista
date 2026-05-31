@@ -5,11 +5,11 @@
  * Códigos soportados:
  *   - "1A", "2B"   → "Ganador Grupo A", "Segundo Lugar Grupo B"
  *   - "3ABCDF"     → "Tercer Lugar Grupos A/B/C/D/F"
- *   - "W73"        → "Ganador Dieciseisavos de Final" (sin número de partido)
+ *   - "W73"        → "Ganador Eliminatorias de 32" (sin número de partido)
  *   - "L101"       → "Perdedor Semifinales"
  *
  * Para W/L derivamos la ronda anterior a partir del rango del `match_number`:
- *   73-88 → Dieciseisavos de Final, 89-96 → Octavos de Final,
+ *   73-88 → Eliminatorias de 32, 89-96 → Octavos de Final,
  *   97-100 → Cuartos de Final,      101-102 → Semifinales.
  *
  * Si el código no calza con ningún patrón conocido, se devuelve tal cual
@@ -47,7 +47,7 @@ export function formatBracketSource(source: string): string {
 
 /** Mapea el match_number del partido de origen al nombre de su ronda. */
 function roundLabelFromMatchNumber(num: number): string | null {
-  if (num >= 73 && num <= 88) return 'Dieciseisavos de Final';
+  if (num >= 73 && num <= 88) return 'Eliminatorias de 32';
   if (num >= 89 && num <= 96) return 'Octavos de Final';
   if (num >= 97 && num <= 100) return 'Cuartos de Final';
   if (num >= 101 && num <= 102) return 'Semifinales';

@@ -44,9 +44,9 @@
 #### Catálogo (Fase 3 + 3B + 3C + 3D)
 - Tabla `teams`: 48 equipos WC 2026 + banderas ISO + grupo (A-L)
 - Tabla `matches`: 104 partidos (72 grupos con equipos/sedes/horarios en TZ Bogotá + 32 eliminatorias con equipos nullable y metadata `bracket_source_*`)
-- `/calendar`: filtros por fase (Todos, Hoy, Por jugar, Dieciseisavos de Final, Octavos, Cuartos, Semis, 3er Puesto, Final). `MatchCard` colorea por status (scheduled/live/final). `BracketSlot` con tooltip en hover
+- `/calendar`: filtros por fase (Todos, Hoy, Por jugar, Eliminatorias de 32, Octavos, Cuartos, Semis, Tercer lugar, Final). `MatchCard` colorea por status (scheduled/live/final). `BracketSlot` con tooltip en hover
 - `/grupos`: 12 tablas de posiciones (PJ, G, E, P, GF, GC, DG, Pts) con tie-break FIFA simplificado. Helper puro `compute-standings.ts`
-- **Nomenclatura de rondas:** Dieciseisavos de Final (R32) → Octavos → Cuartos → Semifinales → Tercer Puesto → Final
+- **Nomenclatura de rondas:** Fase de grupos → Eliminatorias de 32 (R32) → Octavos de Final → Cuartos de Final → Semifinales → Tercer lugar → Final
 
 #### Pronósticos (Fase 4 completa: 4A–4E)
 - Schema: `predictions`, `prediction_group_scores`, `prediction_bracket` con RLS, trigger de inmutabilidad de `locked_at`, check constraints **0-99** en scores
@@ -54,20 +54,20 @@
 - Wizard cliente `/pronosticos` de 5 steps con state que persiste entre steps:
   1. **Bienvenida** — countdown al lock + estado
   2. **Marcadores** — 72 marcadores por día, autosave en blur, estados de card (guardado/incompleto-ámbar/error), tab del día centrado
-  3. **Bracket** — Dieciseisavos→Semis, subset + cascada al deseleccionar, **regla 2-3 por grupo** en R32, agrupado por grupo
-  4. **Cierre** — campeón/subcampeón/3er puesto (entre los 4 semifinalistas), marcador exacto de la final (bonus), goleador (texto libre)
+  3. **Bracket** — Eliminatorias de 32→Semis, subset + cascada al deseleccionar, **regla 2-3 por grupo** en R32, agrupado por grupo
+  4. **Cierre** — campeón/subcampeón/tercer lugar (entre los 4 semifinalistas), marcador exacto de la final (bonus), goleador (texto libre)
   5. **Revisión** — resumen + submit one-shot que setea `locked_at`
 - Autosave por server action; `editBlockReason()` bloquea edición tras submit propio o lock global
 - **Vista read-only** (`PredictionView`, Fase 4C): cuando enviaste o cerró el plazo, en vez del wizard se muestra el pronóstico completo (reusada también en Comunidad)
 - **Indicadores en /home** (Fase 4E, `PredictionStatusCard`): countdown + progreso (X/137) + CTA según estado
 
 #### Scoring (Fase 4D)
-- Motor TS puro `src/lib/scoring.ts` con **tests Vitest** (`scoring.test.ts`, 26 tests):
+- Motor TS puro `src/lib/scoring.ts` con **tests Vitest** (`scoring.test.ts`, 31 tests):
   - `computeScore(user, official)` → desglose + total (máx **643**)
   - `deriveOfficialResults(matches, topScorer)` → construye resultados oficiales desde `matches`
   - `buildRanking(...)` → agrupa por usuario, ordena
   - `normalizeScorer` → match flexible del goleador (sin acentos/mayúsculas)
-- Reglas: grupos exacto 5 / solo-resultado 2; R32 2, R16 3, QF 5, SF 8 por equipo; finalistas 12 c/u; 3er puesto 15; campeón 30; marcador final 15 (par no ordenado); goleador 15
+- Reglas: grupos exacto 5 / solo-resultado 2; R32 2, R16 3, QF 5, SF 8 por equipo; finalistas 12 c/u; tercer lugar 15; campeón 30; marcador final 15 (**estricto, por equipo**: suma solo si tu campeón y tu subcampeón jugaron la final y le clavaste a cada uno su marcador exacto; empate a 90' cuenta si predijiste ese empate entre esos dos equipos); goleador 15
 
 #### Ranking (Fase 5)
 - `/ranking`: gate pre-lock; post-lock arma el ranking server-side reusando `buildRanking` + resultados de `matches` + goleador de `tournament_settings`
@@ -89,9 +89,9 @@
 - Esto "enciende" scoring, ranking, tablas de grupos y aciertos en Comunidad.
 
 #### Tests (Vitest)
-- `scoring.test.ts` (26): reglas de scoring, deriveOfficialResults, buildRanking, pronóstico perfecto = 643.
+- `scoring.test.ts` (31): reglas de scoring (incl. marcador de la final estricto por equipo), deriveOfficialResults, buildRanking, pronóstico perfecto = 643.
 - `compute-standings.test.ts`, `format-bracket-source.test.ts`, `predictions-lock.test.ts`, `validators/profile.test.ts`, `validators/prediction.test.ts`.
-- **52 tests en total**, corren en CI (`npm test`).
+- **57 tests en total**, corren en CI (`npm test`).
 
 ### ⏳ Pendiente / Roadmap
 
@@ -100,7 +100,7 @@
 - **Comunidad: aciertos del día / tabla en vivo** cuando haya resultados (mejora social)
 - **Modal de perfil**: opción de cambiar avatar y equipo favorito (hoy solo los 4 campos base)
 - **Refactors DRY pendientes** (maintainability, no bugs): helper de query de `matches` (7 pages comparten select+normalize), `sanitizeScore`/`sanitizePhone` a `utils`, componente `ScoreInput` unificado
-- **Regla: marcadores al minuto 90** (sin prórroga ni penaltis) — confirmado con el usuario. El marcador exacto se evalúa al 90'. Implicación: si la final/3er puesto empatan en 90' (se definen por penales), `pickWinner` no otorga campeón/3er. Es por diseño (no se modelan penales); si se quisiera otorgar, haría falta una columna `winner_code`. Las reglas visibles al usuario están en `src/lib/game-rules.ts`
+- **Regla: marcadores al minuto 90** (sin prórroga ni penaltis) — confirmado con el usuario. El marcador exacto se evalúa al 90'. Implicación: si la final/tercer lugar empatan en 90' (se definen por penales), `pickWinner` no otorga campeón/tercer lugar. Es por diseño (no se modelan penales); si se quisiera otorgar, haría falta una columna `winner_code`. Las reglas visibles al usuario están en `src/lib/game-rules.ts`
 - **Dependabot alert #1** (PostCSS XSS) — baja prioridad, dev deps
 
 ---
@@ -160,11 +160,11 @@
 5. **Trigger en Postgres** para `auth.users` → `profiles`. `upsert` como red de seguridad en saves.
 6. **Paleta tricolor** (verde/rojo/azul) por los 3 anfitriones. Mensajes de error genéricos en auth.
 7. **`minmax(0, 1fr)` en grids** con texto largo (evita inflado por contenido intrínseco).
-8. **Mecánica = Opción C** (grupos + bracket de clasificados). El usuario predice 72 marcadores + qué equipos pasan a cada ronda + campeón/3er + marcador exacto final (bonus) + goleador.
+8. **Mecánica = Opción C** (grupos + bracket de clasificados). El usuario predice 72 marcadores + qué equipos pasan a cada ronda + campeón/subcampeón/tercer lugar + marcador exacto final (bonus) + goleador.
 9. **Lock global = kickoff match #1** vía `predictions_lock_at()`. **Submit one-shot** (`locked_at`) e inmutable después; submit parcial OK (campos vacíos = 0).
 10. **Wizard cliente** con state que vive en `PredictionWizard` (persiste al navegar entre steps). Autosave por sección (onBlur / toggle).
-11. **Goleador texto libre**, match flexible al evaluar. **Marcador de la final = par no ordenado** (el usuario lo predice sin asignar equipos).
-12. **Regla 2-3 por grupo en Dieciseisavos** (cada grupo aporta 2 directos + posible mejor tercero = 8 grupos con 3).
+11. **Goleador texto libre**, match flexible al evaluar. **Marcador de la final = estricto, por equipo**: el usuario asigna goles a su campeón (`final_home_score`) y a su subcampeón (`final_away_score`); suma 15 solo si **ambos finalistas predichos jugaron la final** y los goles que les asignó coinciden con los goles reales de **ese mismo equipo** (vía `finalHomeCode`/`finalAwayCode` en `OfficialResults`, independiente de home/away oficial; un empate a 90' definido por penales cuenta si se predijo ese empate entre esos dos equipos). Acertar los equipos se premia aparte (campeón 30, finalistas 12).
+12. **Regla 2-3 por grupo en Eliminatorias de 32** (cada grupo aporta 2 directos + posible mejor tercero = 8 grupos con 3).
 13. **Scoring en TS, no en SQL** (`scoring.ts` + Vitest). El **ranking** también computa en TS server-side — una sola fuente de verdad. Con ~30 usuarios el costo es trivial.
 14. **Transparencia post-lock**: los pronósticos de todos se abren al lock (nadie copia antes). Vista `public_profiles` para nombres sin exponer datos sensibles.
 15. **Admin vía flag `is_admin`** + función `is_admin()` en RLS (no hardcodear email).
@@ -242,7 +242,7 @@ Cuando se necesite SQL contra Supabase: mostrar el SQL y pedir que el usuario lo
 - **Security Advisor**: el warning de `public_profiles` (Security Definer View) es intencional/aceptado; "Leaked Password Protection" no aplica (OTP, sin contraseñas).
 
 ### Resueltas (registro histórico)
-- ✅ Lista de equipos TS → tabla `teams` (3B). NAME_REGEX espacios-solo → pipe+trim. OnboardingPage loop redirect. signOutAction silenciaba cookies. Filtro "Hoy" congelado. Warnings `<img>` → `next/image`. Nomenclatura "Treintaidosavos" → "Dieciseisavos de Final". Funciones sin `search_path` → hardened.
+- ✅ Lista de equipos TS → tabla `teams` (3B). NAME_REGEX espacios-solo → pipe+trim. OnboardingPage loop redirect. signOutAction silenciaba cookies. Filtro "Hoy" congelado. Warnings `<img>` → `next/image`. Nomenclatura "Treintaidosavos" → "Dieciseisavos de Final" → "Eliminatorias de 32"; "Tercer Puesto" → "Tercer lugar". Funciones sin `search_path` → hardened.
 
 ---
 

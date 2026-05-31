@@ -80,7 +80,7 @@ export function PredictionView({
   }> = [
     { label: 'Campeón', Icon: Crown, iconClass: 'text-amber-500', code: prediction?.champion_code ?? null },
     { label: 'Subcampeón', Icon: Trophy, iconClass: 'text-muted-foreground', code: prediction?.runner_up_code ?? null },
-    { label: 'Tercer puesto', Icon: Medal, iconClass: 'text-amber-700', code: prediction?.third_place_code ?? null },
+    { label: 'Tercer lugar', Icon: Medal, iconClass: 'text-amber-700', code: prediction?.third_place_code ?? null },
   ];
 
   const finalScore =
@@ -137,7 +137,12 @@ export function PredictionView({
             );
           })}
           <div className="flex items-center justify-between gap-3 px-4 py-3 bg-surface">
-            <span className="text-sm font-medium text-foreground">Marcador final (bonus)</span>
+            <span className="text-sm font-medium text-foreground">
+              Marcador final{' '}
+              <span className="text-xs font-normal text-muted-foreground">
+                (campeón–subcampeón)
+              </span>
+            </span>
             <span className="text-sm font-mono font-bold tabular-nums text-foreground">
               {finalScore}
             </span>

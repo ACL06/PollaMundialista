@@ -28,7 +28,7 @@ export function WelcomeStep({ lockAt, isLocked, isSubmitted, onContinue }: Welco
         <ul className="text-sm text-muted-foreground space-y-1.5 ml-4 list-disc">
           <li>Los marcadores de los 72 partidos de fase de grupos</li>
           <li>Qué equipos clasifican a cada ronda eliminatoria (32 → 16 → 8 → 4 → 2)</li>
-          <li>Tu campeón, subcampeón, tercer puesto y un bonus de marcador exacto en la final</li>
+          <li>Tu campeón, subcampeón, tercer lugar y un bonus de marcador exacto en la final</li>
           <li>El goleador del torneo</li>
         </ul>
         <p className="text-sm text-muted-foreground leading-relaxed">
