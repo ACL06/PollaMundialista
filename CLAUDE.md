@@ -60,6 +60,7 @@
 - Autosave por server action; `editBlockReason()` bloquea edición tras submit propio o lock global
 - **Vista read-only** (`PredictionView`, Fase 4C): cuando enviaste o cerró el plazo, en vez del wizard se muestra el pronóstico completo (reusada también en Comunidad)
 - **Indicadores en /home** (Fase 4E, `PredictionStatusCard`): countdown + progreso (X/137) + CTA según estado
+- **Pestaña Eliminatorias** (Fase 9B, `PronosticosTabs` + `KnockoutScoresPanel`): `/pronosticos` tiene 2 tabs — *Mi pronóstico* (wizard/read-only) y *Eliminatorias* (marcadores de R32..3er lugar). Cada partido: `pending` (cruce tipo calendario) → `open` (inputs + autosave vía `saveKnockoutScore`) → `closed` (read-only) según `knockoutMatchState()`. Scoring pendiente (9C)
 
 #### Scoring (Fase 4D)
 - Motor TS puro `src/lib/scoring.ts` con **tests Vitest** (`scoring.test.ts`, 31 tests):
@@ -134,6 +135,7 @@
 - **`predictions`** — 1 fila/usuario. `user_id` (PK), `locked_at` (inmutable), `champion_code`, `runner_up_code`, `third_place_code`, `final_home_score`/`away_score`, `top_scorer`, timestamps.
 - **`prediction_group_scores`** — PK (`user_id`, `match_id`), scores 0-99.
 - **`prediction_bracket`** — PK (`user_id`, `round`, `team_code`), `round` ∈ (`r32`,`r16`,`qf`,`sf`).
+- **`prediction_knockout_scores`** — PK (`user_id`, `match_id`), scores 0-99, `updated_at`. Marcadores de eliminatoria (R32..3er lugar; la final no). Ventana **por partido** (no por el lock global): editable mientras el cruce tiene equipos y no arranca (Fase 9).
 - **`prediction_reactions`** — PK (`reactor_id`, `target_user_id`, `match_id`), `reaction` ∈ (`like`,`laugh`,`fire`,`shock`), `check (reactor_id <> target_user_id)`.
 - **`tournament_settings`** — 1 fila (`id=1`), `top_scorer`. Lectura pública, UPDATE solo admin.
 
@@ -146,6 +148,7 @@
 ### Funciones SQL
 - `predictions_lock_at()` — `kicks_off_at` del match #1 (lock global dinámico).
 - `is_admin()` — security definer, lee `profiles.is_admin` de `auth.uid()`.
+- `knockout_match_editable(match_id)` / `knockout_match_started(match_id)` — security definer; lock **por partido** de los marcadores de eliminatoria (editable = stage R32..3er + ambos equipos + `now() < kickoff`; started = `now() >= kickoff`, abre lectura pública).
 - `handle_new_user`, `set_updated_at`, `predictions_locked_at_immutable` — triggers.
 - **Todas con `search_path` fijo** (hardening del Security Advisor).
 
