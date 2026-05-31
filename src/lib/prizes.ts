@@ -1,0 +1,52 @@
+/**
+ * Configuración de inscripción y premios de la polla (Fase 10).
+ * Valores que pueden cambiar — centralizados aquí para editarlos en un solo
+ * lugar. Montos en pesos colombianos (COP).
+ */
+
+/** Costo de inscripción por participante (COP). Puede cambiar. */
+export const ENROLLMENT_COST_COP = 50000;
+
+/** Porcentaje del pozo que va a la administración de la polla. */
+export const ADMIN_CUT = 0.2;
+
+/** Reparto del pozo de premios (tras quitar la administración): 1° / 2° / 3°. */
+export const PODIUM_SPLIT = [0.7, 0.2, 0.1] as const;
+
+/** Contacto para dudas. Placeholder — actualizar con el número real. */
+export const CONTACT_PHONE = 'XXX XXX XXXX';
+
+export interface PrizeBreakdown {
+  /** Pozo total recaudado = inscritos × costo. */
+  pot: number;
+  /** Parte para la administración de la polla (20%). */
+  adminCut: number;
+  /** Pozo de premios que se reparte en el podio (80%). */
+  prizePool: number;
+  /** Premio de cada puesto del podio [1°, 2°, 3°]. */
+  podium: [number, number, number];
+}
+
+/**
+ * Calcula el reparto de premios según la cantidad de inscritos.
+ * El 1.er puesto absorbe el redondeo para que el podio sume exactamente
+ * el pozo de premios.
+ */
+export function computePrizes(enrolledCount: number): PrizeBreakdown {
+  const pot = Math.max(0, Math.trunc(enrolledCount)) * ENROLLMENT_COST_COP;
+  const adminCut = Math.round(pot * ADMIN_CUT);
+  const prizePool = pot - adminCut;
+  const second = Math.round(prizePool * PODIUM_SPLIT[1]);
+  const third = Math.round(prizePool * PODIUM_SPLIT[2]);
+  const first = prizePool - second - third;
+  return { pot, adminCut, prizePool, podium: [first, second, third] };
+}
+
+/** Formatea un monto en COP sin decimales: 50000 → "$50.000". */
+export function formatCOP(n: number): string {
+  return n.toLocaleString('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+  });
+}

@@ -90,6 +90,11 @@
 - Patrón de guardado: `changeAndPersist(id, patch)` calcula el draft nuevo y lo persiste directo (evita el stale-closure de setState+leer-viejo que tuvo un bug en 8.2, ya corregido).
 - Esto "enciende" scoring, ranking, tablas de grupos y aciertos en Comunidad.
 
+#### Inscripción y premios (Fase 10)
+- **10A** — `profiles.is_enrolled` + admin (ver Panel admin).
+- **10B** — Sección **Inscripción y premios** en `/home` (entre Reglas y Explora, `EnrollmentPrizes`): estado pre-inscrito/inscrito, costo (`ENROLLMENT_COST_COP` = $50.000, configurable), contador de inscritos (de `public_profiles`), pozo que **se revela en el partido inaugural** (gate `isLockedAt`), reparto **20% administración + podio 70/20/10** (`src/lib/prizes.ts` `computePrizes`, con tests), regla de **empates** (movida desde `game-rules.ts`) y contacto (`CONTACT_PHONE`, placeholder). Podio gráfico con datos de ejemplo.
+- **Badge de estado** bajo el saludo en `/home` (`EnrollmentBadge`): rojo = pre-inscrito, verde = inscrito.
+
 #### Tests (Vitest)
 - `scoring.test.ts` (39): reglas de scoring (incl. marcadores de eliminatoria y marcador de la final estricto por equipo), deriveOfficialResults, buildRanking, pronóstico perfecto = 798.
 - `knockout-window.test.ts` (7): estados de la ventana de captura por partido (pending/open/closed).
