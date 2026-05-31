@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { AdminPanel } from './AdminPanel';
+import type { EnrollmentUser } from './EnrollmentEditor';
 import type { Match, Team } from '@/lib/types/match';
 
 export const metadata = { title: 'Panel admin' };
@@ -20,7 +21,7 @@ export default async function AdminPage() {
     .maybeSingle();
   if (!profile?.is_admin) redirect('/home');
 
-  const [matchesResult, teamsResult, settingsResult] = await Promise.all([
+  const [matchesResult, teamsResult, settingsResult, enrollmentResult] = await Promise.all([
     supabase
       .from('matches')
       .select(
@@ -39,6 +40,9 @@ export default async function AdminPage() {
       .not('group_code', 'is', null)
       .order('group_code', { ascending: true }),
     supabase.from('tournament_settings').select('top_scorer').eq('id', 1).maybeSingle(),
+    supabase
+      .from('public_profiles')
+      .select('id, nickname, first_name, last_name, avatar_url, is_enrolled'),
   ]);
 
   const allMatches = (matchesResult.data ?? []).map((row) => {
@@ -55,6 +59,7 @@ export default async function AdminPage() {
   const knockoutMatches = allMatches.filter((m) => m.stage !== 'group');
   const teams = (teamsResult.data ?? []) as Team[];
   const initialTopScorer = (settingsResult.data?.top_scorer as string | undefined) ?? null;
+  const enrollmentUsers = (enrollmentResult.data ?? []) as EnrollmentUser[];
 
   return (
     <AdminPanel
@@ -62,6 +67,7 @@ export default async function AdminPage() {
       knockoutMatches={knockoutMatches}
       teams={teams}
       initialTopScorer={initialTopScorer}
+      enrollmentUsers={enrollmentUsers}
     />
   );
 }

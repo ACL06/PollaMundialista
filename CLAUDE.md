@@ -81,11 +81,12 @@
 - `/comunidad/[userId]`: pronóstico completo de cualquiera (reusa `PredictionView`)
 - Vista `public_profiles` (solo columnas no sensibles) para mostrar nombres/avatares sin exponer phone/email
 
-#### Panel admin (Fase 8.1 + 8.2)
+#### Panel admin (Fase 8.1 + 8.2 + 10A)
 - `/admin`: gated por flag `is_admin` (server-side + en cada action via `requireAdmin()` + RLS). Link "Panel admin" en /home solo para admins.
-- Switcher **Fase de grupos / Eliminatorias**.
+- Switcher **Fase de grupos / Eliminatorias / Inscripciones**.
   - Grupos: marcador + status de los 72 partidos (autosave) + goleador oficial (`tournament_settings`).
   - Eliminatorias (`KnockoutResultsEditor`): por ronda, asignar equipos home/away (de los 48, con hint del `bracket_source`) + marcador + status.
+  - Inscripciones (`EnrollmentEditor`, Fase 10A): lista de usuarios (de `public_profiles`) con toggle pre-inscrito/inscrito (`setEnrollment` → `profiles.is_enrolled`).
 - Patrón de guardado: `changeAndPersist(id, patch)` calcula el draft nuevo y lo persiste directo (evita el stale-closure de setState+leer-viejo que tuvo un bug en 8.2, ya corregido).
 - Esto "enciende" scoring, ranking, tablas de grupos y aciertos en Comunidad.
 
@@ -130,7 +131,7 @@
 ## Modelo de datos
 
 ### Tablas
-- **`profiles`** — `id` (FK auth.users), `email`, `nickname` (único `lower()`), `first_name`, `last_name`, `phone`, `favorite_team` (FK teams), `avatar_url`, **`is_admin`** (bool), timestamps. RLS: SELECT/UPDATE/INSERT propios.
+- **`profiles`** — `id` (FK auth.users), `email`, `nickname` (único `lower()`), `first_name`, `last_name`, `phone`, `favorite_team` (FK teams), `avatar_url`, **`is_admin`** (bool), **`is_enrolled`** (bool, default `false` = pre-inscrito; lo administra el admin tras pago externo — Fase 10), timestamps. RLS: SELECT/UPDATE/INSERT propios + **UPDATE de admin** (`is_admin()`) para administrar inscripción.
 - **`teams`** — `code` (PK), `name`, `flag`, `group_code` (A-L). 48 filas, lectura pública.
 - **`matches`** — `id`, `match_number` (1-104), `stage` (`group|r32|r16|qf|sf|3rd|final`), `group_code`, `home_team_code`/`away_team_code` (nullable), `bracket_source_home`/`away`, `kicks_off_at`, `venue`, `home_score`/`away_score`, `status`. Lectura pública; UPDATE solo admin (RLS `is_admin()`).
 - **`predictions`** — 1 fila/usuario. `user_id` (PK), `locked_at` (inmutable), `champion_code`, `runner_up_code`, `third_place_code`, `final_home_score`/`away_score`, `top_scorer`, timestamps.
@@ -141,7 +142,7 @@
 - **`tournament_settings`** — 1 fila (`id=1`), `top_scorer`. Lectura pública, UPDATE solo admin.
 
 ### Vista
-- **`public_profiles`** — `select id, nickname, first_name, last_name, avatar_url, favorite_team from profiles`. SECURITY DEFINER (expone solo columnas no sensibles a `authenticated`; **nunca** phone/email). El advisor lo marca pero es intencional/seguro (acknowledged).
+- **`public_profiles`** — `select id, nickname, first_name, last_name, avatar_url, favorite_team, is_enrolled from profiles`. SECURITY DEFINER (expone solo columnas no sensibles a `authenticated`; **nunca** phone/email). Permite contar inscritos y que el admin liste usuarios sin abrir SELECT global en `profiles`. El advisor lo marca pero es intencional/seguro (acknowledged).
 
 ### RLS — patrón de pronósticos
 - Las 3 tablas de predicción + reactions: **SELECT propio siempre + SELECT público post-lock** (`now() >= predictions_lock_at()`). INSERT/UPDATE/DELETE propio y solo antes del lock (predicciones) o post-lock (reacciones).
