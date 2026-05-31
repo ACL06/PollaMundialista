@@ -105,6 +105,21 @@ export interface PredictionGroupScore {
 }
 
 /**
+ * Marcador exacto predicho para un partido de eliminatoria
+ * (R32, Octavos, Cuartos, Semifinal o Tercer lugar — la final tiene su
+ * propio bonus). Misma forma que los de grupos pero vive en una tabla
+ * aparte porque su ventana de edición es POR PARTIDO: abre cuando se
+ * conocen los dos equipos y cierra en el kickoff de ese partido (no
+ * depende del lock global del pronóstico).
+ */
+export interface PredictionKnockoutScore {
+  user_id: string;
+  match_id: string;
+  home_score: number;
+  away_score: number;
+}
+
+/**
  * Un equipo que el usuario predijo que clasifica a una ronda dada.
  * Las reglas de subset (R16 ⊆ R32, QF ⊆ R16, etc.) se validan en
  * server action y UI — la BD solo enforza que `round` sea uno de los
