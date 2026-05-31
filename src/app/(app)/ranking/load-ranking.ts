@@ -7,6 +7,7 @@ import type {
   Prediction,
   PredictionBracketEntry,
   PredictionGroupScore,
+  PredictionKnockoutScore,
 } from '@/lib/types/prediction';
 import type { RankingRow } from './types';
 
@@ -39,11 +40,14 @@ export async function loadRanking(): Promise<RankingResult> {
     return { lockAt, locked: false, hasResults: false, rows: [] };
   }
 
-  const [predsRes, scoresRes, bracketRes, matchesRes, profilesRes, settingsRes] =
+  const [predsRes, scoresRes, bracketRes, knockoutScoresRes, matchesRes, profilesRes, settingsRes] =
     await Promise.all([
       supabase.from('predictions').select('*'),
       supabase.from('prediction_group_scores').select('user_id, match_id, home_score, away_score'),
       supabase.from('prediction_bracket').select('user_id, round, team_code'),
+      supabase
+        .from('prediction_knockout_scores')
+        .select('user_id, match_id, home_score, away_score'),
       supabase
         .from('matches')
         .select(
@@ -63,6 +67,7 @@ export async function loadRanking(): Promise<RankingResult> {
   const predictions = (predsRes.data ?? []) as Prediction[];
   const groupScores = (scoresRes.data ?? []) as PredictionGroupScore[];
   const bracket = (bracketRes.data ?? []) as PredictionBracketEntry[];
+  const knockoutScores = (knockoutScoresRes.data ?? []) as PredictionKnockoutScore[];
   const profiles = (profilesRes.data ?? []) as RankingProfile[];
 
   const matches = (matchesRes.data ?? []).map((row) => {
@@ -82,7 +87,7 @@ export async function loadRanking(): Promise<RankingResult> {
   const profileById = new Map(profiles.map((p) => [p.id, p]));
 
   // Resolver nombre/avatar, y ordenar por puntos desc → nombre asc (desempate).
-  const sorted = buildRanking(predictions, groupScores, bracket, official)
+  const sorted = buildRanking(predictions, groupScores, bracket, knockoutScores, official)
     .map((entry) => {
       const profile = profileById.get(entry.userId);
       return {

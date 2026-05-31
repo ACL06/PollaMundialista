@@ -60,15 +60,15 @@
 - Autosave por server action; `editBlockReason()` bloquea edición tras submit propio o lock global
 - **Vista read-only** (`PredictionView`, Fase 4C): cuando enviaste o cerró el plazo, en vez del wizard se muestra el pronóstico completo (reusada también en Comunidad)
 - **Indicadores en /home** (Fase 4E, `PredictionStatusCard`): countdown + progreso (X/137) + CTA según estado
-- **Pestaña Eliminatorias** (Fase 9B, `PronosticosTabs` + `KnockoutScoresPanel`): `/pronosticos` tiene 2 tabs — *Mi pronóstico* (wizard/read-only) y *Eliminatorias* (marcadores de R32..3er lugar). Cada partido: `pending` (cruce tipo calendario) → `open` (inputs + autosave vía `saveKnockoutScore`) → `closed` (read-only) según `knockoutMatchState()`. Scoring pendiente (9C)
+- **Pestaña Eliminatorias** (Fase 9B+9C, `PronosticosTabs` + `KnockoutScoresPanel`): `/pronosticos` tiene 2 tabs — *Mi pronóstico* (wizard/read-only) y *Eliminatorias* (marcadores de R32..3er lugar). Cada partido: `pending` (cruce tipo calendario) → `open` (inputs + autosave vía `saveKnockoutScore`) → `closed` (read-only) según `knockoutMatchState()`. Puntúan 5/2 en el scoring y ranking (9C)
 
-#### Scoring (Fase 4D)
-- Motor TS puro `src/lib/scoring.ts` con **tests Vitest** (`scoring.test.ts`, 31 tests):
-  - `computeScore(user, official)` → desglose + total (máx **643**)
-  - `deriveOfficialResults(matches, topScorer)` → construye resultados oficiales desde `matches`
-  - `buildRanking(...)` → agrupa por usuario, ordena
+#### Scoring (Fase 4D + 9C)
+- Motor TS puro `src/lib/scoring.ts` con **tests Vitest** (`scoring.test.ts`, 39 tests):
+  - `computeScore(user, official)` → desglose + total (máx **798**)
+  - `deriveOfficialResults(matches, topScorer)` → construye resultados oficiales desde `matches` (incl. `knockoutScores`)
+  - `buildRanking(predictions, groupScores, bracket, knockoutScores, official)` → agrupa por usuario, ordena
   - `normalizeScorer` → match flexible del goleador (sin acentos/mayúsculas)
-- Reglas: grupos exacto 5 / solo-resultado 2; R32 2, R16 3, QF 5, SF 8 por equipo; finalistas 12 c/u; tercer lugar 15; campeón 30; marcador final 15 (**estricto, por equipo**: suma solo si tu campeón y tu subcampeón jugaron la final y le clavaste a cada uno su marcador exacto; empate a 90' cuenta si predijiste ese empate entre esos dos equipos); goleador 15
+- Reglas: grupos exacto 5 / solo-resultado 2; **eliminatoria (R32..3er lugar) exacto 5 / solo-resultado 2 al 90' (Fase 9C)**; clasificados R32 2, R16 3, QF 5, SF 8 por equipo; finalistas 12 c/u; tercer lugar 15; campeón 30; marcador final 15 (**estricto, por equipo**: suma solo si tu campeón y tu subcampeón jugaron la final y le clavaste a cada uno su marcador exacto; empate a 90' cuenta si predijiste ese empate entre esos dos equipos); goleador 15
 
 #### Ranking (Fase 5)
 - `/ranking`: gate pre-lock; post-lock arma el ranking server-side reusando `buildRanking` + resultados de `matches` + goleador de `tournament_settings`
@@ -90,9 +90,10 @@
 - Esto "enciende" scoring, ranking, tablas de grupos y aciertos en Comunidad.
 
 #### Tests (Vitest)
-- `scoring.test.ts` (31): reglas de scoring (incl. marcador de la final estricto por equipo), deriveOfficialResults, buildRanking, pronóstico perfecto = 643.
+- `scoring.test.ts` (39): reglas de scoring (incl. marcadores de eliminatoria y marcador de la final estricto por equipo), deriveOfficialResults, buildRanking, pronóstico perfecto = 798.
+- `knockout-window.test.ts` (7): estados de la ventana de captura por partido (pending/open/closed).
 - `compute-standings.test.ts`, `format-bracket-source.test.ts`, `predictions-lock.test.ts`, `validators/profile.test.ts`, `validators/prediction.test.ts`.
-- **57 tests en total**, corren en CI (`npm test`).
+- **72 tests en total**, corren en CI (`npm test`).
 
 ### ⏳ Pendiente / Roadmap
 

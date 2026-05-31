@@ -8,7 +8,12 @@ import {
   type OfficialResults,
   type UserPrediction,
 } from './scoring';
-import type { Prediction, PredictionBracketEntry, PredictionGroupScore } from '@/lib/types/prediction';
+import type {
+  Prediction,
+  PredictionBracketEntry,
+  PredictionGroupScore,
+  PredictionKnockoutScore,
+} from '@/lib/types/prediction';
 import type { Match, Team } from '@/lib/types/match';
 
 // ── Builders ────────────────────────────────────────────────────────
@@ -40,6 +45,7 @@ function br(round: PredictionBracketEntry['round'], team_code: string): Predicti
 function emptyOfficial(overrides: Partial<OfficialResults> = {}): OfficialResults {
   return {
     groupScores: new Map(),
+    knockoutScores: new Map(),
     advancers: { r32: new Set(), r16: new Set(), qf: new Set(), sf: new Set() },
     finalists: new Set(),
     finalScore: null,
@@ -54,7 +60,18 @@ function emptyOfficial(overrides: Partial<OfficialResults> = {}): OfficialResult
 }
 
 function emptyUser(overrides: Partial<UserPrediction> = {}): UserPrediction {
-  return { prediction: makePrediction(), groupScores: [], bracket: [], ...overrides };
+  return {
+    prediction: makePrediction(),
+    groupScores: [],
+    bracket: [],
+    knockoutScores: [],
+    ...overrides,
+  };
+}
+
+/** Builder de un marcador de eliminatoria pronosticado. */
+function ks(match_id: string, home: number, away: number): PredictionKnockoutScore {
+  return { user_id: 'u1', match_id, home_score: home, away_score: away };
 }
 
 // ── normalizeScorer ─────────────────────────────────────────────────
@@ -112,6 +129,65 @@ describe('computeScore — grupos', () => {
     const actual = emptyOfficial({ groupScores: new Map([['m1', { home: 2, away: 1 }]]) });
     const r = computeScore(user, actual);
     expect(r.total).toBe(5); // no 7
+  });
+});
+
+// ── Marcadores de eliminatoria ──────────────────────────────────────
+
+describe('computeScore — marcadores de eliminatoria', () => {
+  it('marcador exacto = 5', () => {
+    const user = emptyUser({ knockoutScores: [ks('r32a', 2, 1)] });
+    const actual = emptyOfficial({ knockoutScores: new Map([['r32a', { home: 2, away: 1 }]]) });
+    const r = computeScore(user, actual);
+    expect(r.knockoutExact).toBe(5);
+    expect(r.knockoutExactCount).toBe(1);
+    expect(r.knockoutOutcome).toBe(0);
+    expect(r.total).toBe(5);
+  });
+
+  it('solo resultado (a los 90 min) = 2', () => {
+    const user = emptyUser({ knockoutScores: [ks('r32a', 3, 0)] });
+    const actual = emptyOfficial({ knockoutScores: new Map([['r32a', { home: 1, away: 0 }]]) });
+    const r = computeScore(user, actual);
+    expect(r.knockoutExact).toBe(0);
+    expect(r.knockoutOutcome).toBe(2);
+    expect(r.knockoutOutcomeCount).toBe(1);
+  });
+
+  it('empate a los 90 min (definido por penales) cuenta como resultado = 2', () => {
+    const user = emptyUser({ knockoutScores: [ks('r16a', 1, 1)] });
+    const actual = emptyOfficial({ knockoutScores: new Map([['r16a', { home: 0, away: 0 }]]) });
+    expect(computeScore(user, actual).knockoutOutcome).toBe(2);
+  });
+
+  it('resultado equivocado = 0', () => {
+    const user = emptyUser({ knockoutScores: [ks('qfa', 0, 1)] });
+    const actual = emptyOfficial({ knockoutScores: new Map([['qfa', { home: 1, away: 0 }]]) });
+    expect(computeScore(user, actual).total).toBe(0);
+  });
+
+  it('partido sin resultado oficial no puntúa', () => {
+    const user = emptyUser({ knockoutScores: [ks('sfa', 2, 1)] });
+    const actual = emptyOfficial();
+    expect(computeScore(user, actual).total).toBe(0);
+  });
+
+  it('exacto NO suma además el de resultado (no se duplica)', () => {
+    const user = emptyUser({ knockoutScores: [ks('r32a', 2, 1)] });
+    const actual = emptyOfficial({ knockoutScores: new Map([['r32a', { home: 2, away: 1 }]]) });
+    expect(computeScore(user, actual).total).toBe(5);
+  });
+
+  it('grupos y eliminatoria suman juntos', () => {
+    const user = emptyUser({
+      groupScores: [gs('g1', 1, 0)],
+      knockoutScores: [ks('r32a', 2, 1)],
+    });
+    const actual = emptyOfficial({
+      groupScores: new Map([['g1', { home: 1, away: 0 }]]),
+      knockoutScores: new Map([['r32a', { home: 2, away: 1 }]]),
+    });
+    expect(computeScore(user, actual).total).toBe(10); // 5 + 5
   });
 });
 
@@ -340,11 +416,11 @@ describe('computeScore — casos límite', () => {
   });
 
   it('prediction null no rompe', () => {
-    const user: UserPrediction = { prediction: null, groupScores: [], bracket: [] };
+    const user: UserPrediction = { prediction: null, groupScores: [], bracket: [], knockoutScores: [] };
     expect(computeScore(user, emptyOfficial()).total).toBe(0);
   });
 
-  it('pronóstico perfecto = 643 (máximo teórico)', () => {
+  it('pronóstico perfecto = 798 (máximo teórico)', () => {
     // 32 equipos para r32, subconjuntos para rondas siguientes
     const teams = Array.from({ length: 32 }, (_, i) => `T${String(i + 1).padStart(2, '0')}`);
     const r16 = teams.slice(0, 16);
@@ -358,10 +434,16 @@ describe('computeScore — casos límite', () => {
       ...sf.map((t) => br('sf', t)),
     ];
 
-    // 72 marcadores exactos
+    // 72 marcadores exactos de grupos
     const groupScores = Array.from({ length: 72 }, (_, i) => gs(`m${i + 1}`, 2, 1));
     const officialGroups = new Map(
       Array.from({ length: 72 }, (_, i) => [`m${i + 1}`, { home: 2, away: 1 }] as const),
+    );
+
+    // 31 marcadores exactos de eliminatoria (16 + 8 + 4 + 2 + 1)
+    const knockoutScores = Array.from({ length: 31 }, (_, i) => ks(`k${i + 1}`, 2, 1));
+    const officialKnockout = new Map(
+      Array.from({ length: 31 }, (_, i) => [`k${i + 1}`, { home: 2, away: 1 }] as const),
     );
 
     const user = emptyUser({
@@ -375,10 +457,12 @@ describe('computeScore — casos límite', () => {
       }),
       groupScores,
       bracket,
+      knockoutScores,
     });
 
     const actual: OfficialResults = {
       groupScores: officialGroups,
+      knockoutScores: officialKnockout,
       advancers: {
         r32: new Set(teams),
         r16: new Set(r16),
@@ -397,6 +481,8 @@ describe('computeScore — casos límite', () => {
 
     const r = computeScore(user, actual);
     expect(r.groupExact).toBe(360);
+    expect(r.knockoutExact).toBe(155);
+    expect(r.knockoutExactCount).toBe(31);
     expect(r.r32).toBe(64);
     expect(r.r16).toBe(48);
     expect(r.qf).toBe(40);
@@ -406,7 +492,7 @@ describe('computeScore — casos límite', () => {
     expect(r.champion).toBe(30);
     expect(r.finalExact).toBe(15);
     expect(r.topScorer).toBe(15);
-    expect(r.total).toBe(643);
+    expect(r.total).toBe(798);
   });
 });
 
@@ -500,6 +586,11 @@ describe('deriveOfficialResults', () => {
     expect(r.runnerUp).toBe('BBB');
     expect(r.thirdPlace).toBe('CCC');
     expect(r.topScorer).toBe('Goleador X');
+    // El 3er lugar (finalizado) entra a knockoutScores; el r32 sin marcador y
+    // la final (que tiene su bonus aparte) no.
+    expect(r.knockoutScores.get('thirdm')).toEqual({ home: 2, away: 1 });
+    expect(r.knockoutScores.has('r32a')).toBe(false);
+    expect(r.knockoutScores.has('finalm')).toBe(false);
   });
 });
 
@@ -520,7 +611,7 @@ describe('buildRanking', () => {
       groupScores: new Map([['m1', { home: 2, away: 1 }]]),
     });
 
-    const ranking = buildRanking(predictions, groupScores, bracket, official);
+    const ranking = buildRanking(predictions, groupScores, bracket, [], official);
     expect(ranking).toHaveLength(2);
     expect(ranking[0].userId).toBe('ana'); // 30 pts
     expect(ranking[0].breakdown.total).toBe(30);
@@ -539,7 +630,7 @@ describe('buildRanking', () => {
       advancers: { r32: new Set(['BRA']), r16: new Set(), qf: new Set(), sf: new Set() },
     });
 
-    const ranking = buildRanking(predictions, groupScores, bracket, official);
+    const ranking = buildRanking(predictions, groupScores, bracket, [], official);
     expect(ranking).toHaveLength(2);
     const ana = ranking.find((r) => r.userId === 'ana')!;
     const leo = ranking.find((r) => r.userId === 'leo')!;
@@ -552,7 +643,20 @@ describe('buildRanking', () => {
       makePrediction({ user_id: 'ana', champion_code: 'BRA' }),
       makePrediction({ user_id: 'leo', champion_code: 'ARG' }),
     ];
-    const ranking = buildRanking(predictions, [], [], emptyOfficial());
+    const ranking = buildRanking(predictions, [], [], [], emptyOfficial());
     expect(ranking.every((r) => r.breakdown.total === 0)).toBe(true);
+  });
+
+  it('suma los marcadores de eliminatoria al ranking', () => {
+    const predictions: Prediction[] = [makePrediction({ user_id: 'ana' })];
+    const knockoutScores: PredictionKnockoutScore[] = [
+      { user_id: 'ana', match_id: 'r32a', home_score: 2, away_score: 1 },
+    ];
+    const official = emptyOfficial({
+      knockoutScores: new Map([['r32a', { home: 2, away: 1 }]]),
+    });
+    const ranking = buildRanking(predictions, [], [], knockoutScores, official);
+    expect(ranking[0].breakdown.knockoutExact).toBe(5);
+    expect(ranking[0].breakdown.total).toBe(5);
   });
 });

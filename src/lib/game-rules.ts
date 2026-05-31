@@ -17,7 +17,7 @@ export interface GameRule {
 }
 
 /** Máximo teórico de puntos en un pronóstico perfecto. */
-export const MAX_POINTS = 643;
+export const MAX_POINTS = 798;
 
 export const GAME_RULES: GameRule[] = [
   {
@@ -33,6 +33,13 @@ export const GAME_RULES: GameRule[] = [
     points: '2 pts',
     detail:
       'Aciertas quién gana o que empatan, aunque no el marcador exacto. Ejemplo: predices 3–1 y termina 1–0 → +2 pts, porque acertaste que ganaba el local. Si aciertas el marcador exacto recibes los 5, no se suman los 2.',
+  },
+  {
+    id: 'knockout-score',
+    label: 'Marcador de un partido de eliminatoria',
+    points: '5 · 2',
+    detail:
+      'Igual que en grupos pero para los partidos de eliminatoria (Eliminatorias de 32, Octavos, Cuartos, Semifinal y Tercer lugar): 5 pts por el marcador exacto al minuto 90 y 2 por acertar solo el resultado. Estos marcadores se registran en la pestaña "Eliminatorias", y cada cruce se habilita cuando ya se conocen sus dos equipos. La final no entra aquí: tiene su propio bonus de marcador.',
   },
   {
     id: 'advance',
