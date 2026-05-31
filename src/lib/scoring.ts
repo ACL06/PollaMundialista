@@ -21,7 +21,7 @@ import type { Match } from '@/lib/types/match';
  *   - Finalista (campeón + subcampeón que llegan a la final): 12 c/u (× 2 = 24)
  *   - Tercer puesto correcto: 15
  *   - Campeón correcto: 30
- *   - Marcador exacto de la final: 15
+ *   - Marcador exacto de la final (en orden campeón–subcampeón): 15
  *   - Goleador: 15
  */
 
@@ -153,15 +153,19 @@ export function computeScore(user: UserPrediction, actual: OfficialResults): Sco
       : 0;
 
   // ── Marcador exacto de la final (bonus) ───────────────────────────
-  // El usuario predijo un marcador sin asignar equipos (dos cajas X–Y),
-  // así que se compara como par NO ordenado: acertar la "pizarra" basta.
+  // El usuario asigna goles a SU campeón (final_home_score) y a SU
+  // subcampeón (final_away_score). Para sumar debe acertar el marcador
+  // EN ORDEN: los goles del campeón deben igualar los del GANADOR oficial
+  // y los del subcampeón los del PERDEDOR. En un empate a 90' (definido
+  // por penales) ganador y perdedor tienen los mismos goles, así que
+  // basta acertar ese empate exacto.
   let finalExactPts = 0;
   const ph = user.prediction?.final_home_score;
   const pa = user.prediction?.final_away_score;
   if (ph != null && pa != null && actual.finalScore) {
-    const predPair = [ph, pa].sort((a, b) => a - b);
-    const realPair = [actual.finalScore.home, actual.finalScore.away].sort((a, b) => a - b);
-    if (predPair[0] === realPair[0] && predPair[1] === realPair[1]) {
+    const winnerGoals = Math.max(actual.finalScore.home, actual.finalScore.away);
+    const loserGoals = Math.min(actual.finalScore.home, actual.finalScore.away);
+    if (ph === winnerGoals && pa === loserGoals) {
       finalExactPts = SCORING.finalExact;
     }
   }

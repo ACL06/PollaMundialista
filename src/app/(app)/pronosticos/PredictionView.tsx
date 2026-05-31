@@ -137,7 +137,12 @@ export function PredictionView({
             );
           })}
           <div className="flex items-center justify-between gap-3 px-4 py-3 bg-surface">
-            <span className="text-sm font-medium text-foreground">Marcador final (bonus)</span>
+            <span className="text-sm font-medium text-foreground">
+              Marcador final{' '}
+              <span className="text-xs font-normal text-muted-foreground">
+                (campeón–subcampeón)
+              </span>
+            </span>
             <span className="text-sm font-mono font-bold tabular-nums text-foreground">
               {finalScore}
             </span>

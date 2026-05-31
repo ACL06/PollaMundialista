@@ -180,11 +180,39 @@ describe('computeScore — podio y extras', () => {
     expect(computeScore(user, actual).thirdPlace).toBe(15);
   });
 
-  it('marcador exacto final: par NO ordenado cuenta (2-1 vs 1-2)', () => {
+  it('marcador exacto final en orden correcto (campeón gana 2-1) = 15', () => {
+    // El usuario asigna 2 a su campeón y 1 a su subcampeón.
+    const user = emptyUser({
+      prediction: makePrediction({ final_home_score: 2, final_away_score: 1 }),
+    });
+    const actual = emptyOfficial({ finalScore: { home: 2, away: 1 } });
+    expect(computeScore(user, actual).finalExact).toBe(15);
+  });
+
+  it('marcador final independiente del equipo local/visitante oficial', () => {
+    // Campeón 2, subcampeón 1; el ganador oficial fue el visitante (1-2).
+    // Como se compara ganador/perdedor, el orden del usuario igual acierta.
     const user = emptyUser({
       prediction: makePrediction({ final_home_score: 2, final_away_score: 1 }),
     });
     const actual = emptyOfficial({ finalScore: { home: 1, away: 2 } });
+    expect(computeScore(user, actual).finalExact).toBe(15);
+  });
+
+  it('marcador final en orden invertido NO cuenta (1-2 vs ganador 2-1) = 0', () => {
+    // El usuario dijo que su campeón marca 1 y el subcampeón 2: orden errado.
+    const user = emptyUser({
+      prediction: makePrediction({ final_home_score: 1, final_away_score: 2 }),
+    });
+    const actual = emptyOfficial({ finalScore: { home: 2, away: 1 } });
+    expect(computeScore(user, actual).finalExact).toBe(0);
+  });
+
+  it('marcador final empate exacto a 90 (definido por penales) = 15', () => {
+    const user = emptyUser({
+      prediction: makePrediction({ final_home_score: 1, final_away_score: 1 }),
+    });
+    const actual = emptyOfficial({ finalScore: { home: 1, away: 1 } });
     expect(computeScore(user, actual).finalExact).toBe(15);
   });
 

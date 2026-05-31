@@ -67,7 +67,7 @@ export const GAME_RULES: GameRule[] = [
     label: 'Marcador exacto de la final (bonus)',
     points: '15 pts',
     detail:
-      'Aciertas el marcador de la final al minuto 90 (sin penaltis). No importa el orden: si predices 2–1 y termina 1–2, cuenta igual → +15.',
+      'Aciertas el marcador de la final al minuto 90 (sin penaltis), en el orden correcto: los goles que le pones a tu campeón deben coincidir con los del ganador real y los de tu subcampeón con los del perdedor. Ejemplo: predices que tu campeón gana 2–1 y la final termina con el ganador marcando 2 y el perdedor 1 → +15. Si terminara 1–2 a favor del otro equipo, no suma.',
   },
   {
     id: 'top-scorer',

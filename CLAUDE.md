@@ -62,12 +62,12 @@
 - **Indicadores en /home** (Fase 4E, `PredictionStatusCard`): countdown + progreso (X/137) + CTA según estado
 
 #### Scoring (Fase 4D)
-- Motor TS puro `src/lib/scoring.ts` con **tests Vitest** (`scoring.test.ts`, 26 tests):
+- Motor TS puro `src/lib/scoring.ts` con **tests Vitest** (`scoring.test.ts`, 29 tests):
   - `computeScore(user, official)` → desglose + total (máx **643**)
   - `deriveOfficialResults(matches, topScorer)` → construye resultados oficiales desde `matches`
   - `buildRanking(...)` → agrupa por usuario, ordena
   - `normalizeScorer` → match flexible del goleador (sin acentos/mayúsculas)
-- Reglas: grupos exacto 5 / solo-resultado 2; R32 2, R16 3, QF 5, SF 8 por equipo; finalistas 12 c/u; 3er puesto 15; campeón 30; marcador final 15 (par no ordenado); goleador 15
+- Reglas: grupos exacto 5 / solo-resultado 2; R32 2, R16 3, QF 5, SF 8 por equipo; finalistas 12 c/u; 3er puesto 15; campeón 30; marcador final 15 (**en orden** campeón–subcampeón: goles del campeón = ganador oficial, subcampeón = perdedor; empate a 90' cuenta como par exacto); goleador 15
 
 #### Ranking (Fase 5)
 - `/ranking`: gate pre-lock; post-lock arma el ranking server-side reusando `buildRanking` + resultados de `matches` + goleador de `tournament_settings`
@@ -89,9 +89,9 @@
 - Esto "enciende" scoring, ranking, tablas de grupos y aciertos en Comunidad.
 
 #### Tests (Vitest)
-- `scoring.test.ts` (26): reglas de scoring, deriveOfficialResults, buildRanking, pronóstico perfecto = 643.
+- `scoring.test.ts` (29): reglas de scoring (incl. marcador de la final en orden), deriveOfficialResults, buildRanking, pronóstico perfecto = 643.
 - `compute-standings.test.ts`, `format-bracket-source.test.ts`, `predictions-lock.test.ts`, `validators/profile.test.ts`, `validators/prediction.test.ts`.
-- **52 tests en total**, corren en CI (`npm test`).
+- **55 tests en total**, corren en CI (`npm test`).
 
 ### ⏳ Pendiente / Roadmap
 
@@ -163,7 +163,7 @@
 8. **Mecánica = Opción C** (grupos + bracket de clasificados). El usuario predice 72 marcadores + qué equipos pasan a cada ronda + campeón/3er + marcador exacto final (bonus) + goleador.
 9. **Lock global = kickoff match #1** vía `predictions_lock_at()`. **Submit one-shot** (`locked_at`) e inmutable después; submit parcial OK (campos vacíos = 0).
 10. **Wizard cliente** con state que vive en `PredictionWizard` (persiste al navegar entre steps). Autosave por sección (onBlur / toggle).
-11. **Goleador texto libre**, match flexible al evaluar. **Marcador de la final = par no ordenado** (el usuario lo predice sin asignar equipos).
+11. **Goleador texto libre**, match flexible al evaluar. **Marcador de la final = en orden**: el usuario asigna goles a su campeón (`final_home_score`) y a su subcampeón (`final_away_score`); suma 15 solo si los goles del campeón = los del ganador oficial y los del subcampeón = los del perdedor (comparación por ganador/perdedor, independiente de home/away oficial; un empate a 90' definido por penales cuenta como par exacto).
 12. **Regla 2-3 por grupo en Dieciseisavos** (cada grupo aporta 2 directos + posible mejor tercero = 8 grupos con 3).
 13. **Scoring en TS, no en SQL** (`scoring.ts` + Vitest). El **ranking** también computa en TS server-side — una sola fuente de verdad. Con ~30 usuarios el costo es trivial.
 14. **Transparencia post-lock**: los pronósticos de todos se abren al lock (nadie copia antes). Vista `public_profiles` para nombres sin exponer datos sensibles.
