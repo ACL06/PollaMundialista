@@ -113,6 +113,34 @@ export async function saveKnockoutMatch(input: {
   return {};
 }
 
+/**
+ * Cambia el estado de inscripción de un usuario (pre-inscrito ↔ inscrito).
+ * Lo administra el admin a mano porque el pago es por un medio externo
+ * (la app no tiene pasarela). Solo admins (re-chequeado aquí + RLS).
+ */
+export async function setEnrollment(input: {
+  userId: string;
+  enrolled: boolean;
+}): Promise<ActionResult> {
+  if (!input.userId || typeof input.enrolled !== 'boolean') {
+    return { error: 'Datos inválidos' };
+  }
+
+  const admin = await requireAdmin();
+  if ('error' in admin) return { error: admin.error };
+
+  const { error } = await admin.supabase
+    .from('profiles')
+    .update({ is_enrolled: input.enrolled })
+    .eq('id', input.userId);
+
+  if (error) {
+    console.error('[setEnrollment]', error.message);
+    return { error: 'No pudimos actualizar la inscripción. Intenta de nuevo.' };
+  }
+  return {};
+}
+
 /** Guarda el goleador oficial del torneo (texto libre, o null para limpiar). */
 export async function saveTopScorer(name: string | null): Promise<ActionResult> {
   const trimmed = name?.trim() || null;

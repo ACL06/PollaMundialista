@@ -83,10 +83,4 @@ export const GAME_RULES: GameRule[] = [
     detail:
       'Aciertas el máximo goleador del Mundial. Se evalúa de forma flexible: no importan mayúsculas ni acentos. Ejemplo: "kylian mbappe" cuenta como "Kylian Mbappé".',
   },
-  {
-    id: 'tiebreak',
-    label: 'Empates y premio',
-    detail:
-      'Si dos o más participantes terminan con los mismos puntos, en la tabla se ordenan alfabéticamente por nombre y apellidos. Si el empate persiste al final del Mundial, el premio se reparte en partes iguales entre los participantes empatados.',
-  },
 ];

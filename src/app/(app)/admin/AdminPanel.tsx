@@ -12,15 +12,23 @@ import { cn } from '@/lib/utils';
 import type { Match, MatchStatus, Team } from '@/lib/types/match';
 import { saveMatchResult, saveTopScorer } from './actions';
 import { KnockoutResultsEditor } from './KnockoutResultsEditor';
+import { EnrollmentEditor, type EnrollmentUser } from './EnrollmentEditor';
 
 interface AdminPanelProps {
   groupMatches: Match[];
   knockoutMatches: Match[];
   teams: Team[];
   initialTopScorer: string | null;
+  enrollmentUsers: EnrollmentUser[];
 }
 
-type AdminView = 'grupos' | 'eliminatorias';
+type AdminView = 'grupos' | 'eliminatorias' | 'inscripciones';
+
+const VIEW_LABEL: Record<AdminView, string> = {
+  grupos: 'Fase de grupos',
+  eliminatorias: 'Eliminatorias',
+  inscripciones: 'Inscripciones',
+};
 
 interface Draft {
   home: string;
@@ -43,6 +51,7 @@ export function AdminPanel({
   knockoutMatches,
   teams,
   initialTopScorer,
+  enrollmentUsers,
 }: AdminPanelProps) {
   const [view, setView] = useState<AdminView>('grupos');
   const [drafts, setDrafts] = useState<Map<string, Draft>>(() => {
@@ -191,25 +200,27 @@ export function AdminPanel({
         </div>
       </section>
 
-      {/* Switcher Grupos / Eliminatorias */}
+      {/* Switcher Grupos / Eliminatorias / Inscripciones */}
       <div className="inline-flex gap-1 p-1 bg-muted rounded-lg self-start">
-        {(['grupos', 'eliminatorias'] as AdminView[]).map((v) => (
+        {(['grupos', 'eliminatorias', 'inscripciones'] as AdminView[]).map((v) => (
           <button
             key={v}
             type="button"
             onClick={() => setView(v)}
             className={cn(
-              'px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize',
+              'px-4 py-1.5 rounded-md text-sm font-medium transition-colors',
               view === v ? 'bg-surface text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            {v === 'grupos' ? 'Fase de grupos' : 'Eliminatorias'}
+            {VIEW_LABEL[v]}
           </button>
         ))}
       </div>
 
       {view === 'eliminatorias' ? (
         <KnockoutResultsEditor matches={knockoutMatches} teams={teams} />
+      ) : view === 'inscripciones' ? (
+        <EnrollmentEditor users={enrollmentUsers} />
       ) : (
         <>
       {/* Tabs por día */}

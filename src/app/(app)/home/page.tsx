@@ -7,6 +7,7 @@ import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
 import { loadRanking } from '@/app/(app)/ranking/load-ranking';
 import { PredictionStatusCard } from '@/components/home/PredictionStatusCard';
 import { GameRules } from '@/components/home/GameRules';
+import { EnrollmentPrizes, EnrollmentBadge } from '@/components/home/EnrollmentPrizes';
 
 export const metadata = { title: 'Inicio' };
 
@@ -17,11 +18,18 @@ export default async function HomePage() {
   } = await supabase.auth.getUser();
   const userId = user!.id;
 
-  const [profileResult, predictionResult, scoresCountResult, bracketCountResult, lockAt, ranking] =
-    await Promise.all([
+  const [
+    profileResult,
+    predictionResult,
+    scoresCountResult,
+    bracketCountResult,
+    enrolledCountResult,
+    lockAt,
+    ranking,
+  ] = await Promise.all([
       supabase
         .from('profiles')
-        .select('email, nickname, avatar_url, favorite_team, is_admin')
+        .select('email, nickname, avatar_url, favorite_team, is_admin, is_enrolled')
         .eq('id', userId)
         .single(),
       supabase
@@ -39,6 +47,10 @@ export default async function HomePage() {
         .from('prediction_bracket')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId),
+      supabase
+        .from('public_profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_enrolled', true),
       getPredictionsLockAt(),
       loadRanking(),
     ]);
@@ -56,6 +68,7 @@ export default async function HomePage() {
   const myRow = ranking.hasResults ? ranking.rows.find((r) => r.userId === userId) : undefined;
   const scoresCount = scoresCountResult.count ?? 0;
   const bracketCount = bracketCountResult.count ?? 0;
+  const enrolledCount = enrolledCountResult.count ?? 0;
   const metaCount =
     (prediction?.champion_code ? 1 : 0) +
     (prediction?.runner_up_code ? 1 : 0) +
@@ -89,6 +102,9 @@ export default async function HomePage() {
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground">
             ¡Bienvenido, {profile?.nickname}!
           </h1>
+          <div className="flex justify-center">
+            <EnrollmentBadge enrolled={profile?.is_enrolled ?? false} />
+          </div>
           {team && (
             <p className="text-muted-foreground text-lg flex items-center justify-center gap-2">
               <span className={`fi fi-${team.flag} rounded-sm`} aria-hidden="true" />
@@ -126,6 +142,9 @@ export default async function HomePage() {
 
       {/* Reglas del juego */}
       <GameRules />
+
+      {/* Inscripción y premios */}
+      <EnrollmentPrizes enrolledCount={enrolledCount} revealed={isLocked} />
 
       {/* Explora */}
       <div className="flex flex-col gap-4">

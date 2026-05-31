@@ -1,0 +1,224 @@
+import { CheckCircle2, Clock, Crown, Info, Medal, Phone, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import {
+  CONTACT_PHONE,
+  ENROLLMENT_COST_COP,
+  computePrizes,
+  formatCOP,
+} from '@/lib/prizes';
+
+interface EnrollmentPrizesProps {
+  enrolledCount: number;
+  /** true cuando ya arrancó el torneo (partido inaugural) → se revelan montos. */
+  revealed: boolean;
+}
+
+/** Nicknames de ejemplo para el podio (solo visual, hasta que haya ranking real). */
+const PODIUM_EXAMPLE = [
+  { place: 2 as const, nickname: 'mile23' },
+  { place: 1 as const, nickname: 'crack_07' },
+  { place: 3 as const, nickname: 'la_pana' },
+];
+
+export function EnrollmentPrizes({ enrolledCount, revealed }: EnrollmentPrizesProps) {
+  const prizes = computePrizes(enrolledCount);
+  const prizeByPlace: Record<number, number> = {
+    1: prizes.podium[0],
+    2: prizes.podium[1],
+    3: prizes.podium[2],
+  };
+
+  return (
+    <section className="flex flex-col gap-5">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold text-foreground">Inscripción y premios</h2>
+        <p className="text-sm text-muted-foreground">Así funciona la plata de la polla, claro y transparente.</p>
+      </div>
+
+      {/* Qué significan los estados */}
+      <div className="rounded-lg border border-border bg-surface p-4 text-sm text-muted-foreground">
+        Al registrarte quedas <span className="font-semibold text-destructive">pre-inscrito</span>. Pasas a{' '}
+        <span className="font-semibold text-primary">inscrito</span> cuando el administrador confirma tu
+        pago (se hace por un medio externo; la app no cobra en línea).
+      </div>
+
+      {/* Costo + inscritos */}
+      <div className="grid grid-cols-2 gap-3">
+        <Fact label="Costo de inscripción" value={formatCOP(ENROLLMENT_COST_COP)} hint="Puede cambiar" />
+        <Fact
+          label="Inscritos"
+          value={String(enrolledCount)}
+          hint={enrolledCount === 1 ? 'participante' : 'participantes'}
+          icon={<Users className="h-5 w-5 text-tertiary" />}
+        />
+      </div>
+
+      {/* Pozo: se revela en el partido inaugural */}
+      <div className="rounded-lg border border-border bg-surface p-4">
+        {revealed ? (
+          <div className="space-y-2">
+            <Row label="Pozo total" value={formatCOP(prizes.pot)} />
+            <Row label="Administración (20%)" value={formatCOP(prizes.adminCut)} muted />
+            <Row label="Para premios (80%)" value={formatCOP(prizes.prizePool)} strong />
+          </div>
+        ) : (
+          <div className="flex items-start gap-2 text-sm text-muted-foreground">
+            <Info className="h-4 w-4 flex-shrink-0 mt-0.5 text-tertiary" />
+            <span>
+              El premio se calcula según la cantidad de inscritos y{' '}
+              <span className="font-medium text-foreground">se revela en el partido inaugural</span> del
+              Mundial. Por ahora vamos {enrolledCount} {enrolledCount === 1 ? 'inscrito' : 'inscritos'}.
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Podio */}
+      <Podium prizeByPlace={prizeByPlace} revealed={revealed} />
+
+      {/* Reparto + empates */}
+      <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground space-y-2">
+        <p>
+          <span className="font-semibold text-foreground">Reparto:</span> del pozo se aparta un{' '}
+          <span className="font-medium text-foreground">20% para la administración</span> de la polla.
+          El resto se reparte en el podio:{' '}
+          <span className="font-medium text-foreground">1° 70% · 2° 20% · 3° 10%</span>.
+        </p>
+        <p>
+          <span className="font-semibold text-foreground">Empates:</span> en la tabla, los
+          participantes con los mismos puntos se ordenan alfabéticamente por nombre. Si el empate
+          persiste al final del Mundial, ese premio se reparte en partes iguales entre ellos.
+        </p>
+      </div>
+
+      {/* Contacto */}
+      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+        <Phone className="h-4 w-4 text-tertiary" />
+        <span>
+          ¿Dudas? Escríbenos al <span className="font-medium text-foreground">{CONTACT_PHONE}</span>.
+        </span>
+      </div>
+    </section>
+  );
+}
+
+/** Badge de estado de inscripción, para mostrar bajo el saludo en /home. */
+export function EnrollmentBadge({ enrolled }: { enrolled: boolean }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold',
+        enrolled ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive',
+      )}
+    >
+      {enrolled ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+      {enrolled ? 'Inscrito' : 'Pre-inscrito'}
+    </span>
+  );
+}
+
+function Fact({
+  label,
+  value,
+  hint,
+  icon,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-surface p-4">
+      <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
+      <p className="mt-1 flex items-center gap-1.5 text-2xl font-bold text-foreground tabular-nums">
+        {icon}
+        {value}
+      </p>
+      {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+function Row({
+  label,
+  value,
+  muted,
+  strong,
+}: {
+  label: string;
+  value: string;
+  muted?: boolean;
+  strong?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <span className={muted ? 'text-muted-foreground' : 'text-foreground'}>{label}</span>
+      <span
+        className={cn(
+          'tabular-nums',
+          strong ? 'font-bold text-primary' : muted ? 'text-muted-foreground' : 'font-medium text-foreground',
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+const STEP: Record<number, { h: string; bar: string; icon: React.ReactNode }> = {
+  1: { h: 'h-24', bar: 'bg-primary/15 border-primary/40', icon: <Crown className="h-5 w-5 text-amber-500 fill-amber-400" /> },
+  2: { h: 'h-16', bar: 'bg-muted border-border', icon: <Medal className="h-4 w-4 text-zinc-400" /> },
+  3: { h: 'h-12', bar: 'bg-muted border-border', icon: <Medal className="h-4 w-4 text-amber-700" /> },
+};
+
+function Podium({
+  prizeByPlace,
+  revealed,
+}: {
+  prizeByPlace: Record<number, number>;
+  revealed: boolean;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-surface p-4">
+      <p className="mb-3 text-center text-xs text-muted-foreground uppercase tracking-wider">
+        El podio de la polla
+      </p>
+      <div className="grid grid-cols-3 gap-2 items-end">
+        {PODIUM_EXAMPLE.map(({ place, nickname }) => {
+          const s = STEP[place];
+          return (
+            <div key={place} className="flex flex-col items-center gap-1.5">
+              <span
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-muted"
+                aria-hidden="true"
+              >
+                {s.icon}
+              </span>
+              <span className="max-w-full truncate text-[13px] font-medium text-foreground">
+                {nickname}
+              </span>
+              <div
+                className={cn(
+                  'flex w-full flex-col items-center justify-start gap-0.5 rounded-t-md border-x border-t pt-1.5',
+                  s.bar,
+                  s.h,
+                )}
+              >
+                <span className="text-lg font-bold tabular-nums text-foreground">{place}°</span>
+                {revealed && (
+                  <span className="text-[11px] font-semibold tabular-nums text-foreground/80">
+                    {formatCOP(prizeByPlace[place])}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-center text-[11px] text-muted-foreground">
+        Nombres de ejemplo. El podio real se arma con el ranking final.
+      </p>
+    </div>
+  );
+}
