@@ -93,6 +93,66 @@ export async function saveGroupScore(input: {
   return {};
 }
 
+const KNOCKOUT_SCORE_STAGES = ['r32', 'r16', 'qf', 'sf', '3rd'];
+
+/**
+ * Guarda el marcador predicho de un partido de ELIMINATORIA (R32, Octavos,
+ * Cuartos, Semifinal o Tercer lugar — la final tiene su bonus aparte).
+ *
+ * A diferencia de los de grupos, su ventana es POR PARTIDO: solo se puede
+ * editar mientras el partido tiene ambos equipos definidos y aún no arranca.
+ * La RLS es el guard real (funciones `knockout_match_editable`); acá hacemos
+ * el mismo chequeo para devolver un mensaje claro.
+ */
+export async function saveKnockoutScore(input: {
+  match_id: string;
+  home_score: number;
+  away_score: number;
+}): Promise<ActionResult> {
+  const parsed = groupScoreSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: 'Sesión expirada' };
+  }
+
+  const { data: match } = await supabase
+    .from('matches')
+    .select('stage, home_team_code, away_team_code, kicks_off_at')
+    .eq('id', parsed.data.match_id)
+    .maybeSingle();
+
+  if (!match || !KNOCKOUT_SCORE_STAGES.includes(match.stage)) {
+    return { error: 'Este partido no admite marcador de eliminatoria' };
+  }
+  if (match.home_team_code == null || match.away_team_code == null) {
+    return { error: 'Este cruce todavía no tiene equipos definidos' };
+  }
+  if (new Date() >= new Date(match.kicks_off_at)) {
+    return { error: 'Este partido ya comenzó; no se puede modificar' };
+  }
+
+  const { error } = await supabase.from('prediction_knockout_scores').upsert({
+    user_id: user.id,
+    match_id: parsed.data.match_id,
+    home_score: parsed.data.home_score,
+    away_score: parsed.data.away_score,
+  });
+
+  if (error) {
+    console.error('[saveKnockoutScore]', error.message);
+    return { error: 'No pudimos guardar el marcador. Intenta de nuevo.' };
+  }
+
+  return {};
+}
+
 /**
  * Agrega o quita un equipo de una ronda del bracket eliminatorio.
  *
