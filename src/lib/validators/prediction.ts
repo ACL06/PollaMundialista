@@ -42,7 +42,7 @@ const teamCode = z.string().regex(/^[A-Z]{2,4}$/, 'Código de equipo inválido')
 
 /**
  * Campos "meta" del pronóstico (step Cierre): campeón, subcampeón,
- * tercer puesto, marcador exacto de la final (bonus) y goleador.
+ * tercer lugar, marcador exacto de la final (bonus) y goleador.
  *
  * Todos opcionales/nullable: el server solo persiste los campos que
  * llegan definidos (autosave parcial). `null` limpia el campo;

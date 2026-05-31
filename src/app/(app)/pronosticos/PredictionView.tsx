@@ -80,7 +80,7 @@ export function PredictionView({
   }> = [
     { label: 'Campeón', Icon: Crown, iconClass: 'text-amber-500', code: prediction?.champion_code ?? null },
     { label: 'Subcampeón', Icon: Trophy, iconClass: 'text-muted-foreground', code: prediction?.runner_up_code ?? null },
-    { label: 'Tercer puesto', Icon: Medal, iconClass: 'text-amber-700', code: prediction?.third_place_code ?? null },
+    { label: 'Tercer lugar', Icon: Medal, iconClass: 'text-amber-700', code: prediction?.third_place_code ?? null },
   ];
 
   const finalScore =

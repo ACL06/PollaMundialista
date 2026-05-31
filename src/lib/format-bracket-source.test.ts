@@ -14,8 +14,8 @@ describe('formatBracketSource', () => {
   });
 
   it('ganador/perdedor con ronda inferida por match_number', () => {
-    expect(formatBracketSource('W73')).toBe('Ganador Dieciseisavos de Final');
-    expect(formatBracketSource('W88')).toBe('Ganador Dieciseisavos de Final');
+    expect(formatBracketSource('W73')).toBe('Ganador Eliminatorias de 32');
+    expect(formatBracketSource('W88')).toBe('Ganador Eliminatorias de 32');
     expect(formatBracketSource('W89')).toBe('Ganador Octavos de Final');
     expect(formatBracketSource('W96')).toBe('Ganador Octavos de Final');
     expect(formatBracketSource('W97')).toBe('Ganador Cuartos de Final');

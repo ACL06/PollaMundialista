@@ -21,11 +21,11 @@ interface Draft {
 }
 
 const STAGE_LABEL: Partial<Record<MatchStage, string>> = {
-  r32: 'Dieciseisavos de Final',
+  r32: 'Eliminatorias de 32',
   r16: 'Octavos de Final',
   qf: 'Cuartos de Final',
   sf: 'Semifinales',
-  '3rd': 'Tercer Puesto',
+  '3rd': 'Tercer lugar',
   final: 'Final',
 };
 

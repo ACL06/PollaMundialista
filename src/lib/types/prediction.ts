@@ -2,7 +2,7 @@
  * Tipos del modelo de pronósticos.
  *
  * Cada usuario tiene exactamente una fila en `predictions` (campos
- * generales: campeón, finalista, 3er puesto, marcador final, goleador),
+ * generales: campeón, finalista, tercer lugar, marcador final, goleador),
  * más hasta 72 filas en `prediction_group_scores` (un marcador por
  * partido de fase de grupos), más hasta 60 filas en `prediction_bracket`
  * (los equipos predichos como clasificados a cada ronda eliminatoria:
@@ -26,7 +26,7 @@ export const BRACKET_ROUND_SIZE: Record<PredictionBracketRound, number> = {
 };
 
 /**
- * En Dieciseisavos (r32) cada grupo aporta entre 2 y 3 equipos:
+ * En Eliminatorias de 32 (r32) cada grupo aporta entre 2 y 3 equipos:
  *   - 2 fijos: el 1° y 2° de cada grupo (24 en total)
  *   - hasta 1 más: si su 3° está entre los 8 mejores terceros
  * Como 12×2 = 24 y faltan 8 para llegar a 32, exactamente 8 grupos
@@ -37,7 +37,7 @@ export const BRACKET_R32_GROUP_MIN = 2;
 export const BRACKET_R32_GROUP_MAX = 3;
 
 /**
- * Cuántos grupos pueden aportar un 3.er equipo a Dieciseisavos.
+ * Cuántos grupos pueden aportar un 3.er equipo a Eliminatorias de 32.
  * 12 grupos × 2 fijos = 24; faltan 8 para llegar a 32, así que solo 8
  * grupos pueden llegar a 3 (los 8 mejores terceros). Cuando ya hay 8
  * grupos con 3, el 9.º grupo que intente un tercero queda bloqueado.
@@ -46,7 +46,7 @@ export const BRACKET_R32_MAX_THIRDS = 8;
 
 /** Etiqueta humana de cada ronda. */
 export const BRACKET_ROUND_LABEL: Record<PredictionBracketRound, string> = {
-  r32: 'Dieciseisavos de Final',
+  r32: 'Eliminatorias de 32',
   r16: 'Octavos de Final',
   qf: 'Cuartos de Final',
   sf: 'Semifinales',
@@ -84,7 +84,7 @@ export interface Prediction {
   champion_code: string | null;
   /** Código del equipo predicho como subcampeón (finalista). */
   runner_up_code: string | null;
-  /** Código del equipo predicho como tercer puesto. */
+  /** Código del equipo predicho como tercer lugar. */
   third_place_code: string | null;
   /** Bonus: marcador exacto de la final (goles del local). */
   final_home_score: number | null;

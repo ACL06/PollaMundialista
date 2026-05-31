@@ -82,7 +82,7 @@ export function ClosingStep({
           <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <span>
             Primero elige tus <span className="font-medium text-foreground">Semifinalistas</span>{' '}
-            en el paso del bracket. El campeón, subcampeón y tercer puesto se eligen entre
+            en el paso del bracket. El campeón, subcampeón y tercer lugar se eligen entre
             esos 4 equipos.
           </span>
         </div>
@@ -110,7 +110,7 @@ export function ClosingStep({
             emptyHint="Elige primero al campeón."
           />
           <PodiumPicker
-            label="Tercer puesto"
+            label="Tercer lugar"
             Icon={Medal}
             iconClass="text-amber-700"
             pool={thirdPool}

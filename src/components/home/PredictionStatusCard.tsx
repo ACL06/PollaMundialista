@@ -15,7 +15,7 @@ interface PredictionStatusCardProps {
 
 const TOTAL_GROUP = 72;
 const TOTAL_BRACKET = Object.values(BRACKET_ROUND_SIZE).reduce((a, b) => a + b, 0); // 32+16+8+4 = 60
-const TOTAL_META = 5; // campeón, subcampeón, 3er puesto, marcador final, goleador
+const TOTAL_META = 5; // campeón, subcampeón, tercer lugar, marcador final, goleador
 const TOTAL_DECISIONS = TOTAL_GROUP + TOTAL_BRACKET + TOTAL_META; // 137
 
 const ctaClass = cn(

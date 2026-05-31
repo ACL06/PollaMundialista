@@ -60,7 +60,7 @@ export function BracketStep({
   );
   const target = BRACKET_ROUND_SIZE[activeRound];
   const atCap = selectedSet.size >= target;
-  // La regla "2 a 3 por grupo" solo aplica a Dieciseisavos.
+  // La regla "2 a 3 por grupo" solo aplica a Eliminatorias de 32.
   const isR32 = activeRound === 'r32';
 
   // Agrupar el pool por grupo (A-L). Solo mostramos grupos con ≥1 equipo.
@@ -82,7 +82,7 @@ export function BracketStep({
       }));
   }, [poolCodes, teamsByCode]);
 
-  // Resumen de la regla de Dieciseisavos: cuántos grupos llegaron a 3
+  // Resumen de la regla de Eliminatorias de 32: cuántos grupos llegaron a 3
   // (tope 8 = los 8 mejores terceros) y cuáles aún no alcanzan el mínimo
   // de 2. `canAddThird` bloquea el 9.º tercero en la UI.
   const r32Summary = useMemo(() => {
@@ -167,7 +167,7 @@ export function BracketStep({
         </span>
       </div>
 
-      {/* Regla 2-3 por grupo (solo Dieciseisavos) */}
+      {/* Regla 2-3 por grupo (solo Eliminatorias de 32) */}
       {isR32 && (
         <p className="text-xs text-muted-foreground -mt-3">
           Mínimo {BRACKET_R32_GROUP_MIN} por grupo. Hasta {BRACKET_R32_GROUP_MAX} en máximo{' '}
@@ -190,7 +190,7 @@ export function BracketStep({
         </div>
       )}
 
-      {/* Error de mínimo por grupo: cada grupo necesita ≥2 en Dieciseisavos.
+      {/* Error de mínimo por grupo: cada grupo necesita ≥2 en Eliminatorias de 32.
           Solo se muestra una vez el usuario empezó a seleccionar. */}
       {isR32 && selectedSet.size > 0 && r32Summary.incompleteGroups.length > 0 && (
         <div className="flex items-start gap-2 text-sm text-destructive" role="alert">

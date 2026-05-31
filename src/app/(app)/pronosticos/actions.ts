@@ -154,7 +154,7 @@ export async function toggleBracketTeam(input: {
       return { error: `Ya seleccionaste los ${BRACKET_ROUND_SIZE[round]} de esta ronda` };
     }
 
-    // Reglas de Dieciseisavos: máximo 3 por grupo y máximo 8 grupos con 3
+    // Reglas de Eliminatorias de 32: máximo 3 por grupo y máximo 8 grupos con 3
     // (los 8 mejores terceros). Calculamos los conteos por grupo con los
     // equipos ya elegidos en r32 en una sola consulta.
     if (round === 'r32') {
@@ -184,7 +184,7 @@ export async function toggleBracketTeam(input: {
           const sameGroupCount = countByGroup.get(group) ?? 0;
           // Máximo 3 equipos del mismo grupo.
           if (sameGroupCount >= BRACKET_R32_GROUP_MAX) {
-            return { error: `Máximo ${BRACKET_R32_GROUP_MAX} equipos por grupo en Dieciseisavos` };
+            return { error: `Máximo ${BRACKET_R32_GROUP_MAX} equipos por grupo en Eliminatorias de 32` };
           }
           // Tope de terceros: si este equipo llevaría su grupo a 3, no puede
           // haber ya 8 grupos con 3.
