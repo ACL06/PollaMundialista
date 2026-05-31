@@ -4,6 +4,7 @@ import {
   type PredictionBracketEntry,
   type PredictionBracketRound,
   type PredictionGroupScore,
+  type PredictionKnockoutScore,
 } from '@/lib/types/prediction';
 import type { Match } from '@/lib/types/match';
 
@@ -11,9 +12,11 @@ import type { Match } from '@/lib/types/match';
  * Motor de scoring de la polla. Función pura: recibe el pronóstico de un
  * usuario y los resultados oficiales, devuelve el desglose de puntos.
  *
- * Reglas (máximo teórico 643):
+ * Reglas (máximo teórico 798):
  *   - Marcador exacto de grupos: 5 (× 72 = 360)
  *   - Solo resultado (gana/empata) sin marcador exacto: 2
+ *   - Marcador exacto de eliminatoria (R32..3er lugar): 5 (× 31 = 155)
+ *   - Solo resultado de eliminatoria (al 90'): 2
  *   - Clasificado a Eliminatorias de 32: 2 c/u (× 32 = 64)
  *   - Clasificado a Octavos de Final: 3 c/u (× 16 = 48)
  *   - Clasificado a Cuartos de Final: 5 c/u (× 8 = 40)
@@ -28,6 +31,9 @@ import type { Match } from '@/lib/types/match';
 export const SCORING = {
   groupExact: 5,
   groupOutcome: 2,
+  // Marcadores de eliminatoria (R32..3er lugar): mismas reglas que grupos.
+  knockoutExact: 5,
+  knockoutOutcome: 2,
   bracket: { r32: 2, r16: 3, qf: 5, sf: 8 } as Record<PredictionBracketRound, number>,
   finalist: 12,
   thirdPlace: 15,
@@ -40,6 +46,8 @@ export const SCORING = {
 export interface OfficialResults {
   /** match_id → marcador final oficial (solo partidos de grupos finalizados). */
   groupScores: Map<string, { home: number; away: number }>;
+  /** match_id → marcador final oficial de eliminatoria (R32..3er lugar finalizados). */
+  knockoutScores: Map<string, { home: number; away: number }>;
   /** Equipos que realmente alcanzaron cada ronda eliminatoria. */
   advancers: Record<PredictionBracketRound, Set<string>>;
   /** Los 2 equipos que jugaron la final. */
@@ -56,11 +64,12 @@ export interface OfficialResults {
   topScorer: string | null;
 }
 
-/** El pronóstico de un usuario, tal como sale de las 3 tablas. */
+/** El pronóstico de un usuario, tal como sale de las tablas. */
 export interface UserPrediction {
   prediction: Prediction | null;
   groupScores: PredictionGroupScore[];
   bracket: PredictionBracketEntry[];
+  knockoutScores: PredictionKnockoutScore[];
 }
 
 export interface ScoreBreakdown {
@@ -68,6 +77,10 @@ export interface ScoreBreakdown {
   groupExactCount: number;
   groupOutcome: number;
   groupOutcomeCount: number;
+  knockoutExact: number;
+  knockoutExactCount: number;
+  knockoutOutcome: number;
+  knockoutOutcomeCount: number;
   r32: number;
   r16: number;
   qf: number;
@@ -118,6 +131,26 @@ export function computeScore(user: UserPrediction, actual: OfficialResults): Sco
     } else if (outcome(gs.home_score, gs.away_score) === outcome(real.home, real.away)) {
       groupOutcome += SCORING.groupOutcome;
       groupOutcomeCount += 1;
+    }
+  }
+
+  // ── Marcadores de eliminatoria (R32..3er lugar) ───────────────────
+  // Mismas reglas que grupos (exacto / solo resultado al 90'). La final
+  // no entra acá: tiene su propio bonus de marcador estricto.
+  let knockoutExact = 0;
+  let knockoutExactCount = 0;
+  let knockoutOutcome = 0;
+  let knockoutOutcomeCount = 0;
+
+  for (const ks of user.knockoutScores) {
+    const real = actual.knockoutScores.get(ks.match_id);
+    if (!real) continue; // sin resultado oficial todavía → no puntúa
+    if (ks.home_score === real.home && ks.away_score === real.away) {
+      knockoutExact += SCORING.knockoutExact;
+      knockoutExactCount += 1;
+    } else if (outcome(ks.home_score, ks.away_score) === outcome(real.home, real.away)) {
+      knockoutOutcome += SCORING.knockoutOutcome;
+      knockoutOutcomeCount += 1;
     }
   }
 
@@ -201,6 +234,8 @@ export function computeScore(user: UserPrediction, actual: OfficialResults): Sco
   const total =
     groupExact +
     groupOutcome +
+    knockoutExact +
+    knockoutOutcome +
     roundPts.r32 +
     roundPts.r16 +
     roundPts.qf +
@@ -216,6 +251,10 @@ export function computeScore(user: UserPrediction, actual: OfficialResults): Sco
     groupExactCount,
     groupOutcome,
     groupOutcomeCount,
+    knockoutExact,
+    knockoutExactCount,
+    knockoutOutcome,
+    knockoutOutcomeCount,
     r32: roundPts.r32,
     r16: roundPts.r16,
     qf: roundPts.qf,
@@ -247,6 +286,7 @@ export function deriveOfficialResults(
   officialTopScorer: string | null = null,
 ): OfficialResults {
   const groupScores = new Map<string, { home: number; away: number }>();
+  const knockoutScores = new Map<string, { home: number; away: number }>();
   const advancers: Record<PredictionBracketRound, Set<string>> = {
     r32: new Set(),
     r16: new Set(),
@@ -271,6 +311,16 @@ export function deriveOfficialResults(
         groupScores.set(m.id, { home: m.home_score as number, away: m.away_score as number });
       }
       continue;
+    }
+
+    // Marcador oficial de eliminatoria (R32..3er lugar; la final no, tiene
+    // su propio bonus). Solo cuando el partido está finalizado con marcador.
+    if (
+      m.status === 'final' &&
+      hasScore &&
+      (m.stage === 'r32' || m.stage === 'r16' || m.stage === 'qf' || m.stage === 'sf' || m.stage === '3rd')
+    ) {
+      knockoutScores.set(m.id, { home: m.home_score as number, away: m.away_score as number });
     }
 
     // Eliminatorias: registrar clasificados a cada ronda
@@ -299,6 +349,7 @@ export function deriveOfficialResults(
 
   return {
     groupScores,
+    knockoutScores,
     advancers,
     finalists,
     finalScore,
@@ -340,13 +391,14 @@ export function buildRanking(
   predictions: Prediction[],
   groupScores: PredictionGroupScore[],
   bracket: PredictionBracketEntry[],
+  knockoutScores: PredictionKnockoutScore[],
   official: OfficialResults,
 ): RankingEntry[] {
   const byUser = new Map<string, UserPrediction>();
   const ensure = (userId: string): UserPrediction => {
     let up = byUser.get(userId);
     if (!up) {
-      up = { prediction: null, groupScores: [], bracket: [] };
+      up = { prediction: null, groupScores: [], bracket: [], knockoutScores: [] };
       byUser.set(userId, up);
     }
     return up;
@@ -355,6 +407,7 @@ export function buildRanking(
   for (const p of predictions) ensure(p.user_id).prediction = p;
   for (const s of groupScores) ensure(s.user_id).groupScores.push(s);
   for (const b of bracket) ensure(b.user_id).bracket.push(b);
+  for (const k of knockoutScores) ensure(k.user_id).knockoutScores.push(k);
 
   const entries: RankingEntry[] = Array.from(byUser.entries()).map(([userId, up]) => ({
     userId,

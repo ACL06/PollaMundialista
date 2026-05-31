@@ -98,7 +98,7 @@ export function RankingView({ rows, currentUserId, hasResults }: RankingViewProp
                     </div>
                   </td>
                   <td className="text-center px-2 py-2.5 text-muted-foreground tabular-nums hidden sm:table-cell">
-                    {r.breakdown.groupExactCount}
+                    {r.breakdown.groupExactCount + r.breakdown.knockoutExactCount}
                   </td>
                   <td className="text-right pr-4 pl-2 py-2.5 font-bold tabular-nums text-foreground">
                     {r.breakdown.total}
