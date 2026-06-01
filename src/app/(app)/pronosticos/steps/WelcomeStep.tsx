@@ -16,14 +16,14 @@ interface WelcomeStepProps {
 }
 
 export function WelcomeStep({ lockAt, isLocked, isSubmitted, onContinue }: WelcomeStepProps) {
-  const canContinue = !isLocked && !isSubmitted;
+  const canContinue = !isLocked;
 
   return (
     <div className="space-y-6">
       <div className="space-y-3">
         <h2 className="text-2xl font-bold text-foreground">¡Hagamos tu pronóstico!</h2>
         <p className="text-muted-foreground leading-relaxed">
-          Una sola oportunidad antes del partido inaugural. Vas a llenar:
+          Puedes editarlo cuando quieras hasta que arranque el Mundial. Vas a llenar:
         </p>
         <ul className="text-sm text-muted-foreground space-y-1.5 ml-4 list-disc">
           <li>Los marcadores de los 72 partidos de fase de grupos</li>
@@ -32,8 +32,8 @@ export function WelcomeStep({ lockAt, isLocked, isSubmitted, onContinue }: Welco
           <li>El goleador del torneo</li>
         </ul>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Puedes guardar progreso e ir volviendo. Cuando lo envíes (o llegue el lock global), queda
-          como tu pronóstico final.
+          Se guarda solo y puedes ir volviendo a ajustarlo. Cuando arranque el Mundial se cierra y
+          queda como tu pronóstico final.
         </p>
       </div>
 
@@ -68,7 +68,8 @@ export function WelcomeStep({ lockAt, isLocked, isSubmitted, onContinue }: Welco
           <div className="space-y-1">
             <h3 className="text-sm font-semibold text-foreground">Pronóstico enviado</h3>
             <p className="text-sm text-muted-foreground">
-              Ya enviaste tu pronóstico definitivo. Puedes verlo en modo solo lectura.
+              Ya lo enviaste, pero puedes seguir ajustándolo hasta que arranque el Mundial. Los
+              cambios se guardan solos.
             </p>
           </div>
         </div>
@@ -76,7 +77,7 @@ export function WelcomeStep({ lockAt, isLocked, isSubmitted, onContinue }: Welco
 
       <div className="flex justify-end pt-2">
         <Button onClick={onContinue} disabled={!canContinue}>
-          {isSubmitted || isLocked ? 'Ver mi pronóstico' : 'Empezar'}
+          {isLocked ? 'Ver mi pronóstico' : isSubmitted ? 'Seguir editando' : 'Empezar'}
           <ArrowRight className="ml-1 h-4 w-4" />
         </Button>
       </div>

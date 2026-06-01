@@ -326,7 +326,6 @@ function ScoreBox({ value, onChange, onBlur, disabled, ariaLabel }: ScoreBoxProp
       inputMode="numeric"
       pattern="[0-9]*"
       value={value}
-      placeholder="0"
       maxLength={2}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value)}

@@ -63,8 +63,11 @@ export function ReviewStep({
       <div className="space-y-2">
         <h2 className="text-2xl font-bold text-foreground">Revisión</h2>
         <p className="text-sm text-muted-foreground">
-          Este es el resumen de tu pronóstico. Puedes enviarlo ya o seguir editando hasta el
-          cierre. <span className="font-medium text-foreground">Al enviar, queda definitivo.</span>
+          Este es el resumen de tu pronóstico. Al enviarlo queda registrado, y{' '}
+          <span className="font-medium text-foreground">
+            puedes seguir ajustándolo hasta que arranque el Mundial
+          </span>{' '}
+          — los cambios se guardan solos.
         </p>
       </div>
 
@@ -95,7 +98,8 @@ export function ReviewStep({
           <div className="space-y-1">
             <h3 className="text-sm font-semibold text-foreground">¡Pronóstico enviado!</h3>
             <p className="text-sm text-muted-foreground">
-              Quedó registrado como definitivo. Ya no se puede modificar. ¡Suerte!
+              Quedó registrado. Puedes seguir ajustándolo hasta que arranque el Mundial; los
+              cambios se guardan solos. ¡Suerte! 🍀
             </p>
           </div>
         </div>
@@ -125,16 +129,14 @@ export function ReviewStep({
             </Button>
           ) : (
             <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-3">
-              <p className="text-sm text-foreground font-medium">
-                ¿Enviar tu pronóstico definitivo?
-              </p>
+              <p className="text-sm text-foreground font-medium">¿Enviar tu pronóstico?</p>
               <p className="text-xs text-muted-foreground">
-                Después de enviar no podrás cambiar ningún marcador, equipo ni dato. Los campos
-                que dejes vacíos simplemente no sumarán puntos.
+                Quedará marcado como enviado. Igual podrás seguir ajustándolo hasta que arranque el
+                Mundial; los campos vacíos no suman puntos.
               </p>
               <div className="flex gap-2">
                 <Button onClick={onSubmit} loading={submitting} size="md">
-                  Sí, enviar definitivo
+                  Sí, enviar
                 </Button>
                 <button
                   type="button"

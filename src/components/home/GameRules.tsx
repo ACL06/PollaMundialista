@@ -27,27 +27,29 @@ export function GameRules() {
           const isOpen = openId === rule.id;
           return (
             <li key={rule.id} className="py-2.5">
-              <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setOpenId(isOpen ? null : rule.id)}
+                aria-expanded={isOpen}
+                aria-label={`Ver detalle: ${rule.label}`}
+                className={cn(
+                  'flex w-full items-center gap-2 text-left rounded-md',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
+                )}
+              >
                 {rule.points && (
                   <span className="inline-flex items-center justify-center rounded-md bg-primary/10 text-primary text-[11px] font-bold px-1.5 py-0.5 tabular-nums whitespace-nowrap flex-shrink-0 min-w-[3.2rem]">
                     {rule.points}
                   </span>
                 )}
                 <span className="text-sm text-foreground flex-1 min-w-0">{rule.label}</span>
-                <button
-                  type="button"
-                  onClick={() => setOpenId(isOpen ? null : rule.id)}
-                  aria-expanded={isOpen}
-                  aria-label={`Ver detalle: ${rule.label}`}
-                  className={cn(
-                    'inline-flex items-center justify-center h-6 w-6 rounded-full flex-shrink-0 transition-colors',
-                    'text-tertiary hover:bg-tertiary/10',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
-                  )}
+                <span
+                  className="inline-flex items-center justify-center h-6 w-6 rounded-full flex-shrink-0 text-tertiary"
+                  aria-hidden="true"
                 >
                   {isOpen ? <ChevronDown className="h-4 w-4" /> : <Info className="h-4 w-4" />}
-                </button>
-              </div>
+                </span>
+              </button>
               {isOpen && (
                 <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground bg-muted/40 rounded-lg p-3">
                   {rule.detail}

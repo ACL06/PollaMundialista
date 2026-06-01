@@ -46,7 +46,7 @@ export const GAME_RULES: GameRule[] = [
     label: 'Cada equipo que clasifica a una ronda eliminatoria',
     points: '2 · 3 · 5 · 8',
     detail:
-      'Por cada equipo que pusiste en una ronda y de verdad llegó: Eliminatorias de 32 2 pts, Octavos de Final 3, Cuartos de Final 5, Semifinales 8 (cada uno). Ejemplo: pusiste a Brasil en Cuartos y llegó → +5. Mientras más avanza la ronda, más vale cada acierto.',
+      'Por cada equipo que pusiste en una ronda y de verdad llegó: Eliminatorias de 32 (2 pts), Octavos de Final (3 pts), Cuartos de Final (5 pts), Semifinales (8 pts), cada uno. Ejemplo: pusiste a Brasil en Cuartos y llegó → +5. Mientras más avanza la ronda, más vale cada acierto.',
   },
   {
     id: 'finalists',

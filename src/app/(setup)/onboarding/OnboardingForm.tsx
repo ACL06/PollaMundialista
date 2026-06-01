@@ -49,15 +49,12 @@ export function OnboardingForm() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const avatarVariants = useMemo(
-    () => getAvatarVariants(nickname, generation),
-    [nickname, generation],
-  );
+  const avatarVariants = useMemo(() => getAvatarVariants(generation), [generation]);
 
-  // Resetear selección cuando cambia el set de variantes
+  // Resetear selección solo cuando se piden "Otras opciones" (cambia el set).
   useEffect(() => {
     setSelectedIndex(0);
-  }, [nickname, generation]);
+  }, [generation]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

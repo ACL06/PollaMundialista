@@ -56,7 +56,7 @@
   2. **Marcadores** — 72 marcadores por día, autosave en blur, estados de card (guardado/incompleto-ámbar/error), tab del día centrado
   3. **Bracket** — Eliminatorias de 32→Semis, subset + cascada al deseleccionar, **regla 2-3 por grupo** en R32, agrupado por grupo
   4. **Cierre** — campeón/subcampeón/tercer lugar (entre los 4 semifinalistas), marcador exacto de la final (bonus), goleador (texto libre)
-  5. **Revisión** — resumen + submit one-shot que setea `locked_at`
+  5. **Revisión** — resumen + submit que setea `locked_at` (marca "enviado"; sigue editable hasta el lock global)
 - Autosave por server action; `editBlockReason()` bloquea edición tras submit propio o lock global
 - **Vista read-only** (`PredictionView`, Fase 4C): cuando enviaste o cerró el plazo, en vez del wizard se muestra el pronóstico completo (reusada también en Comunidad)
 - **Indicadores en /home** (Fase 4E, `PredictionStatusCard`): countdown + progreso (X/137) + CTA según estado
@@ -92,7 +92,7 @@
 
 #### Inscripción y premios (Fase 10)
 - **10A** — `profiles.is_enrolled` + admin (ver Panel admin).
-- **10B** — Sección **Inscripción y premios** en `/home` (entre Reglas y Explora, `EnrollmentPrizes`): estado pre-inscrito/inscrito, costo (`ENROLLMENT_COST_COP` = $50.000, configurable), contador de inscritos (de `public_profiles`), pozo que **se revela en el partido inaugural** (gate `isLockedAt`), reparto **20% administración + podio 70/20/10** (`src/lib/prizes.ts` `computePrizes`, con tests), regla de **empates** (movida desde `game-rules.ts`) y contacto (`CONTACT_PHONE`, placeholder). Podio gráfico con datos de ejemplo.
+- **10B** — Sección **Inscripción y premios** en `/home` (entre Reglas y Explora, `EnrollmentPrizes`): estado pre-inscrito/inscrito, costo (`ENROLLMENT_COST_COP` = $50.000, configurable), contador de inscritos (de `public_profiles`), **monto acumulado** que **se revela en el partido inaugural** (gate `isLockedAt`), reparto **10% administración + podio 70/20/10** (`src/lib/prizes.ts` `computePrizes` con `ADMIN_CUT`, con tests), regla de **empates** (movida desde `game-rules.ts`) y contacto (`CONTACT_PHONE`, placeholder). Podio gráfico con datos de ejemplo.
 - **Badge de estado** bajo el saludo en `/home` (`EnrollmentBadge`): rojo = pre-inscrito, verde = inscrito.
 
 #### Tests (Vitest)
@@ -171,7 +171,7 @@
 6. **Paleta tricolor** (verde/rojo/azul) por los 3 anfitriones. Mensajes de error genéricos en auth.
 7. **`minmax(0, 1fr)` en grids** con texto largo (evita inflado por contenido intrínseco).
 8. **Mecánica = Opción C** (grupos + bracket de clasificados). El usuario predice 72 marcadores + qué equipos pasan a cada ronda + campeón/subcampeón/tercer lugar + marcador exacto final (bonus) + goleador.
-9. **Lock global = kickoff match #1** vía `predictions_lock_at()`. **Submit one-shot** (`locked_at`) e inmutable después; submit parcial OK (campos vacíos = 0).
+9. **Lock global = kickoff match #1** vía `predictions_lock_at()`. **Submit marca "enviado"** (`locked_at`) pero **editable hasta el lock global** (ya no es inmutable; el `editBlockReason` solo bloquea por el lock global, `submitPrediction` es idempotente, y `/pronosticos` muestra el wizard editable mientras `!isLocked`). Submit parcial OK (campos vacíos = 0).
 10. **Wizard cliente** con state que vive en `PredictionWizard` (persiste al navegar entre steps). Autosave por sección (onBlur / toggle).
 11. **Goleador texto libre**, match flexible al evaluar. **Marcador de la final = estricto, por equipo**: el usuario asigna goles a su campeón (`final_home_score`) y a su subcampeón (`final_away_score`); suma 15 solo si **ambos finalistas predichos jugaron la final** y los goles que les asignó coinciden con los goles reales de **ese mismo equipo** (vía `finalHomeCode`/`finalAwayCode` en `OfficialResults`, independiente de home/away oficial; un empate a 90' definido por penales cuenta si se predijo ese empate entre esos dos equipos). Acertar los equipos se premia aparte (campeón 30, finalistas 12).
 12. **Regla 2-3 por grupo en Eliminatorias de 32** (cada grupo aporta 2 directos + posible mejor tercero = 8 grupos con 3).
