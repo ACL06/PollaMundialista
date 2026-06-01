@@ -1,8 +1,10 @@
-import { CheckCircle2, Clock, Crown, Info, Medal, Phone, Users } from 'lucide-react';
+import { CheckCircle2, Clock, Crown, Info, Landmark, Medal, MessageCircle, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  CONTACT_PHONE,
+  BREB_HOLDER,
+  BREB_KEY,
   ENROLLMENT_COST_COP,
+  WHATSAPP_GROUP_URL,
   computePrizes,
   formatCOP,
 } from '@/lib/prizes';
@@ -32,7 +34,7 @@ export function EnrollmentPrizes({ enrolledCount, revealed }: EnrollmentPrizesPr
     <section className="flex flex-col gap-5">
       <div className="space-y-1">
         <h2 className="text-lg font-semibold text-foreground">Inscripción y premios</h2>
-        <p className="text-sm text-muted-foreground">Así funciona la plata de la polla, claro y transparente.</p>
+        <p className="text-sm text-muted-foreground">Así funciona el acumulado, claro y transparente.</p>
       </div>
 
       {/* Qué significan los estados */}
@@ -44,13 +46,35 @@ export function EnrollmentPrizes({ enrolledCount, revealed }: EnrollmentPrizesPr
 
       {/* Costo + inscritos */}
       <div className="grid grid-cols-2 gap-3">
-        <Fact label="Costo de inscripción" value={formatCOP(ENROLLMENT_COST_COP)} hint="Puede cambiar" />
+        <Fact label="Costo de inscripción" value={formatCOP(ENROLLMENT_COST_COP)} />
         <Fact
           label="Inscritos"
           value={String(enrolledCount)}
           hint={enrolledCount === 1 ? 'participante' : 'participantes'}
           icon={<Users className="h-5 w-5 text-tertiary" />}
         />
+      </div>
+
+      {/* Cómo pagar: llave Bre-B */}
+      <div className="rounded-lg border border-border bg-surface p-4 space-y-2">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Landmark className="h-4 w-4 text-tertiary" />
+          Cómo pagar tu inscripción
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Consigna a esta llave <span className="font-medium text-foreground">Bre-B</span> y avísale al
+          administrador para que te marque como inscrito.
+        </p>
+        <div className="flex flex-col gap-1 rounded-md bg-muted/40 p-3 text-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">Llave Bre-B</span>
+            <span className="font-semibold tabular-nums text-foreground">{BREB_KEY}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">A nombre de</span>
+            <span className="font-medium text-foreground">{BREB_HOLDER}</span>
+          </div>
+        </div>
       </div>
 
       {/* Pozo: se revela en el partido inaugural */}
@@ -90,12 +114,22 @@ export function EnrollmentPrizes({ enrolledCount, revealed }: EnrollmentPrizesPr
         </p>
       </div>
 
-      {/* Contacto */}
-      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-        <Phone className="h-4 w-4 text-tertiary" />
-        <span>
-          ¿Dudas? Escríbenos al <span className="font-medium text-foreground">{CONTACT_PHONE}</span>.
-        </span>
+      {/* Contacto: grupo de WhatsApp */}
+      <div className="flex flex-col items-center gap-2">
+        <p className="text-sm text-muted-foreground">¿Dudas? Únete al grupo de la polla:</p>
+        <a
+          href={WHATSAPP_GROUP_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            'inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold',
+            'bg-primary text-primary-foreground hover:brightness-110 transition-all',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          )}
+        >
+          <MessageCircle className="h-4 w-4" />
+          Unirme al grupo de WhatsApp
+        </a>
       </div>
     </section>
   );

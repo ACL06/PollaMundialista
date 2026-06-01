@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { AlertCircle, Crown, Info, Medal, Trophy } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Crown, Info, Medal, Save, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Team } from '@/lib/types/match';
 
@@ -23,6 +23,12 @@ interface ClosingStepProps {
   onBlurFinalScore: () => void;
   onChangeTopScorer: (value: string) => void;
   onBlurTopScorer: () => void;
+  /** Re-guarda todos los campos del cierre (botón "Actualizar pronóstico"). */
+  onUpdate: () => void;
+  /** True mientras se está guardando por el botón. */
+  updating: boolean;
+  /** True tras un guardado exitoso (se limpia al editar de nuevo). */
+  saved: boolean;
   isLocked: boolean;
   isSubmitted: boolean;
 }
@@ -42,6 +48,9 @@ export function ClosingStep({
   onBlurFinalScore,
   onChangeTopScorer,
   onBlurTopScorer,
+  onUpdate,
+  updating,
+  saved,
   isLocked,
   isSubmitted,
 }: ClosingStepProps) {
@@ -130,9 +139,10 @@ export function ClosingStep({
           <span className="text-xs font-normal text-muted-foreground">(bonus)</span>
         </h3>
         <p className="text-xs text-muted-foreground">
-          Los goles de tu campeón y tu subcampeón en los 90&apos; (sin prórroga ni penales).
-          Suma solo si aciertas el marcador <span className="font-medium text-foreground">en
-          el orden correcto</span>.
+          Los goles de tu campeón y tu subcampeón al final del tiempo reglamentario (90&apos; +
+          minutos de adición; sin prórroga ni penales). Suma solo si aciertas el marcador{' '}
+          <span className="font-medium text-foreground">en el orden correcto</span>; el campeón no
+          puede llevar menos goles que el subcampeón.
         </p>
         <div className="flex items-end gap-3">
           <FinalScoreSide
@@ -166,7 +176,7 @@ export function ClosingStep({
           id="top_scorer"
           type="text"
           value={topScorer}
-          placeholder="ej: Kylian Mbappé"
+          placeholder="ej: Luis Díaz"
           maxLength={80}
           disabled={readOnly}
           onChange={(e) => onChangeTopScorer(e.target.value)}
@@ -178,10 +188,36 @@ export function ClosingStep({
           )}
         />
         <p className="text-xs text-muted-foreground">
-          Escribe el nombre del jugador. Se evalúa de forma flexible (sin distinguir
-          mayúsculas ni acentos).
+          Escribe el nombre completo (<span className="font-medium text-foreground">nombre y
+          apellido</span>). Se evalúa de forma flexible (sin distinguir mayúsculas ni acentos).
         </p>
       </div>
+
+      {/* Guardar / Actualizar (el cierre ya autoguarda; el botón da tranquilidad) */}
+      {!readOnly && (
+        <div className="flex items-center gap-3 pt-2 border-t border-border">
+          <button
+            type="button"
+            onClick={onUpdate}
+            disabled={updating}
+            className={cn(
+              'inline-flex items-center justify-center gap-2 rounded-lg h-10 px-4 text-sm font-medium',
+              'bg-primary text-primary-foreground hover:brightness-110 transition-all',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
+              'disabled:opacity-60 disabled:cursor-not-allowed',
+            )}
+          >
+            <Save className="h-4 w-4" />
+            {updating ? 'Guardando…' : 'Actualizar pronóstico'}
+          </button>
+          {saved && !updating && (
+            <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+              <CheckCircle2 className="h-4 w-4" />
+              Guardado
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

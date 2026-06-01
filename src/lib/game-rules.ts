@@ -25,7 +25,7 @@ export const GAME_RULES: GameRule[] = [
     label: 'Marcador exacto de un partido de grupos',
     points: '5 pts',
     detail:
-      'Aciertas el marcador exacto de un partido de la fase de grupos, contado al minuto 90 (sin prórroga ni penaltis). Ejemplo: predices México 2–0 y el partido termina 2–0 → +5 pts.',
+      'Aciertas el marcador exacto de un partido de la fase de grupos, al final del tiempo reglamentario (minuto 90 + minutos de adición; sin prórroga ni penales). Ejemplo: predices México 2–0 y el partido termina 2–0 → +5 pts.',
   },
   {
     id: 'group-outcome',
@@ -39,7 +39,7 @@ export const GAME_RULES: GameRule[] = [
     label: 'Marcador de un partido de eliminatoria',
     points: '5 · 2',
     detail:
-      'Igual que en grupos pero para los partidos de eliminatoria (Eliminatorias de 32, Octavos, Cuartos, Semifinal y Tercer lugar): 5 pts por el marcador exacto al minuto 90 y 2 por acertar solo el resultado. Estos marcadores se registran en la pestaña "Eliminatorias", y cada cruce se habilita cuando ya se conocen sus dos equipos. La final no entra aquí: tiene su propio bonus de marcador.',
+      'Igual que en grupos pero para los partidos de eliminatoria (Eliminatorias de 32, Octavos, Cuartos, Semifinal y Tercer lugar): 5 pts por el marcador exacto al final del tiempo reglamentario (90 + adición; sin prórroga ni penales) y 2 por acertar solo el resultado. Estos marcadores se registran en la pestaña "Eliminatorias", y cada cruce se habilita cuando ya se conocen sus dos equipos. La final no entra aquí: tiene su propio bonus de marcador.',
   },
   {
     id: 'advance',
@@ -74,7 +74,7 @@ export const GAME_RULES: GameRule[] = [
     label: 'Marcador exacto de la final (bonus)',
     points: '15 pts',
     detail:
-      'Aciertas cuántos goles marca cada uno de tus finalistas en la final al minuto 90 (sin penaltis). Cuenta solo si tu campeón y tu subcampeón son de verdad los que juegan la final y le pones a cada uno su marcador exacto. Ejemplo: dices que tu campeón le gana 2–1 a tu subcampeón y la final termina justo así → +15. Si te equivocas en el marcador de algún equipo, o si uno de tus finalistas no llega a la final, no suma.',
+      'Aciertas cuántos goles marca cada uno de tus finalistas en la final, al final del tiempo reglamentario (90 + adición; sin prórroga ni penales). Cuenta solo si tu campeón y tu subcampeón son de verdad los que juegan la final y le pones a cada uno su marcador exacto. Ejemplo: dices que tu campeón le gana 2–1 a tu subcampeón y la final termina justo así → +15. Si te equivocas en el marcador de algún equipo, o si uno de tus finalistas no llega a la final, no suma.',
   },
   {
     id: 'top-scorer',

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { AlertCircle, Check, Info } from 'lucide-react';
+import { AlertCircle, ArrowRight, Check, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   BRACKET_ROUNDS,
@@ -62,6 +62,7 @@ export function BracketStep({
   const atCap = selectedSet.size >= target;
   // La regla "2 a 3 por grupo" solo aplica a Eliminatorias de 32.
   const isR32 = activeRound === 'r32';
+  const isSf = activeRound === 'sf';
 
   // Agrupar el pool por grupo (A-L). Solo mostramos grupos con ≥1 equipo.
   const groupedPool = useMemo(() => {
@@ -187,6 +188,18 @@ export function BracketStep({
         <div className="flex items-center gap-2 text-sm text-destructive" role="alert">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {/* #12: en Semifinales, una vez elegidos los 4, guiar al paso Cierre. */}
+      {isSf && selectedSet.size === target && (
+        <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm text-foreground">
+          <ArrowRight className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" />
+          <span>
+            ¡Listo! Ya tienes tus 4 semifinalistas. Continúa al paso{' '}
+            <span className="font-semibold">Cierre</span> para elegir campeón, subcampeón, tercer
+            lugar y el marcador de la final.
+          </span>
         </div>
       )}
 

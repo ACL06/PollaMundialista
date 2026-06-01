@@ -71,24 +71,35 @@ export function ReviewStep({
         </p>
       </div>
 
-      {/* Resumen */}
+      {/* Resumen — en ámbar lo que falta del pronóstico (#23) */}
       <dl className="divide-y divide-border rounded-lg border border-border overflow-hidden">
         <SummaryRow
           label="Marcadores de grupos"
           value={`${groupScoresSaved} / ${groupScoresTotal}`}
+          warn={groupScoresSaved < groupScoresTotal}
         />
         {BRACKET_ROUNDS.map((round) => (
           <SummaryRow
             key={round}
             label={BRACKET_ROUND_LABEL[round]}
             value={`${bracketCounts[round]} / ${BRACKET_ROUND_SIZE[round]}`}
+            warn={bracketCounts[round] < BRACKET_ROUND_SIZE[round]}
           />
         ))}
-        <SummaryRow label="Campeón" value={teamName(champion)} highlight={!!champion} />
-        <SummaryRow label="Subcampeón" value={teamName(runnerUp)} />
-        <SummaryRow label="Tercer lugar" value={teamName(third)} />
-        <SummaryRow label="Marcador final · campeón–subcampeón (bonus)" value={finalScore} />
-        <SummaryRow label="Goleador" value={topScorer.trim() || '—'} />
+        <SummaryRow
+          label="Campeón"
+          value={teamName(champion)}
+          highlight={!!champion}
+          warn={!champion}
+        />
+        <SummaryRow label="Subcampeón" value={teamName(runnerUp)} warn={!runnerUp} />
+        <SummaryRow label="Tercer lugar" value={teamName(third)} warn={!third} />
+        <SummaryRow
+          label="Marcador final · campeón–subcampeón (bonus)"
+          value={finalScore}
+          warn={finalScore === '—'}
+        />
+        <SummaryRow label="Goleador" value={topScorer.trim() || '—'} warn={topScorer.trim() === ''} />
       </dl>
 
       {/* Estado / submit */}
@@ -123,10 +134,17 @@ export function ReviewStep({
           )}
 
           {!confirming ? (
-            <Button onClick={() => setConfirming(true)} size="lg" fullWidth>
-              <Send className="h-4 w-4" />
-              Enviar pronóstico
-            </Button>
+            <>
+              <p className="text-sm text-muted-foreground">
+                Antes de enviar, revisá que toda la información de arriba esté correcta — lo que
+                aparece en <span className="font-medium text-amber-500">ámbar</span> es lo que aún
+                te falta.
+              </p>
+              <Button onClick={() => setConfirming(true)} size="lg" fullWidth>
+                <Send className="h-4 w-4" />
+                Enviar pronóstico
+              </Button>
+            </>
           ) : (
             <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-3">
               <p className="text-sm text-foreground font-medium">¿Enviar tu pronóstico?</p>
@@ -162,18 +180,26 @@ function SummaryRow({
   label,
   value,
   highlight = false,
+  warn = false,
 }: {
   label: string;
   value: string;
   highlight?: boolean;
+  /** Resalta la fila en ámbar cuando falta completar este dato. */
+  warn?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-surface">
-      <dt className="text-sm text-muted-foreground">{label}</dt>
+    <div
+      className={cn(
+        'flex items-center justify-between gap-3 px-4 py-2.5',
+        warn ? 'bg-amber-500/10' : 'bg-surface',
+      )}
+    >
+      <dt className={cn('text-sm', warn ? 'text-amber-500' : 'text-muted-foreground')}>{label}</dt>
       <dd
         className={cn(
           'text-sm font-medium tabular-nums',
-          highlight ? 'text-primary' : 'text-foreground',
+          warn ? 'text-amber-500' : highlight ? 'text-primary' : 'text-foreground',
         )}
       >
         {value}
