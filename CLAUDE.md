@@ -10,7 +10,7 @@
 
 **Polla Mundialista** es una aplicación web para hacer pronósticos del Mundial de Fútbol 2026 (USA, México, Canadá) entre amigos. Proyecto personal, no comercial.
 
-**URL producción:** https://polla-mundialista-six.vercel.app
+**URL producción:** https://www.pollafutbolera.com.co (dominio propio; el `polla-mundialista-six.vercel.app` sigue como alias)
 **Repositorio:** https://github.com/ACL06/PollaMundialista
 
 **Fase actual:** MVP completo de punta a punta y en uso real. Auth (con dominio propio verificado → OTP funciona para todos), perfil (+ modal de edición), calendario, tablas de grupos, wizard de pronósticos (5 steps, editable hasta el lock global), Comunidad, Ranking, panel admin completo (grupos + eliminatorias + goleador + inscripciones), marcadores de eliminatoria en vivo (Fase 9) e inscripción/premios (Fase 10) están en producción. El sistema "se enciende" cuando el admin carga resultados oficiales. **Notificaciones = solo in-app** (sin emails automáticos, por decisión de costos — ver Fase 7). Pendiente del roadmap: grupos privados (Fase 6).
