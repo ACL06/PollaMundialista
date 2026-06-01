@@ -85,13 +85,14 @@ export default async function PronosticosPage() {
   const knockoutMatches = normalizeMatches(knockoutMatchesResult.data ?? []);
   const knockoutScores = (knockoutScoresResult.data ?? []) as PredictionKnockoutScore[];
 
-  // Si ya envió (one-shot) o el plazo global cerró → vista de solo lectura del
-  // pronóstico principal. En otro caso, el wizard editable.
+  // Solo cuando el plazo global cerró se pasa a la vista de solo lectura. Si
+  // ya envió pero el Mundial no ha arrancado, sigue viendo el wizard editable
+  // (con el estado "enviado"); el envío ya no es inmutable.
   const isSubmitted = prediction?.locked_at != null;
   const isLocked = isLockedAt(lockAt);
 
   const miPronostico =
-    isSubmitted || isLocked ? (
+    isLocked ? (
       <PredictionView
         prediction={prediction}
         groupScores={groupScores}

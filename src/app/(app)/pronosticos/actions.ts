@@ -21,16 +21,13 @@ interface ActionResult {
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
 /**
- * Devuelve un mensaje si el usuario NO puede editar su pronóstico:
- *   - El plazo global ya cerró (kickoff del match #1), o
- *   - El usuario ya envió su pronóstico (locked_at seteado → one-shot).
- * Devuelve null si puede editar. Usa el mismo cliente de la action para
- * no abrir conexiones extra.
+ * Devuelve un mensaje si el usuario NO puede editar su pronóstico.
+ * El único bloqueo es el **lock global** (kickoff del match #1): mientras el
+ * Mundial no arranca, el usuario puede seguir editando aunque ya haya
+ * enviado (el envío deja de ser inmutable; queda como "enviado" pero
+ * editable). Devuelve null si puede editar.
  */
-async function editBlockReason(
-  supabase: SupabaseServerClient,
-  userId: string,
-): Promise<string | null> {
+async function editBlockReason(supabase: SupabaseServerClient): Promise<string | null> {
   const { data: m1 } = await supabase
     .from('matches')
     .select('kicks_off_at')
@@ -38,14 +35,6 @@ async function editBlockReason(
     .maybeSingle();
   if (m1 && new Date() >= new Date(m1.kicks_off_at)) {
     return 'El plazo de pronósticos ya cerró';
-  }
-  const { data: pred } = await supabase
-    .from('predictions')
-    .select('locked_at')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (pred?.locked_at) {
-    return 'Ya enviaste tu pronóstico; no se puede modificar';
   }
   return null;
 }
@@ -75,7 +64,7 @@ export async function saveGroupScore(input: {
     return { error: 'Sesión expirada' };
   }
 
-  const blocked = await editBlockReason(supabase, user.id);
+  const blocked = await editBlockReason(supabase);
   if (blocked) return { error: blocked };
 
   const { error } = await supabase.from('prediction_group_scores').upsert({
@@ -186,7 +175,7 @@ export async function toggleBracketTeam(input: {
     return { error: 'Sesión expirada' };
   }
 
-  const blocked = await editBlockReason(supabase, user.id);
+  const blocked = await editBlockReason(supabase);
   if (blocked) return { error: blocked };
 
   if (selected) {
@@ -329,7 +318,7 @@ export async function savePredictionMeta(input: {
     return { error: 'Sesión expirada' };
   }
 
-  const blocked = await editBlockReason(supabase, user.id);
+  const blocked = await editBlockReason(supabase);
   if (blocked) return { error: blocked };
 
   // Solo incluir las claves definidas (las que el cliente quiso tocar).
@@ -348,11 +337,12 @@ export async function savePredictionMeta(input: {
 }
 
 /**
- * Envío definitivo del pronóstico: setea `locked_at = now()`. A partir
- * de ahí el pronóstico es inmutable (one-shot), enforzado por:
- *   - editBlockReason en las demás actions (no más edición)
- *   - trigger `predictions_locked_at_immutable` en BD
- * Rechaza si ya está enviado o si el plazo global ya cerró.
+ * Marca el pronóstico como "enviado": setea `locked_at = now()`. Ya NO es
+ * inmutable — el usuario puede seguir editando (vía autosave) hasta el lock
+ * global; el envío solo registra que lo dio por listo una vez.
+ * Idempotente: si ya tiene `locked_at`, no lo reescribe (el trigger
+ * `predictions_locked_at_immutable` bloquea cambiarlo). Rechaza si el plazo
+ * global ya cerró.
  */
 export async function submitPrediction(): Promise<ActionResult> {
   const supabase = await createClient();
@@ -363,8 +353,16 @@ export async function submitPrediction(): Promise<ActionResult> {
     return { error: 'Sesión expirada' };
   }
 
-  const blocked = await editBlockReason(supabase, user.id);
+  const blocked = await editBlockReason(supabase);
   if (blocked) return { error: blocked };
+
+  // Si ya está enviado, no reescribir locked_at (idempotente).
+  const { data: existing } = await supabase
+    .from('predictions')
+    .select('locked_at')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (existing?.locked_at) return {};
 
   const { error } = await supabase
     .from('predictions')

@@ -42,7 +42,7 @@ export function PredictionStatusCard({
   const pct = Math.round((filled / TOTAL_DECISIONS) * 100);
   const nothingStarted = filled === 0;
 
-  // ── Enviado (definitivo) ──────────────────────────────────────────
+  // ── Enviado ───────────────────────────────────────────────────────
   if (isSubmitted) {
     return (
       <Card>
@@ -50,11 +50,13 @@ export function PredictionStatusCard({
           Pronóstico enviado
         </Badge>
         <p className="text-sm text-muted-foreground">
-          Tu pronóstico quedó registrado como definitivo. ¡Mucha suerte! 🍀
+          {isLocked
+            ? 'Tu pronóstico quedó registrado como definitivo. ¡Mucha suerte! 🍀'
+            : 'Lo enviaste ✓ — puedes seguir ajustándolo hasta que arranque el Mundial; los cambios se guardan solos.'}
         </p>
         <div className="flex flex-wrap gap-2 pt-1">
           <Link href="/pronosticos" className={ctaClass}>
-            Ver mi pronóstico
+            {isLocked ? 'Ver mi pronóstico' : 'Editar mi pronóstico'}
             <ArrowRight className="h-4 w-4" />
           </Link>
           {isLocked && (

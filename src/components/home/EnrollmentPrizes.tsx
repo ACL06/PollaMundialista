@@ -57,9 +57,9 @@ export function EnrollmentPrizes({ enrolledCount, revealed }: EnrollmentPrizesPr
       <div className="rounded-lg border border-border bg-surface p-4">
         {revealed ? (
           <div className="space-y-2">
-            <Row label="Pozo total" value={formatCOP(prizes.pot)} />
-            <Row label="Administración (20%)" value={formatCOP(prizes.adminCut)} muted />
-            <Row label="Para premios (80%)" value={formatCOP(prizes.prizePool)} strong />
+            <Row label="Monto acumulado" value={formatCOP(prizes.pot)} />
+            <Row label="Administración (10%)" value={formatCOP(prizes.adminCut)} muted />
+            <Row label="Para premios (90%)" value={formatCOP(prizes.prizePool)} strong />
           </div>
         ) : (
           <div className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -79,15 +79,14 @@ export function EnrollmentPrizes({ enrolledCount, revealed }: EnrollmentPrizesPr
       {/* Reparto + empates */}
       <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground space-y-2">
         <p>
-          <span className="font-semibold text-foreground">Reparto:</span> del pozo se aparta un{' '}
-          <span className="font-medium text-foreground">20% para la administración</span> de la polla.
-          El resto se reparte en el podio:{' '}
+          <span className="font-semibold text-foreground">Reparto:</span> del monto acumulado se
+          aparta un <span className="font-medium text-foreground">10% para la administración</span>{' '}
+          de la polla. El resto se reparte en el podio:{' '}
           <span className="font-medium text-foreground">1° 70% · 2° 20% · 3° 10%</span>.
         </p>
         <p>
-          <span className="font-semibold text-foreground">Empates:</span> en la tabla, los
-          participantes con los mismos puntos se ordenan alfabéticamente por nombre. Si el empate
-          persiste al final del Mundial, ese premio se reparte en partes iguales entre ellos.
+          <span className="font-semibold text-foreground">Empates:</span> si dos o más participantes
+          terminan con los mismos puntos, ese premio se reparte en partes iguales entre ellos.
         </p>
       </div>
 

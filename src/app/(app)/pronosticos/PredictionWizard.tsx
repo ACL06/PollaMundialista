@@ -154,7 +154,7 @@ export function PredictionWizard({
   };
 
   const handleGroupScoreBlur = (matchId: string) => {
-    if (isLocked || isSubmitted) return;
+    if (isLocked) return;
     const current = groupScoresDraft.get(matchId);
     if (!current) return;
     if (current.home === '' || current.away === '') return; // Aún incompleto
@@ -230,7 +230,7 @@ export function PredictionWizard({
   };
 
   const handleBracketToggle = (round: PredictionBracketRound, teamCode: string) => {
-    if (isLocked || isSubmitted) return;
+    if (isLocked) return;
     const isSelected = bracket.get(round)?.has(teamCode) ?? false;
     const bracketSnapshot = cloneBracket(bracket);
     const podiumSnapshot = { champion, runnerUp, third };
@@ -284,7 +284,7 @@ export function PredictionWizard({
   };
 
   const handleSelectPodium = (field: PodiumField, code: string) => {
-    if (isLocked || isSubmitted) return;
+    if (isLocked) return;
     if (field === 'champion') {
       const value = champion === code ? null : code;
       const patch: MetaPatch = { champion_code: value };
@@ -322,7 +322,7 @@ export function PredictionWizard({
   };
 
   const handleFinalScoreBlur = () => {
-    if (isLocked || isSubmitted) return;
+    if (isLocked) return;
     if (finalHome === '' && finalAway === '') {
       persistMeta({ final_home_score: null, final_away_score: null });
       return;
@@ -338,7 +338,7 @@ export function PredictionWizard({
   };
 
   const handleTopScorerBlur = () => {
-    if (isLocked || isSubmitted) return;
+    if (isLocked) return;
     const trimmed = topScorer.trim();
     persistMeta({ top_scorer: trimmed === '' ? null : trimmed });
   };
@@ -375,11 +375,48 @@ export function PredictionWizard({
           Mi pronóstico
         </h1>
         <p className="text-sm text-muted-foreground">
-          Una sola entrega antes del partido inaugural. Después no se aceptan cambios.
+          Puedes editarlo cuando quieras hasta que arranque el Mundial. Después se cierra y queda
+          como tu pronóstico final.
         </p>
       </header>
 
       <WizardNav steps={STEPS} currentIndex={currentIndex} onSelect={setCurrentIndex} />
+
+      {/* Navegación entre PASOS del pronóstico (va aquí, pegada a los pasos,
+        * para no confundirla con "siguiente día"). */}
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={goPrev}
+          disabled={currentIndex === 0}
+          className={cn(
+            'inline-flex items-center gap-1 text-sm font-medium px-3 py-2 rounded-md',
+            'text-muted-foreground hover:text-foreground hover:bg-muted',
+            'disabled:opacity-40 disabled:cursor-not-allowed',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
+          )}
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Paso anterior
+        </button>
+        <span className="text-xs text-muted-foreground tabular-nums">
+          Paso {currentIndex + 1} / {STEPS.length}
+        </span>
+        <button
+          type="button"
+          onClick={goNext}
+          disabled={currentIndex === STEPS.length - 1}
+          className={cn(
+            'inline-flex items-center gap-1 text-sm font-medium px-3 py-2 rounded-md',
+            'text-muted-foreground hover:text-foreground hover:bg-muted',
+            'disabled:opacity-40 disabled:cursor-not-allowed',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
+          )}
+        >
+          Paso siguiente
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
 
       <section
         aria-labelledby="step-heading"
@@ -403,7 +440,7 @@ export function PredictionWizard({
             onChangeField={handleGroupScoreChange}
             onBlurField={handleGroupScoreBlur}
             isLocked={isLocked}
-            isSubmitted={isSubmitted}
+            isSubmitted={false}
           />
         ) : currentStep.key === 'bracket' ? (
           <BracketStep
@@ -414,7 +451,7 @@ export function PredictionWizard({
             onToggle={handleBracketToggle}
             error={bracketError}
             isLocked={isLocked}
-            isSubmitted={isSubmitted}
+            isSubmitted={false}
           />
         ) : currentStep.key === 'closing' ? (
           <ClosingStep
@@ -433,7 +470,7 @@ export function PredictionWizard({
             onChangeTopScorer={setTopScorer}
             onBlurTopScorer={handleTopScorerBlur}
             isLocked={isLocked}
-            isSubmitted={isSubmitted}
+            isSubmitted={false}
           />
         ) : (
           <ReviewStep
@@ -460,40 +497,6 @@ export function PredictionWizard({
           />
         )}
       </section>
-
-      <footer className="flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={goPrev}
-          disabled={currentIndex === 0}
-          className={cn(
-            'inline-flex items-center gap-1 text-sm font-medium px-3 py-2 rounded-md',
-            'text-muted-foreground hover:text-foreground hover:bg-muted',
-            'disabled:opacity-40 disabled:cursor-not-allowed',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
-          )}
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Anterior
-        </button>
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {currentIndex + 1} / {STEPS.length}
-        </span>
-        <button
-          type="button"
-          onClick={goNext}
-          disabled={currentIndex === STEPS.length - 1}
-          className={cn(
-            'inline-flex items-center gap-1 text-sm font-medium px-3 py-2 rounded-md',
-            'text-muted-foreground hover:text-foreground hover:bg-muted',
-            'disabled:opacity-40 disabled:cursor-not-allowed',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
-          )}
-        >
-          Siguiente
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </footer>
     </div>
   );
 }

@@ -7,12 +7,12 @@ describe('computePrizes', () => {
     expect(p).toEqual({ pot: 0, adminCut: 0, prizePool: 0, podium: [0, 0, 0] });
   });
 
-  it('10 inscritos: 20% admin y reparto 70/20/10', () => {
+  it('10 inscritos: 10% admin y reparto 70/20/10', () => {
     const p = computePrizes(10); // 10 × 50.000 = 500.000
     expect(p.pot).toBe(500000);
-    expect(p.adminCut).toBe(100000); // 20%
-    expect(p.prizePool).toBe(400000); // 80%
-    expect(p.podium).toEqual([280000, 80000, 40000]); // 70 / 20 / 10
+    expect(p.adminCut).toBe(50000); // 10%
+    expect(p.prizePool).toBe(450000); // 90%
+    expect(p.podium).toEqual([315000, 90000, 45000]); // 70 / 20 / 10
   });
 
   it('el podio siempre suma exactamente el pozo de premios (redondeo al 1°)', () => {

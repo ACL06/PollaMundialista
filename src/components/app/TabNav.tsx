@@ -19,10 +19,12 @@ export function TabNav() {
 
   return (
     <nav className="border-b border-border bg-background sticky top-0 z-10">
-      {/* overflow-x-auto: con 5 pestañas no caben en mobile; en desktop sí
-        * (sin scrollbar visible). */}
-      <div className="max-w-6xl mx-auto px-5 flex gap-1 overflow-x-auto">
-        {tabs.map(({ href, label, Icon }) => {
+      {/* En mobile las pestañas no caben: scroll SOLO horizontal
+        * (touch-pan-x + overscroll-x-contain evitan el arrastre diagonal/vertical)
+        * y un degradado a la derecha insinúa que hay más. */}
+      <div className="relative max-w-6xl mx-auto">
+        <div className="flex gap-1 overflow-x-auto overflow-y-hidden touch-pan-x overscroll-x-contain px-5">
+          {tabs.map(({ href, label, Icon }) => {
           const isActive = pathname === href || pathname.startsWith(href + '/');
           return (
             <Link
@@ -42,7 +44,14 @@ export function TabNav() {
               <span>{label}</span>
             </Link>
           );
-        })}
+          })}
+        </div>
+        {/* Degradado en el borde derecho: pista visual de que hay más pestañas
+          * (solo en mobile; en desktop caben todas). */}
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background to-transparent sm:hidden"
+          aria-hidden="true"
+        />
       </div>
     </nav>
   );
