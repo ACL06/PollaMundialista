@@ -2,7 +2,7 @@
 
 Aplicación web para hacer pronósticos del **Mundial de Fútbol 2026** (USA · México · Canadá) entre amigos. Proyecto personal, no comercial.
 
-🔗 **Producción:** https://polla-mundialista-six.vercel.app
+🔗 **Producción:** https://www.pollafutbolera.com.co
 🛠️ **Stack:** Next.js 15 · React 19 · TypeScript · Supabase · Tailwind · Vercel
 
 > Polla Mundialista es un proyecto independiente y no está afiliado, patrocinado ni avalado por FIFA ni por ninguna federación oficial.
