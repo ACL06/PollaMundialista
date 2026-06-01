@@ -168,7 +168,7 @@ export function OnboardingForm() {
           <Input
             id="first_name"
             type="text"
-            placeholder="ej: Álvaro"
+            placeholder="ej: Pepito"
             value={firstName}
             onChange={(e) => {
               setFirstName(e.target.value);

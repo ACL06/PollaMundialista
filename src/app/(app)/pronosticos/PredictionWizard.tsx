@@ -220,12 +220,56 @@ export function PredictionWizard({
   );
   const [topScorer, setTopScorer] = useState<string>(initialPrediction?.top_scorer ?? '');
   const [metaError, setMetaError] = useState<string | null>(null);
-  const [, startMetaSave] = useTransition();
+  const [metaSaved, setMetaSaved] = useState(false);
+  const [metaSaving, startMetaSave] = useTransition();
 
   const persistMeta = (patch: MetaPatch) => {
     startMetaSave(async () => {
       const result = await savePredictionMeta(patch);
       setMetaError(result.error ?? null);
+    });
+  };
+
+  /** ¿El goleador tiene nombre y apellido (≥2 palabras)? (#14) */
+  const scorerHasFullName = (value: string) => value.trim().split(/\s+/).filter(Boolean).length >= 2;
+
+  /**
+   * Botón "Actualizar pronóstico" del Cierre: re-guarda todos los campos
+   * válidos y muestra "Guardado ✓" (el cierre ya autoguarda, esto es para
+   * tranquilidad del usuario). Omite campos inválidos (su blur ya avisó).
+   */
+  const handleClosingUpdate = () => {
+    if (isLocked) return;
+    const patch: MetaPatch = {
+      champion_code: champion,
+      runner_up_code: runnerUp,
+      third_place_code: third,
+    };
+    const scorer = topScorer.trim();
+    if (scorer === '') patch.top_scorer = null;
+    else if (scorerHasFullName(scorer)) patch.top_scorer = scorer;
+
+    if (finalHome === '' && finalAway === '') {
+      patch.final_home_score = null;
+      patch.final_away_score = null;
+    } else if (finalHome !== '' && finalAway !== '') {
+      const h = Number(finalHome);
+      const a = Number(finalAway);
+      if (Number.isInteger(h) && Number.isInteger(a) && h >= 0 && a >= 0 && h <= 99 && a <= 99 && h >= a) {
+        patch.final_home_score = h;
+        patch.final_away_score = a;
+      }
+    }
+
+    startMetaSave(async () => {
+      const result = await savePredictionMeta(patch);
+      if (result.error) {
+        setMetaError(result.error);
+        setMetaSaved(false);
+      } else {
+        setMetaError(null);
+        setMetaSaved(true);
+      }
     });
   };
 
@@ -285,6 +329,7 @@ export function PredictionWizard({
 
   const handleSelectPodium = (field: PodiumField, code: string) => {
     if (isLocked) return;
+    setMetaSaved(false);
     if (field === 'champion') {
       const value = champion === code ? null : code;
       const patch: MetaPatch = { champion_code: value };
@@ -317,6 +362,7 @@ export function PredictionWizard({
 
   const handleFinalScoreChange = (side: 'home' | 'away', raw: string) => {
     const cleaned = sanitizeScore(raw);
+    setMetaSaved(false);
     if (side === 'home') setFinalHome(cleaned);
     else setFinalAway(cleaned);
   };
@@ -334,13 +380,32 @@ export function PredictionWizard({
       setMetaError('Marcador de la final fuera de rango (0–99)');
       return;
     }
+    // #1: el campeón no puede llevar menos goles que el subcampeón.
+    if (h < a) {
+      setMetaError('El campeón no puede tener menos goles que el subcampeón');
+      return;
+    }
     persistMeta({ final_home_score: h, final_away_score: a });
+  };
+
+  const handleTopScorerChange = (value: string) => {
+    setMetaSaved(false);
+    setTopScorer(value);
   };
 
   const handleTopScorerBlur = () => {
     if (isLocked) return;
     const trimmed = topScorer.trim();
-    persistMeta({ top_scorer: trimmed === '' ? null : trimmed });
+    if (trimmed === '') {
+      persistMeta({ top_scorer: null });
+      return;
+    }
+    // #14: el goleador debe ser nombre y apellido (≥2 palabras).
+    if (!scorerHasFullName(trimmed)) {
+      setMetaError('Escribe el nombre y el apellido del goleador');
+      return;
+    }
+    persistMeta({ top_scorer: trimmed });
   };
 
   // ── Submit final ─────────────────────────────────────────────────
@@ -467,8 +532,11 @@ export function PredictionWizard({
             onSelectPodium={handleSelectPodium}
             onChangeFinalScore={handleFinalScoreChange}
             onBlurFinalScore={handleFinalScoreBlur}
-            onChangeTopScorer={setTopScorer}
+            onChangeTopScorer={handleTopScorerChange}
             onBlurTopScorer={handleTopScorerBlur}
+            onUpdate={handleClosingUpdate}
+            updating={metaSaving}
+            saved={metaSaved}
             isLocked={isLocked}
             isSubmitted={false}
           />

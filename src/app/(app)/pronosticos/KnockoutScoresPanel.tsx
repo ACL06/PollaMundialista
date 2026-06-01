@@ -160,9 +160,10 @@ export function KnockoutScoresPanel({ matches, initialScores, nowIso }: Knockout
           Marcadores de eliminatoria
         </h1>
         <p className="text-sm text-muted-foreground">
-          Predice el marcador (al 90&apos;) de cada partido eliminatorio. Cada cruce se habilita
-          cuando se conocen sus dos equipos y se cierra cuando arranca. Son los cruces reales del
-          torneo, independientes de tu bracket.
+          Predice el marcador al final del tiempo reglamentario (90&apos; + adición; sin prórroga ni
+          penales) de cada partido eliminatorio. Cada cruce se habilita cuando se conocen sus dos
+          equipos y se cierra cuando arranca. Son los cruces reales del torneo, independientes de tu
+          bracket.
         </p>
       </header>
 
