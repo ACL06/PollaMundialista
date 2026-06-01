@@ -13,7 +13,7 @@
 **URL producción:** https://polla-mundialista-six.vercel.app
 **Repositorio:** https://github.com/ACL06/PollaMundialista
 
-**Fase actual:** MVP completo de punta a punta. Auth, perfil (+ modal de edición), calendario, tablas de grupos, wizard de pronósticos (5 steps + submit), vista read-only, Comunidad (transparencia + reacciones), Ranking y panel admin completo (grupos + eliminatorias + goleador) están en producción. El sistema "se enciende" cuando el admin carga resultados oficiales. Falta solo el roadmap extra: grupos privados (6), notificaciones (7).
+**Fase actual:** MVP completo de punta a punta y en uso real. Auth (con dominio propio verificado → OTP funciona para todos), perfil (+ modal de edición), calendario, tablas de grupos, wizard de pronósticos (5 steps, editable hasta el lock global), Comunidad, Ranking, panel admin completo (grupos + eliminatorias + goleador + inscripciones), marcadores de eliminatoria en vivo (Fase 9) e inscripción/premios (Fase 10) están en producción. El sistema "se enciende" cuando el admin carga resultados oficiales. **Notificaciones = solo in-app** (sin emails automáticos, por decisión de costos — ver Fase 7). Pendiente del roadmap: grupos privados (Fase 6).
 
 **Disclaimer:** El proyecto NO está afiliado a FIFA. No usar logos, marcas ni mascotas oficiales (ver sección de copyright más abajo).
 
@@ -98,13 +98,14 @@
 #### Tests (Vitest)
 - `scoring.test.ts` (39): reglas de scoring (incl. marcadores de eliminatoria y marcador de la final estricto por equipo), deriveOfficialResults, buildRanking, pronóstico perfecto = 798.
 - `knockout-window.test.ts` (7): estados de la ventana de captura por partido (pending/open/closed).
+- `prizes.test.ts` (5): reparto de premios (10% admin + podio 70/20/10, el 1° absorbe el redondeo).
 - `compute-standings.test.ts`, `format-bracket-source.test.ts`, `predictions-lock.test.ts`, `validators/profile.test.ts`, `validators/prediction.test.ts`.
-- **72 tests en total**, corren en CI (`npm test`).
+- **77 tests en total**, corren en CI (`npm test`).
 
 ### ⏳ Pendiente / Roadmap
 
 - **Fase 6** — Grupos privados con código de invitación
-- **Fase 7** — Notificaciones por email (Resend) + **verificar dominio en Resend** (hoy solo el email registrado recibe OTP)
+- ✅ **Fase 7 (cerrada)** — Dominio propio `pollafutbolera.com.co` registrado en Hostinger y **verificado en Resend** → el OTP llega a cualquier correo (probado con usuarios reales). **Decisión: notificaciones solo in-app** (la tarjeta de estado en `/home` con countdown + CTA hace de recordatorio) — sin emails automáticos, para no pasar el free tier de Resend (100/día, 3.000/mes). Si algún día se quisieran, retomar el plan 7A/7B con dedup + tope diario.
 - **Comunidad: aciertos del día / tabla en vivo** cuando haya resultados (mejora social)
 - **Modal de perfil**: opción de cambiar avatar y equipo favorito (hoy solo los 4 campos base)
 - **Refactors DRY pendientes** (maintainability, no bugs): helper de query de `matches` (7 pages comparten select+normalize), `sanitizeScore`/`sanitizePhone` a `utils`, componente `ScoreInput` unificado
@@ -121,7 +122,7 @@
 | Estilos | Tailwind CSS 3.4 + componentes propios | CSS variables, paleta tricolor |
 | Auth | `@supabase/ssr` con Email OTP | Cookies HttpOnly |
 | Base de datos | Supabase Postgres con RLS | 8 tablas + 1 vista, RLS activo |
-| SMTP | Resend (custom SMTP en Supabase) | Free: 100/día, 3000/mes |
+| SMTP | Resend (custom SMTP en Supabase), dominio `pollafutbolera.com.co` verificado | Free: 100/día, 3000/mes |
 | Animaciones | Framer Motion | Modales, transiciones |
 | Iconos | Lucide React | Outline |
 | Validación | Zod | `src/lib/validators/` |
