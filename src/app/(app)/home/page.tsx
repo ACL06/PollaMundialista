@@ -6,6 +6,7 @@ import { WORLD_CUP_TEAMS } from '@/lib/validators/profile';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
 import { loadRanking } from '@/app/(app)/ranking/load-ranking';
 import { PredictionStatusCard } from '@/components/home/PredictionStatusCard';
+import { HomeStandingCard } from '@/components/home/HomeStandingCard';
 import { GameRules } from '@/components/home/GameRules';
 import { EnrollmentPrizes, EnrollmentBadge } from '@/components/home/EnrollmentPrizes';
 
@@ -114,15 +115,6 @@ export default async function HomePage() {
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-2">
-          {myRow && (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-tertiary/10 text-tertiary text-sm font-medium">
-              <Trophy className="h-4 w-4" />
-              <span>
-                Tu posición: <span className="font-bold">#{myRow.rank}</span> de{' '}
-                {ranking.rows.length} · {myRow.breakdown.total} pts
-              </span>
-            </div>
-          )}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
             <CheckCircle2 className="h-4 w-4" />
             <span>Sesión iniciada como {profile?.email ?? user?.email}</span>
@@ -130,15 +122,28 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* Estado del pronóstico */}
-      <PredictionStatusCard
-        lockAtIso={lockAt?.toISOString() ?? null}
-        isLocked={isLocked}
-        isSubmitted={isSubmitted}
-        scoresCount={scoresCount}
-        bracketCount={bracketCount}
-        metaCount={metaCount}
-      />
+      {/* Pre-lock: estado del pronóstico (countdown + progreso).
+          Post-lock: tu posición + accesos a ranking y comunidad. */}
+      {isLocked ? (
+        <HomeStandingCard
+          rank={myRow?.rank ?? null}
+          participants={ranking.rows.length}
+          total={myRow?.breakdown.total ?? 0}
+          exactCount={
+            (myRow?.breakdown.groupExactCount ?? 0) + (myRow?.breakdown.knockoutExactCount ?? 0)
+          }
+          hasResults={ranking.hasResults}
+        />
+      ) : (
+        <PredictionStatusCard
+          lockAtIso={lockAt?.toISOString() ?? null}
+          isLocked={isLocked}
+          isSubmitted={isSubmitted}
+          scoresCount={scoresCount}
+          bracketCount={bracketCount}
+          metaCount={metaCount}
+        />
+      )}
 
       {/* Reglas del juego */}
       <GameRules />

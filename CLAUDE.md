@@ -59,7 +59,7 @@
   5. **Revisión** — resumen + submit que setea `locked_at` (marca "enviado"; sigue editable hasta el lock global)
 - Autosave por server action; `editBlockReason()` bloquea edición tras submit propio o lock global
 - **Vista read-only** (`PredictionView`, Fase 4C): cuando enviaste o cerró el plazo, en vez del wizard se muestra el pronóstico completo (reusada también en Comunidad)
-- **Indicadores en /home** (Fase 4E, `PredictionStatusCard`): countdown + progreso (X/137) + CTA según estado
+- **Indicadores en /home** (Fase 4E): **pre-lock** `PredictionStatusCard` (countdown + progreso X/137 + CTA según estado); **post-lock** `HomeStandingCard` (tu posición #/total + pts + exactos, o estado de espera si aún no hay resultados, + accesos a Ranking/Comunidad/Mi pronóstico). La píldora "Tu posición" del encabezado se retiró: la tarjeta post-lock la absorbe
 - **Pestaña Eliminatorias** (Fase 9B+9C, `PronosticosTabs` + `KnockoutScoresPanel`): `/pronosticos` tiene 2 tabs — *Mi pronóstico* (wizard/read-only) y *Eliminatorias* (marcadores de R32..3er lugar). Cada partido: `pending` (cruce tipo calendario) → `open` (inputs + autosave vía `saveKnockoutScore`) → `closed` (read-only) según `knockoutMatchState()`. Puntúan 5/2 en el scoring y ranking (9C)
 
 #### Scoring (Fase 4D + 9C)
@@ -73,6 +73,7 @@
 #### Ranking (Fase 5)
 - `/ranking`: gate pre-lock; post-lock arma el ranking server-side reusando `buildRanking` + resultados de `matches` + goleador de `tournament_settings`
 - Podio top-3 + tabla con posición (ranking de competición), avatar, nombre, exactos, total; resalta tu fila
+- **Desglose de puntos** (`RankingBoard` + `ScoreBreakdownModal`, cliente): tocar cualquier participante (fila o podio) abre un modal con cómo sumó — grupos exactos/resultado, eliminatoria, clasificados por ronda, finalistas, 3ero, campeón, marcador final, goleador y total. Presentación pura sobre el `ScoreBreakdown`
 - Cómputo en TS (no materialized view) — una sola fuente de verdad con el scoring
 
 #### Comunidad (Fase 4F — transparencia post-lock)
