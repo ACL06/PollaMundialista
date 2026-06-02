@@ -252,6 +252,32 @@ describe('computeScore — podio y extras', () => {
     expect(computeScore(user, actual).champion).toBe(30);
   });
 
+  it('campeón por penales: acertar campeón suma 30 aunque el 90 fuera empate', () => {
+    // Final 1-1 a los 90', definida por penales a favor de AAA (el admin lo
+    // declaró → official.champion = AAA). El usuario predijo campeón AAA y el
+    // empate 1-1: gana los 30 del campeón Y los 15 del marcador (empate exacto).
+    const user = emptyUser({
+      prediction: makePrediction({
+        champion_code: 'AAA',
+        runner_up_code: 'BBB',
+        final_home_score: 1,
+        final_away_score: 1,
+      }),
+    });
+    const actual = emptyOfficial({
+      finalists: new Set(['AAA', 'BBB']),
+      finalScore: { home: 1, away: 1 },
+      finalHomeCode: 'AAA',
+      finalAwayCode: 'BBB',
+      champion: 'AAA',
+      runnerUp: 'BBB',
+    });
+    const r = computeScore(user, actual);
+    expect(r.champion).toBe(30);
+    expect(r.finalExact).toBe(15);
+    expect(r.finalists).toBe(24);
+  });
+
   it('tercer lugar correcto = 15', () => {
     const user = emptyUser({ prediction: makePrediction({ third_place_code: 'CCC' }) });
     const actual = emptyOfficial({ thirdPlace: 'CCC' });
@@ -513,6 +539,7 @@ function match(overrides: Partial<Match> & Pick<Match, 'id' | 'match_number' | '
     venue: 'X',
     home_score: null,
     away_score: null,
+    winner_code: null,
     status: 'scheduled',
     ...overrides,
   } as Match;
@@ -591,6 +618,63 @@ describe('deriveOfficialResults', () => {
     expect(r.knockoutScores.get('thirdm')).toEqual({ home: 2, away: 1 });
     expect(r.knockoutScores.has('r32a')).toBe(false);
     expect(r.knockoutScores.has('finalm')).toBe(false);
+  });
+
+  it('final empatada a 90 con winner_code declara campeón y subcampeón (Hallazgo 1)', () => {
+    const matches: Match[] = [
+      match({
+        id: 'finalm',
+        match_number: 104,
+        stage: 'final',
+        home_team: team('AAA'),
+        away_team: team('BBB'),
+        home_score: 1,
+        away_score: 1,
+        winner_code: 'AAA', // definido por penales
+        status: 'final',
+      }),
+    ];
+    const r = deriveOfficialResults(matches);
+    expect(r.champion).toBe('AAA');
+    expect(r.runnerUp).toBe('BBB');
+    expect(r.finalScore).toEqual({ home: 1, away: 1 });
+  });
+
+  it('3er lugar por penales: winner_code define el tercero aunque empate a 90', () => {
+    const matches: Match[] = [
+      match({
+        id: 'thirdm',
+        match_number: 103,
+        stage: '3rd',
+        home_team: team('CCC'),
+        away_team: team('DDD'),
+        home_score: 0,
+        away_score: 0,
+        winner_code: 'DDD',
+        status: 'final',
+      }),
+    ];
+    expect(deriveOfficialResults(matches).thirdPlace).toBe('DDD');
+  });
+
+  it('final en vivo (status live) no deriva campeón ni marcador (Hallazgo 2)', () => {
+    const matches: Match[] = [
+      match({
+        id: 'finalm',
+        match_number: 104,
+        stage: 'final',
+        home_team: team('AAA'),
+        away_team: team('BBB'),
+        home_score: 2,
+        away_score: 1,
+        status: 'live',
+      }),
+    ];
+    const r = deriveOfficialResults(matches);
+    expect(r.champion).toBeNull();
+    expect(r.finalScore).toBeNull();
+    // Los finalistas sí: ya están en la final aunque no haya terminado.
+    expect(r.finalists).toEqual(new Set(['AAA', 'BBB']));
   });
 });
 

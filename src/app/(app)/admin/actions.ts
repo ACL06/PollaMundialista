@@ -73,9 +73,12 @@ export async function saveKnockoutMatch(input: {
   awayTeamCode: string | null;
   homeScore: number | null;
   awayScore: number | null;
+  /** Ganador declarado (final/3er por penales). Null = inferir del marcador. */
+  winnerCode?: string | null;
   status: string;
 }): Promise<ActionResult> {
   const { matchId, homeTeamCode, awayTeamCode, homeScore, awayScore, status } = input;
+  const winnerCode = input.winnerCode ?? null;
 
   if (!VALID_STATUS.has(status)) {
     return { error: 'Estado inválido' };
@@ -86,6 +89,10 @@ export async function saveKnockoutMatch(input: {
   }
   if (homeTeamCode && awayTeamCode && homeTeamCode === awayTeamCode) {
     return { error: 'Un equipo no puede jugar contra sí mismo' };
+  }
+  // El ganador declarado debe ser uno de los dos equipos del partido.
+  if (winnerCode !== null && winnerCode !== homeTeamCode && winnerCode !== awayTeamCode) {
+    return { error: 'El ganador debe ser uno de los dos equipos' };
   }
   const inRange = (n: number | null) => n === null || (Number.isInteger(n) && n >= 0 && n <= 99);
   if (!inRange(homeScore) || !inRange(awayScore)) {
@@ -102,6 +109,7 @@ export async function saveKnockoutMatch(input: {
       away_team_code: awayTeamCode,
       home_score: homeScore,
       away_score: awayScore,
+      winner_code: winnerCode,
       status,
     })
     .eq('id', matchId);
