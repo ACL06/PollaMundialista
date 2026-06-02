@@ -1,5 +1,6 @@
 import { CheckCircle2, Clock, Crown, Info, Landmark, Medal, MessageCircle, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CopyButton } from '@/components/home/CopyButton';
 import {
   BREB_HOLDER,
   BREB_KEY,
@@ -70,7 +71,10 @@ export function EnrollmentPrizes({ enrolledCount, revealed }: EnrollmentPrizesPr
         <div className="flex flex-col gap-1 rounded-md bg-muted/40 p-3 text-sm">
           <div className="flex items-center justify-between gap-3">
             <span className="text-muted-foreground">Llave Bre-B</span>
-            <span className="font-semibold tabular-nums text-foreground">{BREB_KEY}</span>
+            <span className="inline-flex items-center gap-1">
+              <span className="font-semibold tabular-nums text-foreground">{BREB_KEY}</span>
+              <CopyButton value={BREB_KEY} label="Copiar la llave Bre-B" />
+            </span>
           </div>
           <div className="flex items-center justify-between gap-3">
             <span className="text-muted-foreground">A nombre de</span>
