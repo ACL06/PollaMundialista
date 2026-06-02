@@ -1,8 +1,18 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import {
+  CalendarDays,
+  Clock,
+  LayoutGrid,
+  Medal,
+  Swords,
+  Trophy,
+  type LucideIcon,
+} from 'lucide-react';
 import { MatchCard } from '@/components/calendar/MatchCard';
 import { formatMatchDateLong, formatMatchDateKey } from '@/lib/format-date';
+import { useCenterActiveTab } from '@/lib/use-center-active-tab';
 import { cn } from '@/lib/utils';
 import type { Match } from '@/lib/types/match';
 
@@ -17,16 +27,16 @@ type Filter =
   | '3rd'
   | 'final';
 
-const FILTER_OPTIONS: Array<{ value: Filter; label: string }> = [
-  { value: 'all', label: 'Todos' },
-  { value: 'today', label: 'Hoy' },
-  { value: 'upcoming', label: 'Por jugar' },
-  { value: 'r32', label: 'Eliminatorias de 32' },
-  { value: 'r16', label: 'Octavos de Final' },
-  { value: 'qf', label: 'Cuartos de Final' },
-  { value: 'sf', label: 'Semifinales' },
-  { value: '3rd', label: 'Tercer lugar' },
-  { value: 'final', label: 'Final' },
+const FILTER_OPTIONS: Array<{ value: Filter; label: string; Icon: LucideIcon }> = [
+  { value: 'all', label: 'Todos', Icon: LayoutGrid },
+  { value: 'today', label: 'Hoy', Icon: CalendarDays },
+  { value: 'upcoming', label: 'Por jugar', Icon: Clock },
+  { value: 'r32', label: 'Eliminatorias de 32', Icon: Swords },
+  { value: 'r16', label: 'Octavos de Final', Icon: Swords },
+  { value: 'qf', label: 'Cuartos de Final', Icon: Swords },
+  { value: 'sf', label: 'Semifinales', Icon: Swords },
+  { value: '3rd', label: 'Tercer lugar', Icon: Medal },
+  { value: 'final', label: 'Final', Icon: Trophy },
 ];
 
 // Filtro "Grupos" se eliminó del calendario: las tablas de posiciones
@@ -40,6 +50,7 @@ interface CalendarListProps {
 
 export function CalendarList({ matches }: CalendarListProps) {
   const [filter, setFilter] = useState<Filter>('all');
+  const { containerRef, activeRef } = useCenterActiveTab<HTMLButtonElement>(filter);
 
   // `todayKey` se mantiene en estado para que el filtro "Hoy" se actualice
   // cuando cruza la medianoche (Bogotá). Si calculáramos `new Date()` solo
@@ -93,7 +104,7 @@ export function CalendarList({ matches }: CalendarListProps) {
 
   return (
     <div className="max-w-[880px] mx-auto px-5 py-9 sm:py-10 flex flex-col gap-7">
-      <header className="flex items-start justify-between gap-4 flex-wrap">
+      <header className="flex flex-col gap-4">
         <div>
           <h1 className="text-[32px] leading-[1.1] font-bold tracking-tight text-foreground">
             Calendario
@@ -102,28 +113,43 @@ export function CalendarList({ matches }: CalendarListProps) {
             {matches.length} {matches.length === 1 ? 'partido' : 'partidos'} programados
           </p>
         </div>
-        {/*
-         * Con 10 filtros el "segmented control" original no cabe en una línea.
-         * Cambiamos a chips independientes con flex-wrap: en desktop suelen
-         * caber en una sola fila; en pantallas estrechas bajan a dos.
-         */}
-        <div className="flex flex-wrap gap-1.5 sm:justify-end">
-          {FILTER_OPTIONS.map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setFilter(value)}
-              className={cn(
-                'px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors',
-                'whitespace-nowrap',
-                filter === value
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {label}
-            </button>
-          ))}
+        {/* Filtros: una sola fila scrolleable (con ícono por fase), el activo
+          * queda centrado y un degradado a la derecha insinúa que hay más. */}
+        <div className="relative">
+          <div
+            ref={containerRef}
+            className="flex gap-1.5 overflow-x-auto overflow-y-hidden touch-pan-x overscroll-x-contain scroll-smooth pb-1 -mx-1 px-1"
+            role="tablist"
+            aria-label="Filtrar partidos"
+          >
+            {FILTER_OPTIONS.map(({ value, label, Icon }) => {
+              const isActive = filter === value;
+              return (
+                <button
+                  key={value}
+                  ref={isActive ? activeRef : undefined}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setFilter(value)}
+                  className={cn(
+                    'inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium whitespace-nowrap transition-colors',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
+                    isActive
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-muted text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent sm:hidden"
+            aria-hidden="true"
+          />
         </div>
       </header>
 

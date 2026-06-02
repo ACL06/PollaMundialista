@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CalendarDays, Home, ListOrdered, Target, Trophy, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCenterActiveTab } from '@/lib/use-center-active-tab';
 
 const tabs = [
   { href: '/home', label: 'Inicio', Icon: Home },
@@ -16,20 +17,28 @@ const tabs = [
 
 export function TabNav() {
   const pathname = usePathname();
+  const activeHref =
+    tabs.find((t) => pathname === t.href || pathname.startsWith(t.href + '/'))?.href ?? null;
+  const { containerRef, activeRef } = useCenterActiveTab<HTMLAnchorElement>(activeHref);
 
   return (
     <nav className="border-b border-border bg-background sticky top-0 z-10">
       {/* En mobile las pestañas no caben: scroll SOLO horizontal
-        * (touch-pan-x + overscroll-x-contain evitan el arrastre diagonal/vertical)
-        * y un degradado a la derecha insinúa que hay más. */}
+        * (touch-pan-x + overscroll-x-contain evitan el arrastre diagonal/vertical),
+        * la pestaña activa queda centrada y un degradado a la derecha insinúa que
+        * hay más. */}
       <div className="relative max-w-6xl mx-auto">
-        <div className="flex gap-1 overflow-x-auto overflow-y-hidden touch-pan-x overscroll-x-contain px-5">
+        <div
+          ref={containerRef}
+          className="flex gap-1 overflow-x-auto overflow-y-hidden touch-pan-x overscroll-x-contain scroll-smooth px-5"
+        >
           {tabs.map(({ href, label, Icon }) => {
-          const isActive = pathname === href || pathname.startsWith(href + '/');
+          const isActive = href === activeHref;
           return (
             <Link
               key={href}
               href={href}
+              ref={isActive ? activeRef : undefined}
               className={cn(
                 'inline-flex items-center gap-2 px-3.5 py-3.5',
                 'text-sm font-medium whitespace-nowrap',
