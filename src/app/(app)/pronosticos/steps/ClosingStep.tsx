@@ -17,7 +17,12 @@ interface ClosingStepProps {
   finalHome: string;
   finalAway: string;
   topScorer: string;
+  /** Error general/del servidor (podio, guardado). Se muestra arriba. */
   error: string | null;
+  /** Error del marcador de la final (se muestra debajo de los marcadores). */
+  finalScoreError: string | null;
+  /** Error del goleador (se muestra debajo del campo del goleador). */
+  topScorerError: string | null;
   onSelectPodium: (field: PodiumField, code: string) => void;
   onChangeFinalScore: (side: 'home' | 'away', value: string) => void;
   onBlurFinalScore: () => void;
@@ -43,6 +48,8 @@ export function ClosingStep({
   finalAway,
   topScorer,
   error,
+  finalScoreError,
+  topScorerError,
   onSelectPodium,
   onChangeFinalScore,
   onBlurFinalScore,
@@ -141,8 +148,7 @@ export function ClosingStep({
         <p className="text-xs text-muted-foreground">
           Los goles de tu campeón y tu subcampeón al final del tiempo reglamentario (90&apos; +
           minutos de adición; sin prórroga ni penales). Suma solo si aciertas el marcador{' '}
-          <span className="font-medium text-foreground">en el orden correcto</span>; el campeón no
-          puede llevar menos goles que el subcampeón.
+          <span className="font-medium text-foreground">en el orden correcto</span>.
         </p>
         <div className="flex items-end gap-3">
           <FinalScoreSide
@@ -165,6 +171,12 @@ export function ClosingStep({
             ariaLabel="Goles de tu subcampeón en la final"
           />
         </div>
+        {finalScoreError && (
+          <div className="flex items-center gap-2 text-sm text-destructive" role="alert">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>{finalScoreError}</span>
+          </div>
+        )}
       </div>
 
       {/* Goleador del torneo */}
@@ -182,15 +194,23 @@ export function ClosingStep({
           onChange={(e) => onChangeTopScorer(e.target.value)}
           onBlur={onBlurTopScorer}
           className={cn(
-            'w-full h-11 px-3 rounded-lg bg-background border border-border text-foreground',
+            'w-full h-11 px-3 rounded-lg bg-background border text-foreground',
             'focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-tertiary',
             'disabled:opacity-60 disabled:cursor-not-allowed',
+            topScorerError ? 'border-destructive' : 'border-border',
           )}
         />
-        <p className="text-xs text-muted-foreground">
-          Escribe el nombre completo (<span className="font-medium text-foreground">nombre y
-          apellido</span>). Se evalúa de forma flexible (sin distinguir mayúsculas ni acentos).
-        </p>
+        {topScorerError ? (
+          <div className="flex items-center gap-2 text-sm text-destructive" role="alert">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>{topScorerError}</span>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Escribe el nombre completo (<span className="font-medium text-foreground">nombre y
+            apellido</span>). Se evalúa de forma flexible (sin distinguir mayúsculas ni acentos).
+          </p>
+        )}
       </div>
 
       {/* Guardar / Actualizar (el cierre ya autoguarda; el botón da tranquilidad) */}

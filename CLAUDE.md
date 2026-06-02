@@ -196,7 +196,7 @@
 - ⚠️ **No importar valores (no-tipos) desde un `page.tsx` server hacia un componente cliente** — arrastra `next/headers` al bundle. Usar un módulo `shared.ts` neutro (ver `comunidad/shared.ts`).
 
 ### Estilos
-- Tailwind + `cn()`. Colores SIEMPRE via tokens (`bg-primary`, `text-foreground`). Dark mode automático.
+- Tailwind + `cn()`. Colores SIEMPRE via tokens (`bg-primary`, `text-foreground`). **Tema por defecto: claro** (`ThemeProvider` `defaultTheme="light"`, sin `enableSystem`); el toggle alterna claro/oscuro.
 - `next/image` con `unoptimized` para SVGs de DiceBear.
 
 ### Commits y branches

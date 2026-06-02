@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useRef, useState, useTransition } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { TeamLabel } from '@/components/calendar/TeamLabel';
 import {
@@ -46,6 +46,18 @@ function sanitizeScore(v: string): string {
   return v.replace(/\D/g, '').slice(0, 2);
 }
 
+function matchToDraft(m: Match): Draft {
+  return {
+    home: m.home_score != null ? String(m.home_score) : '',
+    away: m.away_score != null ? String(m.away_score) : '',
+    status: m.status,
+  };
+}
+
+function draftsEqual(a: Draft, b: Draft): boolean {
+  return a.home === b.home && a.away === b.away && a.status === b.status;
+}
+
 export function AdminPanel({
   groupMatches,
   knockoutMatches,
@@ -56,21 +68,23 @@ export function AdminPanel({
   const [view, setView] = useState<AdminView>('grupos');
   const [drafts, setDrafts] = useState<Map<string, Draft>>(() => {
     const map = new Map<string, Draft>();
-    for (const m of groupMatches) {
-      map.set(m.id, {
-        home: m.home_score != null ? String(m.home_score) : '',
-        away: m.away_score != null ? String(m.away_score) : '',
-        status: m.status,
-      });
-    }
+    for (const m of groupMatches) map.set(m.id, matchToDraft(m));
     return map;
   });
+  // Último valor PERSISTIDO por partido (baseline). Sirve para no re-guardar
+  // —ni marcar "Guardado"— cuando el admin solo entra y sale de una casilla
+  // sin cambiar nada (#4). Se actualiza tras cada guardado exitoso.
+  const persistedRef = useRef<Map<string, Draft> | null>(null);
+  if (persistedRef.current === null) {
+    persistedRef.current = new Map(groupMatches.map((m) => [m.id, matchToDraft(m)]));
+  }
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Map<string, string>>(new Map());
   const [, startSave] = useTransition();
 
   const [topScorer, setTopScorer] = useState(initialTopScorer ?? '');
   const [topScorerSaved, setTopScorerSaved] = useState(false);
+  const persistedScorerRef = useRef<string>(initialTopScorer ?? '');
   const [, startScorerSave] = useTransition();
 
   const days = useMemo(() => {
@@ -128,6 +142,10 @@ export function AdminPanel({
   const persist = (id: string, override?: Draft) => {
     const d = override ?? drafts.get(id);
     if (!d) return;
+    // #4: no guardar (ni marcar "Guardado") si nada cambió respecto a lo último
+    // persistido — p.ej. el admin solo entra y sale de una casilla sin tocarla.
+    const baseline = persistedRef.current?.get(id);
+    if (baseline && draftsEqual(baseline, d)) return;
     // Si marca final, exige ambos marcadores
     if (d.status === 'final' && (d.home === '' || d.away === '')) {
       setError(id, 'Para marcar Final, ingresa ambos marcadores');
@@ -146,6 +164,7 @@ export function AdminPanel({
           return next;
         });
       } else {
+        persistedRef.current?.set(id, { ...d });
         setError(id, null);
         setSavedIds((prev) => new Set(prev).add(id));
       }
@@ -153,9 +172,16 @@ export function AdminPanel({
   };
 
   const persistTopScorer = () => {
+    // #4: no re-guardar ni marcar "Guardado" si no cambió respecto a lo persistido.
+    if (topScorer.trim() === persistedScorerRef.current.trim()) return;
     startScorerSave(async () => {
       const res = await saveTopScorer(topScorer);
-      setTopScorerSaved(!res.error);
+      if (!res.error) {
+        persistedScorerRef.current = topScorer;
+        setTopScorerSaved(true);
+      } else {
+        setTopScorerSaved(false);
+      }
     });
   };
 

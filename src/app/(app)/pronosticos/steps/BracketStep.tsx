@@ -133,8 +133,8 @@ export function BracketStep({
       <div className="space-y-2">
         <h2 className="text-2xl font-bold text-foreground">Bracket eliminatorio</h2>
         <p className="text-sm text-muted-foreground">
-          Marca qué equipos crees que clasifican a cada ronda. Cada ronda se elige entre los
-          que pusiste en la anterior.
+          Marca tu pronóstico de los equipos que crees que clasifican en cada ronda. Cada ronda se
+          elige entre los que pusiste en la anterior.
         </p>
       </div>
 
