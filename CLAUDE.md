@@ -33,7 +33,7 @@
 - Workflows GitHub Actions (CI lint/typecheck/**test**/build + keep-alive Supabase cada 6 días)
 - Deploy automático en Vercel; Vercel Analytics + Speed Insights
 - Footer global "By Álvaro Castaño"; UserBadge en header (nombre + bandera del equipo favorito)
-- **Modal de editar perfil** desde el header (avatar clickeable): edita nombre/apellidos/nickname/celular; el email se muestra pero no se edita (PR #29)
+- **Modal de editar perfil** desde el header (avatar clickeable): edita **avatar** (galería DiceBear + "Otras opciones"), nombre/apellidos/nickname/celular y **equipo favorito**; el email se muestra pero no se edita (PR #29 + avatar/equipo)
 
 #### Perfil (Fase 2 + 2.1)
 - Onboarding en una pantalla: avatar (galería de 6 DiceBear), nombre, apellidos, celular colombiano (10 díg., empieza por 3), nickname único, equipo favorito
@@ -112,7 +112,6 @@
 - **Fase 6** — Grupos privados con código de invitación
 - ✅ **Fase 7 (cerrada)** — Dominio propio `pollafutbolera.com.co` registrado en Hostinger y **verificado en Resend** → el OTP llega a cualquier correo (probado con usuarios reales). **Decisión: notificaciones solo in-app** (la tarjeta de estado en `/home` con countdown + CTA hace de recordatorio) — sin emails automáticos, para no pasar el free tier de Resend (100/día, 3.000/mes). Si algún día se quisieran, retomar el plan 7A/7B con dedup + tope diario.
 - **Comunidad: aciertos del día / tabla en vivo** cuando haya resultados (mejora social)
-- **Modal de perfil**: opción de cambiar avatar y equipo favorito (hoy solo los 4 campos base)
 - **Refactors DRY pendientes** (maintainability, no bugs): helper de query de `matches` (7 pages comparten select+normalize), `sanitizeScore`/`sanitizePhone` a `utils`, componente `ScoreInput` unificado
 - **Regla: marcadores al minuto 90** (sin prórroga ni penaltis) — confirmado con el usuario. El **marcador exacto** se evalúa al 90' (un empate a 90' definido por penales cuenta como empate para el bonus del marcador). **Campeón/subcampeón/3er lugar** sí respetan al ganador real: el admin declara `matches.winner_code` para la final/3er lugar (selector en `KnockoutResultsEditor`) y `resolveOutcome` lo usa; si es null, infiere del marcador a los 90' (`pickWinner`). Las reglas visibles al usuario están en `src/lib/game-rules.ts`
 - **Dependabot alert #1** (PostCSS XSS) — baja prioridad, dev deps

@@ -18,15 +18,17 @@ export async function signOutAction(): Promise<never> {
 }
 
 /**
- * Actualiza los datos base del perfil (nombre, apellidos, nickname,
- * celular) desde el modal del header. El email NO se modifica.
- * Validación Zod + manejo de nickname duplicado (23505).
+ * Actualiza los datos del perfil (nombre, apellidos, nickname, celular,
+ * avatar y equipo favorito) desde el modal del header. El email NO se
+ * modifica. Validación Zod + manejo de nickname duplicado (23505).
  */
 export async function updateProfile(data: {
   first_name: string;
   last_name: string;
   nickname: string;
   phone: string;
+  favorite_team?: string | null;
+  avatar_url?: string;
 }): Promise<{ error?: string }> {
   const parsed = profileUpdateSchema.safeParse(data);
   if (!parsed.success) {
@@ -41,15 +43,25 @@ export async function updateProfile(data: {
     return { error: 'Sesión expirada. Vuelve a iniciar sesión.' };
   }
 
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      first_name: parsed.data.first_name,
-      last_name: parsed.data.last_name,
-      nickname: parsed.data.nickname,
-      phone: parsed.data.phone,
-    })
-    .eq('id', user.id);
+  // favorite_team puede limpiarse (null). avatar_url solo se toca si vino
+  // (el modal siempre envía uno, pero lo dejamos opcional por robustez).
+  const patch: {
+    first_name: string;
+    last_name: string;
+    nickname: string;
+    phone: string;
+    favorite_team: string | null;
+    avatar_url?: string;
+  } = {
+    first_name: parsed.data.first_name,
+    last_name: parsed.data.last_name,
+    nickname: parsed.data.nickname,
+    phone: parsed.data.phone,
+    favorite_team: parsed.data.favorite_team ?? null,
+  };
+  if (parsed.data.avatar_url) patch.avatar_url = parsed.data.avatar_url;
+
+  const { error } = await supabase.from('profiles').update(patch).eq('id', user.id);
 
   if (error) {
     if (error.code === '23505') {

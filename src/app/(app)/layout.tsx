@@ -79,6 +79,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               lastName={profile.last_name}
               nickname={profile.nickname}
               phone={profile.phone}
+              favoriteTeam={profile.favorite_team ?? null}
             />
             <ThemeToggle />
             <LogoutButton />
