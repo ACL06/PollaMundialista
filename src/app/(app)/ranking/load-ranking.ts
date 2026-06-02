@@ -17,6 +17,7 @@ interface RankingProfile {
   first_name: string | null;
   last_name: string | null;
   avatar_url: string | null;
+  is_enrolled: boolean;
 }
 
 export interface RankingResult {
@@ -60,15 +61,25 @@ export async function loadRanking(): Promise<RankingResult> {
         `,
         )
         .order('match_number', { ascending: true }),
-      supabase.from('public_profiles').select('id, nickname, first_name, last_name, avatar_url'),
+      supabase
+        .from('public_profiles')
+        .select('id, nickname, first_name, last_name, avatar_url, is_enrolled'),
       supabase.from('tournament_settings').select('top_scorer').eq('id', 1).maybeSingle(),
     ]);
 
-  const predictions = (predsRes.data ?? []) as Prediction[];
-  const groupScores = (scoresRes.data ?? []) as PredictionGroupScore[];
-  const bracket = (bracketRes.data ?? []) as PredictionBracketEntry[];
-  const knockoutScores = (knockoutScoresRes.data ?? []) as PredictionKnockoutScore[];
-  const profiles = (profilesRes.data ?? []) as RankingProfile[];
+  const allProfiles = (profilesRes.data ?? []) as RankingProfile[];
+  // #3: solo los INSCRITOS aparecen en el ranking; los pre-inscritos quedan
+  // fuera una vez arrancado el Mundial.
+  const enrolledIds = new Set(allProfiles.filter((p) => p.is_enrolled).map((p) => p.id));
+  const isEnrolled = (row: { user_id: string }) => enrolledIds.has(row.user_id);
+
+  const predictions = ((predsRes.data ?? []) as Prediction[]).filter(isEnrolled);
+  const groupScores = ((scoresRes.data ?? []) as PredictionGroupScore[]).filter(isEnrolled);
+  const bracket = ((bracketRes.data ?? []) as PredictionBracketEntry[]).filter(isEnrolled);
+  const knockoutScores = ((knockoutScoresRes.data ?? []) as PredictionKnockoutScore[]).filter(
+    isEnrolled,
+  );
+  const profiles = allProfiles.filter((p) => p.is_enrolled);
 
   const matches = (matchesRes.data ?? []).map((row) => {
     const homeTeam = Array.isArray(row.home_team)
