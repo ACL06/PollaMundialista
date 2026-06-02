@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCenterActiveTab } from '@/lib/use-center-active-tab';
 import { TeamLabel } from '@/components/calendar/TeamLabel';
 import { BracketSlot } from '@/components/calendar/BracketSlot';
 import {
@@ -68,23 +69,10 @@ export function GroupScoresStep({
   const completedCount = savedIds.size;
   const selectedDay = days.find((d) => d.key === selectedDayKey) ?? days[0];
 
-  // Mantener el tab del día seleccionado centrado en el scroll horizontal.
-  // Se calcula el offset del tab DENTRO del contenedor con rects (no
-  // `offsetLeft`, que es relativo al offsetParent y se iba hasta el final).
-  // Scroll controlado del contenedor para no mover el scroll de la página.
-  const tabsRef = useRef<HTMLDivElement>(null);
-  const activeTabRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    const container = tabsRef.current;
-    const active = activeTabRef.current;
-    if (!container || !active) return;
-    const containerRect = container.getBoundingClientRect();
-    const activeRect = active.getBoundingClientRect();
-    // Posición del tab dentro del contenido scrolleable del contenedor.
-    const offsetWithin = activeRect.left - containerRect.left + container.scrollLeft;
-    const target = offsetWithin - (container.clientWidth - active.clientWidth) / 2;
-    container.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
-  }, [selectedDay?.key]);
+  // Mantener centrado el tab del día seleccionado en el scroll horizontal.
+  const { containerRef: tabsRef, activeRef: activeTabRef } = useCenterActiveTab<HTMLButtonElement>(
+    selectedDay?.key,
+  );
 
   return (
     <div className="space-y-6">

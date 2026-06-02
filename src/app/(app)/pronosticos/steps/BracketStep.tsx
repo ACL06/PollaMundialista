@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { AlertCircle, ArrowRight, Check, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCenterActiveTab } from '@/lib/use-center-active-tab';
 import {
   BRACKET_ROUNDS,
   BRACKET_ROUND_LABEL,
@@ -83,6 +84,21 @@ export function BracketStep({
       }));
   }, [poolCodes, teamsByCode]);
 
+  // #10: de Octavos en adelante (ya no es fase de grupos) los equipos van en
+  // una sola lista ordenada alfabéticamente, sin agrupar por grupo.
+  const flatPool = useMemo(
+    () =>
+      poolCodes
+        .map((code) => teamsByCode.get(code))
+        .filter((t): t is Team => !!t)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [poolCodes, teamsByCode],
+  );
+
+  // #11: centrar la ronda activa en el selector scrolleable.
+  const { containerRef: roundTabsRef, activeRef: activeRoundRef } =
+    useCenterActiveTab<HTMLButtonElement>(activeRound);
+
   // Resumen de la regla de Eliminatorias de 32: cuántos grupos llegaron a 3
   // (tope 8 = los 8 mejores terceros) y cuáles aún no alcanzan el mínimo
   // de 2. `canAddThird` bloquea el 9.º tercero en la UI.
@@ -123,7 +139,11 @@ export function BracketStep({
       </div>
 
       {/* Sub-tabs por ronda */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1" role="tablist">
+      <div
+        ref={roundTabsRef}
+        className="flex gap-1.5 overflow-x-auto overflow-y-hidden touch-pan-x overscroll-x-contain scroll-smooth pb-1 -mx-1 px-1"
+        role="tablist"
+      >
         {BRACKET_ROUNDS.map((round) => {
           const isActive = round === activeRound;
           const size = bracket.get(round)?.size ?? 0;
@@ -131,6 +151,7 @@ export function BracketStep({
           return (
             <button
               key={round}
+              ref={isActive ? activeRoundRef : undefined}
               type="button"
               role="tab"
               aria-selected={isActive}
@@ -227,7 +248,7 @@ export function BracketStep({
             para poder elegir aquí.
           </span>
         </div>
-      ) : (
+      ) : isR32 ? (
         <div className="space-y-5">
           {groupedPool.map(({ group, teams: groupTeams }) => {
             const groupSelected = groupTeams.filter((t) => selectedSet.has(t.code)).length;
@@ -259,47 +280,16 @@ export function BracketStep({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {groupTeams.map((team) => {
                   const selected = selectedSet.has(team.code);
-                  const disabled =
-                    readOnly || (atCap && !selected) || (cannotAdd && !selected);
+                  const disabled = readOnly || (atCap && !selected) || (cannotAdd && !selected);
                   return (
-                    <button
+                    <TeamOption
                       key={team.code}
-                      type="button"
-                      onClick={() => onToggle(activeRound, team.code)}
+                      team={team}
+                      selected={selected}
                       disabled={disabled}
-                      aria-pressed={selected}
-                      className={cn(
-                        'flex items-center gap-2.5 px-3 py-2.5 rounded-lg border text-left transition-colors',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
-                        selected
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border bg-surface hover:border-foreground/20',
-                        disabled && !selected && 'opacity-40 cursor-not-allowed',
-                        readOnly && 'cursor-default',
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          `fi fi-${team.flag} rounded-sm flex-shrink-0`,
-                          'shadow-[0_0_0_1px_hsl(var(--border))]',
-                        )}
-                        style={{ width: 24, height: 18 }}
-                        aria-hidden="true"
-                      />
-                      <span className="text-[14px] font-medium text-foreground truncate flex-1">
-                        {team.name}
-                      </span>
-                      <span
-                        className={cn(
-                          'flex items-center justify-center h-5 w-5 rounded-full flex-shrink-0 border',
-                          selected
-                            ? 'bg-primary border-primary text-primary-foreground'
-                            : 'border-border',
-                        )}
-                      >
-                        {selected && <Check className="h-3 w-3" strokeWidth={3} />}
-                      </span>
-                    </button>
+                      readOnly={readOnly}
+                      onToggle={() => onToggle(activeRound, team.code)}
+                    />
                   );
                 })}
               </div>
@@ -307,7 +297,72 @@ export function BracketStep({
             );
           })}
         </div>
+      ) : (
+        // De Octavos en adelante: lista única, orden alfabético (#10).
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {flatPool.map((team) => {
+            const selected = selectedSet.has(team.code);
+            const disabled = readOnly || (atCap && !selected);
+            return (
+              <TeamOption
+                key={team.code}
+                team={team}
+                selected={selected}
+                disabled={disabled}
+                readOnly={readOnly}
+                onToggle={() => onToggle(activeRound, team.code)}
+              />
+            );
+          })}
+        </div>
       )}
     </div>
+  );
+}
+
+interface TeamOptionProps {
+  team: Team;
+  selected: boolean;
+  disabled: boolean;
+  readOnly: boolean;
+  onToggle: () => void;
+}
+
+/** Botón de selección de un equipo (reutilizado en grupos y lista plana). */
+function TeamOption({ team, selected, disabled, readOnly, onToggle }: TeamOptionProps) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={disabled}
+      aria-pressed={selected}
+      className={cn(
+        'flex items-center gap-2.5 px-3 py-2.5 rounded-lg border text-left transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
+        selected
+          ? 'border-primary bg-primary/10'
+          : 'border-border bg-surface hover:border-foreground/20',
+        disabled && !selected && 'opacity-40 cursor-not-allowed',
+        readOnly && 'cursor-default',
+      )}
+    >
+      <span
+        className={cn(
+          `fi fi-${team.flag} rounded-sm flex-shrink-0`,
+          'shadow-[0_0_0_1px_hsl(var(--border))]',
+        )}
+        style={{ width: 24, height: 18 }}
+        aria-hidden="true"
+      />
+      <span className="text-[14px] font-medium text-foreground truncate flex-1">{team.name}</span>
+      <span
+        className={cn(
+          'flex items-center justify-center h-5 w-5 rounded-full flex-shrink-0 border',
+          selected ? 'bg-primary border-primary text-primary-foreground' : 'border-border',
+        )}
+      >
+        {selected && <Check className="h-3 w-3" strokeWidth={3} />}
+      </span>
+    </button>
   );
 }
