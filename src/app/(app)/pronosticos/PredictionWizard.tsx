@@ -220,6 +220,9 @@ export function PredictionWizard({
   );
   const [topScorer, setTopScorer] = useState<string>(initialPrediction?.top_scorer ?? '');
   const [metaError, setMetaError] = useState<string | null>(null);
+  // Errores por campo (se muestran junto a su control, no en el tope del paso).
+  const [finalScoreError, setFinalScoreError] = useState<string | null>(null);
+  const [topScorerError, setTopScorerError] = useState<string | null>(null);
   const [metaSaved, setMetaSaved] = useState(false);
   const [metaSaving, startMetaSave] = useTransition();
 
@@ -246,18 +249,31 @@ export function PredictionWizard({
       third_place_code: third,
     };
     const scorer = topScorer.trim();
-    if (scorer === '') patch.top_scorer = null;
-    else if (scorerHasFullName(scorer)) patch.top_scorer = scorer;
+    if (scorer === '') {
+      patch.top_scorer = null;
+      setTopScorerError(null);
+    } else if (scorerHasFullName(scorer)) {
+      patch.top_scorer = scorer;
+      setTopScorerError(null);
+    } else {
+      setTopScorerError('No se guardó el goleador: debe ser mínimo nombre y apellido del jugador.');
+    }
 
     if (finalHome === '' && finalAway === '') {
       patch.final_home_score = null;
       patch.final_away_score = null;
+      setFinalScoreError(null);
     } else if (finalHome !== '' && finalAway !== '') {
       const h = Number(finalHome);
       const a = Number(finalAway);
-      if (Number.isInteger(h) && Number.isInteger(a) && h >= 0 && a >= 0 && h <= 99 && a <= 99 && h >= a) {
+      if (!Number.isInteger(h) || !Number.isInteger(a) || h < 0 || a < 0 || h > 99 || a > 99) {
+        setFinalScoreError('Marcador de la final fuera de rango (0–99)');
+      } else if (h < a) {
+        setFinalScoreError('El campeón no puede tener menos goles que el subcampeón');
+      } else {
         patch.final_home_score = h;
         patch.final_away_score = a;
+        setFinalScoreError(null);
       }
     }
 
@@ -363,6 +379,7 @@ export function PredictionWizard({
   const handleFinalScoreChange = (side: 'home' | 'away', raw: string) => {
     const cleaned = sanitizeScore(raw);
     setMetaSaved(false);
+    setFinalScoreError(null);
     if (side === 'home') setFinalHome(cleaned);
     else setFinalAway(cleaned);
   };
@@ -370,6 +387,7 @@ export function PredictionWizard({
   const handleFinalScoreBlur = () => {
     if (isLocked) return;
     if (finalHome === '' && finalAway === '') {
+      setFinalScoreError(null);
       persistMeta({ final_home_score: null, final_away_score: null });
       return;
     }
@@ -377,19 +395,21 @@ export function PredictionWizard({
     const h = Number(finalHome);
     const a = Number(finalAway);
     if (!Number.isInteger(h) || !Number.isInteger(a) || h < 0 || a < 0 || h > 99 || a > 99) {
-      setMetaError('Marcador de la final fuera de rango (0–99)');
+      setFinalScoreError('Marcador de la final fuera de rango (0–99)');
       return;
     }
-    // #1: el campeón no puede llevar menos goles que el subcampeón.
+    // El campeón no puede llevar menos goles que el subcampeón (ganó o empató a 90').
     if (h < a) {
-      setMetaError('El campeón no puede tener menos goles que el subcampeón');
+      setFinalScoreError('El campeón no puede tener menos goles que el subcampeón');
       return;
     }
+    setFinalScoreError(null);
     persistMeta({ final_home_score: h, final_away_score: a });
   };
 
   const handleTopScorerChange = (value: string) => {
     setMetaSaved(false);
+    setTopScorerError(null);
     setTopScorer(value);
   };
 
@@ -397,14 +417,16 @@ export function PredictionWizard({
     if (isLocked) return;
     const trimmed = topScorer.trim();
     if (trimmed === '') {
+      setTopScorerError(null);
       persistMeta({ top_scorer: null });
       return;
     }
     // #14: el goleador debe ser nombre y apellido (≥2 palabras).
     if (!scorerHasFullName(trimmed)) {
-      setMetaError('Escribe el nombre y el apellido del goleador');
+      setTopScorerError('No se guardó el goleador: debe ser mínimo nombre y apellido del jugador.');
       return;
     }
+    setTopScorerError(null);
     persistMeta({ top_scorer: trimmed });
   };
 
@@ -529,6 +551,8 @@ export function PredictionWizard({
             finalAway={finalAway}
             topScorer={topScorer}
             error={metaError}
+            finalScoreError={finalScoreError}
+            topScorerError={topScorerError}
             onSelectPodium={handleSelectPodium}
             onChangeFinalScore={handleFinalScoreChange}
             onBlurFinalScore={handleFinalScoreBlur}
