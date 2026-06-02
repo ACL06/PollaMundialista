@@ -13,12 +13,16 @@ export const ADMIN_CUT = 0.1;
 /** Reparto del pozo de premios (tras quitar la administración): 1° / 2° / 3°. */
 export const PODIUM_SPLIT = [0.7, 0.2, 0.1] as const;
 
-/** Link de invitación al grupo de WhatsApp de la polla. Placeholder — reemplazar. */
-export const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/XXXXXXXXXXXXXXXXX';
+/** Link de invitación al grupo de WhatsApp de la polla. */
+export const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/GpC9h6iioGhAPXwHSkWiB6';
 
 /** Datos para consignar la inscripción vía Bre-B (editables acá). */
 export const BREB_KEY = '@alvaro320';
 export const BREB_HOLDER = 'Álvaro Castaño López';
+
+/** WhatsApp para enviar el comprobante de pago de la inscripción. */
+export const PAYMENT_WHATSAPP_DISPLAY = '320 920 8932';
+export const PAYMENT_WHATSAPP_URL = 'https://wa.me/573209208932';
 
 export interface PrizeBreakdown {
   /** Monto acumulado = inscritos × costo. */

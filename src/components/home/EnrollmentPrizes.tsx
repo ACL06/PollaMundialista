@@ -4,6 +4,8 @@ import {
   BREB_HOLDER,
   BREB_KEY,
   ENROLLMENT_COST_COP,
+  PAYMENT_WHATSAPP_DISPLAY,
+  PAYMENT_WHATSAPP_URL,
   WHATSAPP_GROUP_URL,
   computePrizes,
   formatCOP,
@@ -74,6 +76,23 @@ export function EnrollmentPrizes({ enrolledCount, revealed }: EnrollmentPrizesPr
             <span className="text-muted-foreground">A nombre de</span>
             <span className="font-medium text-foreground">{BREB_HOLDER}</span>
           </div>
+        </div>
+
+        {/* Aviso: enviar comprobante por WhatsApp (recuadro azul claro) */}
+        <div className="flex items-start gap-2.5 rounded-md border border-tertiary/30 bg-tertiary/10 p-3 text-sm text-foreground">
+          <MessageCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-tertiary" />
+          <p>
+            Luego de pagar, <span className="font-semibold">envía el comprobante</span> al WhatsApp{' '}
+            <a
+              href={PAYMENT_WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-tertiary underline underline-offset-2 hover:no-underline"
+            >
+              {PAYMENT_WHATSAPP_DISPLAY}
+            </a>
+            .
+          </p>
         </div>
       </div>
 
