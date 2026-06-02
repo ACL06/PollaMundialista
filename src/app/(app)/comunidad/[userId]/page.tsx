@@ -56,15 +56,22 @@ export default async function ComunidadUserPage({
         .order('group_code', { ascending: true }),
       supabase
         .from('public_profiles')
-        .select('id, nickname, first_name, last_name')
+        .select('id, nickname, first_name, last_name, is_enrolled')
         .eq('id', userId)
         .maybeSingle(),
     ]);
 
   const profile = profileResult.data as
-    | { nickname: string | null; first_name: string | null; last_name: string | null }
+    | {
+        nickname: string | null;
+        first_name: string | null;
+        last_name: string | null;
+        is_enrolled: boolean;
+      }
     | null;
-  const ownerName = profile ? displayName(profile) : null;
+  // #3: post-lock solo se ven pronósticos de inscritos. Un pre-inscrito se
+  // trata como "no encontrado".
+  const ownerName = profile?.is_enrolled ? displayName(profile) : null;
 
   if (!ownerName) {
     return (

@@ -11,6 +11,7 @@ export interface PublicProfile {
   last_name: string | null;
   avatar_url: string | null;
   favorite_team: string | null;
+  is_enrolled: boolean;
 }
 
 export interface CommunityScore {

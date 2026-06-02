@@ -78,7 +78,7 @@ export default async function ComunidadPage() {
       supabase.from('predictions').select('user_id, champion_code'),
       supabase
         .from('public_profiles')
-        .select('id, nickname, first_name, last_name, avatar_url, favorite_team'),
+        .select('id, nickname, first_name, last_name, avatar_url, favorite_team, is_enrolled'),
       supabase
         .from('teams')
         .select('code, name, flag, group_code')
@@ -98,14 +98,24 @@ export default async function ComunidadPage() {
     return { ...row, home_team: homeTeam, away_team: awayTeam };
   }) as unknown as Match[];
 
-  const scores = (scoresResult.data ?? []) as CommunityScore[];
-  const profiles = (profilesResult.data ?? []) as PublicProfile[];
+  const allProfiles = (profilesResult.data ?? []) as PublicProfile[];
+  // #3: post-lock solo se muestran los INSCRITOS; los pre-inscritos y su info
+  // desaparecen de Comunidad.
+  const enrolledIds = new Set(allProfiles.filter((p) => p.is_enrolled).map((p) => p.id));
+  const profiles = allProfiles.filter((p) => p.is_enrolled);
+  const scores = ((scoresResult.data ?? []) as CommunityScore[]).filter((s) =>
+    enrolledIds.has(s.user_id),
+  );
   const teams = (teamsResult.data ?? []) as Team[];
-  const championPicks = (predictionsResult.data ?? []) as ChampionPick[];
-  const reactions = (reactionsResult.data ?? []) as ReactionRow[];
+  const championPicks = ((predictionsResult.data ?? []) as ChampionPick[]).filter((p) =>
+    enrolledIds.has(p.user_id),
+  );
+  const reactions = ((reactionsResult.data ?? []) as ReactionRow[]).filter(
+    (r) => enrolledIds.has(r.reactor_id) && enrolledIds.has(r.target_user_id),
+  );
 
-  // Participantes = quienes tienen pronóstico (fila en predictions) o al
-  // menos un marcador. Se enlazan a su pronóstico completo.
+  // Participantes = inscritos con pronóstico (fila en predictions) o al menos
+  // un marcador. Se enlazan a su pronóstico completo.
   const participantIds = new Set<string>([
     ...championPicks.map((p) => p.user_id),
     ...scores.map((s) => s.user_id),

@@ -5,7 +5,10 @@ import { Logo } from '@/components/shared/Logo';
 import { TabNav } from '@/components/app/TabNav';
 import { UserBadge } from '@/components/app/UserBadge';
 import { ProfileMenu } from '@/components/app/ProfileMenu';
+import { NotEnrolledScreen } from '@/components/app/NotEnrolledScreen';
+import { EnrollmentReminderModal } from '@/components/app/EnrollmentReminderModal';
 import { WORLD_CUP_TEAMS } from '@/lib/validators/profile';
+import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
 import { LogoutButton } from './LogoutButton';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -20,7 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('email, nickname, first_name, last_name, phone, favorite_team, avatar_url')
+    .select('email, nickname, first_name, last_name, phone, favorite_team, avatar_url, is_admin, is_enrolled')
     .eq('id', user.id)
     .single();
 
@@ -35,6 +38,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     !profile?.phone
   ) {
     redirect('/onboarding');
+  }
+
+  // Acceso de pre-inscritos (#2): cuando arranca el Mundial (lock global), un
+  // usuario que no completó su inscripción —y no es admin— pierde el acceso.
+  const lockAt = await getPredictionsLockAt();
+  const isLocked = isLockedAt(lockAt);
+  const isPreEnrolled = !profile.is_enrolled && !profile.is_admin;
+
+  if (isLocked && isPreEnrolled) {
+    return <NotEnrolledScreen />;
   }
 
   // Mapear el código del equipo favorito al objeto Team (con bandera).
@@ -76,6 +89,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <TabNav />
 
       <main className="flex-1">{children}</main>
+
+      {/* #16: recordatorio de inscripción (pre-inscritos, últimos 5 días). */}
+      {isPreEnrolled && <EnrollmentReminderModal lockAtIso={lockAt?.toISOString() ?? null} />}
     </div>
   );
 }

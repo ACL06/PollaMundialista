@@ -92,8 +92,12 @@
 
 #### Inscripción y premios (Fase 10)
 - **10A** — `profiles.is_enrolled` + admin (ver Panel admin).
-- **10B** — Sección **Inscripción y premios** en `/home` (entre Reglas y Explora, `EnrollmentPrizes`): estado pre-inscrito/inscrito, costo (`ENROLLMENT_COST_COP` = $50.000, configurable), contador de inscritos (de `public_profiles`), **monto acumulado** que **se revela en el partido inaugural** (gate `isLockedAt`), reparto **10% administración + podio 70/20/10** (`src/lib/prizes.ts` `computePrizes` con `ADMIN_CUT`, con tests), regla de **empates** (movida desde `game-rules.ts`) y contacto (`CONTACT_PHONE`, placeholder). Podio gráfico con datos de ejemplo.
+- **10B** — Sección **Inscripción y premios** en `/home` (entre Reglas y Explora, `EnrollmentPrizes`): estado pre-inscrito/inscrito, costo (`ENROLLMENT_COST_COP` = $50.000, configurable), contador de inscritos (de `public_profiles`), **monto acumulado** que **se revela en el partido inaugural** (gate `isLockedAt`), reparto **10% administración + podio 70/20/10** (`src/lib/prizes.ts` `computePrizes` con `ADMIN_CUT`, con tests), regla de **empates** (movida desde `game-rules.ts`), sección **"Cómo pagar"** (llave Bre-B `BREB_KEY`/`BREB_HOLDER`) y botón al **grupo de WhatsApp** (`WHATSAPP_GROUP_URL`, placeholder). Podio gráfico con datos de ejemplo.
 - **Badge de estado** bajo el saludo en `/home` (`EnrollmentBadge`): rojo = pre-inscrito, verde = inscrito.
+- **10C — Acceso de pre-inscritos** (todo app-layer, sin SQL):
+  - **Gate** en `AppLayout`: al pasar el lock global, un usuario con `!is_enrolled && !is_admin` ve `NotEnrolledScreen` (sin acceso a las rutas privadas).
+  - **Filtrado** post-lock: `loadRanking` (ranking + "Tu posición") y Comunidad (lista, consenso, distribución, detalle `[userId]`) **solo muestran inscritos** — los pre-inscritos desaparecen.
+  - **Recordatorio** (`EnrollmentReminderModal`): pre-inscritos ven 1×/día (localStorage) en los últimos 5 días antes del arranque un modal con la llave Bre-B + WhatsApp.
 
 #### Tests (Vitest)
 - `scoring.test.ts` (39): reglas de scoring (incl. marcadores de eliminatoria y marcador de la final estricto por equipo), deriveOfficialResults, buildRanking, pronóstico perfecto = 798.
