@@ -278,8 +278,9 @@ export function computeScore(user: UserPrediction, actual: OfficialResults): Sco
  *   - 73-88 r32, 89-96 r16, 97-100 qf, 101-102 sf, 103 3er, 104 final
  *   - "clasificados a una ronda" = equipos presentes en los partidos de
  *     esa ronda (home_team/away_team no nulos).
- *   - ganador = mayor marcador; si empatan (no debería en eliminatoria
- *     sin datos de penales) se devuelve null para ese puesto.
+ *   - campeón/sub/3er lugar: ganador declarado por el admin (`winner_code`)
+ *     o, si no está, el de mayor marcador a los 90'. Solo se derivan con el
+ *     partido finalizado (`status === 'final'`).
  */
 export function deriveOfficialResults(
   matches: Match[],
@@ -332,18 +333,19 @@ export function deriveOfficialResults(
     if (m.stage === 'final') {
       if (homeCode) finalists.add(homeCode);
       if (awayCode) finalists.add(awayCode);
-      if (hasScore) {
+      // Campeón/sub y marcador solo cuando la final está FINALIZADA (Hallazgo 2).
+      if (m.status === 'final' && hasScore) {
         finalScore = { home: m.home_score as number, away: m.away_score as number };
         finalHomeCode = homeCode;
         finalAwayCode = awayCode;
-        const result = pickWinner(m);
+        const result = resolveOutcome(m);
         champion = result.winner;
         runnerUp = result.loser;
       }
     }
 
-    if (m.stage === '3rd' && hasScore) {
-      thirdPlace = pickWinner(m).winner;
+    if (m.stage === '3rd' && m.status === 'final' && hasScore) {
+      thirdPlace = resolveOutcome(m).winner;
     }
   }
 
@@ -370,6 +372,23 @@ function pickWinner(m: Match): { winner: string | null; loser: string | null } {
   if (m.home_score > m.away_score) return { winner: home, loser: away };
   if (m.home_score < m.away_score) return { winner: away, loser: home };
   return { winner: null, loser: null }; // empate sin datos de penales
+}
+
+/**
+ * Ganador/perdedor de final/3er lugar. Prioriza el `winner_code` que el admin
+ * declara (p.ej. definido por penales tras empate a 90'); si no está, lo
+ * infiere del marcador a los 90'. Así, un empate a 90' definido por penales
+ * SÍ otorga campeón/3er lugar al equipo que de verdad ganó.
+ */
+function resolveOutcome(m: Match): { winner: string | null; loser: string | null } {
+  const home = m.home_team?.code ?? null;
+  const away = m.away_team?.code ?? null;
+  if (m.winner_code) {
+    const winner = m.winner_code;
+    const loser = winner === home ? away : winner === away ? home : null;
+    return { winner, loser };
+  }
+  return pickWinner(m);
 }
 
 /** Entrada del ranking: el desglose de puntos de un usuario. */

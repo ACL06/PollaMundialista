@@ -24,6 +24,7 @@ function match(overrides: Partial<Match> = {}): Match {
     venue: 'X',
     home_score: null,
     away_score: null,
+    winner_code: null,
     status: 'scheduled',
     ...overrides,
   };

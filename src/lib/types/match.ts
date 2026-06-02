@@ -30,5 +30,11 @@ export interface Match {
   venue: string;
   home_score: number | null;
   away_score: number | null;
+  /**
+   * Ganador declarado por el admin para final/3er lugar (campeón / 3er
+   * puesto), útil cuando el 90' terminó en empate y se definió por penales.
+   * Si es null, el ganador se infiere del marcador a los 90'.
+   */
+  winner_code: string | null;
   status: MatchStatus;
 }

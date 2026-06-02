@@ -85,7 +85,7 @@
 - `/admin`: gated por flag `is_admin` (server-side + en cada action via `requireAdmin()` + RLS). Link "Panel admin" en /home solo para admins.
 - Switcher **Fase de grupos / Eliminatorias / Inscripciones**.
   - Grupos: marcador + status de los 72 partidos (autosave) + goleador oficial (`tournament_settings`).
-  - Eliminatorias (`KnockoutResultsEditor`): por ronda, asignar equipos home/away (de los 48, con hint del `bracket_source`) + marcador + status.
+  - Eliminatorias (`KnockoutResultsEditor`): por ronda, asignar equipos home/away (de los 48, con hint del `bracket_source`) + marcador + status. En **final/3er lugar** aparece además un selector de **ganador** (Según marcador / equipo A / equipo B) que setea `winner_code` para resolver el campeón/3ero cuando el 90' fue empate y se definió por penales.
   - Inscripciones (`EnrollmentEditor`, Fase 10A): lista de usuarios (de `public_profiles`) con toggle pre-inscrito/inscrito (`setEnrollment` → `profiles.is_enrolled`).
 - Patrón de guardado: `changeAndPersist(id, patch)` calcula el draft nuevo y lo persiste directo (evita el stale-closure de setState+leer-viejo que tuvo un bug en 8.2, ya corregido).
 - Esto "enciende" scoring, ranking, tablas de grupos y aciertos en Comunidad.
@@ -100,11 +100,11 @@
   - **Recordatorio** (`EnrollmentReminderModal`): pre-inscritos ven 1×/día (localStorage) en los últimos 5 días antes del arranque un modal con la llave Bre-B + WhatsApp.
 
 #### Tests (Vitest)
-- `scoring.test.ts` (39): reglas de scoring (incl. marcadores de eliminatoria y marcador de la final estricto por equipo), deriveOfficialResults, buildRanking, pronóstico perfecto = 798.
+- `scoring.test.ts` (43): reglas de scoring (incl. marcadores de eliminatoria y marcador de la final estricto por equipo, **campeón/3er por `winner_code` cuando el 90' fue empate y se definió por penales**, gate de `status === 'final'`), deriveOfficialResults, buildRanking, pronóstico perfecto = 798.
 - `knockout-window.test.ts` (7): estados de la ventana de captura por partido (pending/open/closed).
 - `prizes.test.ts` (5): reparto de premios (10% admin + podio 70/20/10, el 1° absorbe el redondeo).
 - `compute-standings.test.ts`, `format-bracket-source.test.ts`, `predictions-lock.test.ts`, `validators/profile.test.ts`, `validators/prediction.test.ts`.
-- **77 tests en total**, corren en CI (`npm test`).
+- **81 tests en total**, corren en CI (`npm test`).
 
 ### ⏳ Pendiente / Roadmap
 
@@ -113,7 +113,7 @@
 - **Comunidad: aciertos del día / tabla en vivo** cuando haya resultados (mejora social)
 - **Modal de perfil**: opción de cambiar avatar y equipo favorito (hoy solo los 4 campos base)
 - **Refactors DRY pendientes** (maintainability, no bugs): helper de query de `matches` (7 pages comparten select+normalize), `sanitizeScore`/`sanitizePhone` a `utils`, componente `ScoreInput` unificado
-- **Regla: marcadores al minuto 90** (sin prórroga ni penaltis) — confirmado con el usuario. El marcador exacto se evalúa al 90'. Implicación: si la final/tercer lugar empatan en 90' (se definen por penales), `pickWinner` no otorga campeón/tercer lugar. Es por diseño (no se modelan penales); si se quisiera otorgar, haría falta una columna `winner_code`. Las reglas visibles al usuario están en `src/lib/game-rules.ts`
+- **Regla: marcadores al minuto 90** (sin prórroga ni penaltis) — confirmado con el usuario. El **marcador exacto** se evalúa al 90' (un empate a 90' definido por penales cuenta como empate para el bonus del marcador). **Campeón/subcampeón/3er lugar** sí respetan al ganador real: el admin declara `matches.winner_code` para la final/3er lugar (selector en `KnockoutResultsEditor`) y `resolveOutcome` lo usa; si es null, infiere del marcador a los 90' (`pickWinner`). Las reglas visibles al usuario están en `src/lib/game-rules.ts`
 - **Dependabot alert #1** (PostCSS XSS) — baja prioridad, dev deps
 
 ---
@@ -143,7 +143,7 @@
 ### Tablas
 - **`profiles`** — `id` (FK auth.users), `email`, `nickname` (único `lower()`), `first_name`, `last_name`, `phone`, `favorite_team` (FK teams), `avatar_url`, **`is_admin`** (bool), **`is_enrolled`** (bool, default `false` = pre-inscrito; lo administra el admin tras pago externo — Fase 10), timestamps. RLS: SELECT/UPDATE/INSERT propios + **UPDATE de admin** (`is_admin()`) para administrar inscripción.
 - **`teams`** — `code` (PK), `name`, `flag`, `group_code` (A-L). 48 filas, lectura pública.
-- **`matches`** — `id`, `match_number` (1-104), `stage` (`group|r32|r16|qf|sf|3rd|final`), `group_code`, `home_team_code`/`away_team_code` (nullable), `bracket_source_home`/`away`, `kicks_off_at`, `venue`, `home_score`/`away_score`, `status`. Lectura pública; UPDATE solo admin (RLS `is_admin()`).
+- **`matches`** — `id`, `match_number` (1-104), `stage` (`group|r32|r16|qf|sf|3rd|final`), `group_code`, `home_team_code`/`away_team_code` (nullable), `bracket_source_home`/`away`, `kicks_off_at`, `venue`, `home_score`/`away_score`, **`winner_code`** (FK teams, nullable — ganador declarado por el admin para final/3er lugar cuando el 90' fue empate y se definió por penales; null = inferir del marcador), `status`. Lectura pública; UPDATE solo admin (RLS `is_admin()`).
 - **`predictions`** — 1 fila/usuario. `user_id` (PK), `locked_at` (inmutable), `champion_code`, `runner_up_code`, `third_place_code`, `final_home_score`/`away_score`, `top_scorer`, timestamps.
 - **`prediction_group_scores`** — PK (`user_id`, `match_id`), scores 0-99.
 - **`prediction_bracket`** — PK (`user_id`, `round`, `team_code`), `round` ∈ (`r32`,`r16`,`qf`,`sf`).
@@ -178,7 +178,7 @@
 8. **Mecánica = Opción C** (grupos + bracket de clasificados). El usuario predice 72 marcadores + qué equipos pasan a cada ronda + campeón/subcampeón/tercer lugar + marcador exacto final (bonus) + goleador.
 9. **Lock global = kickoff match #1** vía `predictions_lock_at()`. **Submit marca "enviado"** (`locked_at`) pero **editable hasta el lock global** (ya no es inmutable; el `editBlockReason` solo bloquea por el lock global, `submitPrediction` es idempotente, y `/pronosticos` muestra el wizard editable mientras `!isLocked`). Submit parcial OK (campos vacíos = 0).
 10. **Wizard cliente** con state que vive en `PredictionWizard` (persiste al navegar entre steps). Autosave por sección (onBlur / toggle).
-11. **Goleador texto libre**, match flexible al evaluar. **Marcador de la final = estricto, por equipo**: el usuario asigna goles a su campeón (`final_home_score`) y a su subcampeón (`final_away_score`); suma 15 solo si **ambos finalistas predichos jugaron la final** y los goles que les asignó coinciden con los goles reales de **ese mismo equipo** (vía `finalHomeCode`/`finalAwayCode` en `OfficialResults`, independiente de home/away oficial; un empate a 90' definido por penales cuenta si se predijo ese empate entre esos dos equipos). Acertar los equipos se premia aparte (campeón 30, finalistas 12).
+11. **Goleador texto libre**, match flexible al evaluar. **Marcador de la final = estricto, por equipo**: el usuario asigna goles a su campeón (`final_home_score`) y a su subcampeón (`final_away_score`); suma 15 solo si **ambos finalistas predichos jugaron la final** y los goles que les asignó coinciden con los goles reales de **ese mismo equipo** (vía `finalHomeCode`/`finalAwayCode` en `OfficialResults`, independiente de home/away oficial; un empate a 90' definido por penales cuenta si se predijo ese empate entre esos dos equipos). Acertar los equipos se premia aparte (campeón 30, finalistas 12). **Campeón/subcampeón/3er lugar se derivan del ganador real** (`matches.winner_code` declarado por el admin para final/3er lugar; si es null, se infiere del marcador a los 90' vía `resolveOutcome`). Así, una final que terminó empatada a 90' y se definió por penales **sí otorga el campeón** al que de verdad ganó — y el usuario que predijo ese empate **suma el marcador exacto (15) Y los 30 del campeón por separado**. La derivación de campeón/3er/marcador final solo ocurre con `status === 'final'` (consistente con grupos y eliminatorias).
 12. **Regla 2-3 por grupo en Eliminatorias de 32** (cada grupo aporta 2 directos + posible mejor tercero = 8 grupos con 3).
 13. **Scoring en TS, no en SQL** (`scoring.ts` + Vitest). El **ranking** también computa en TS server-side — una sola fuente de verdad. Con ~30 usuarios el costo es trivial.
 14. **Transparencia post-lock**: los pronósticos de todos se abren al lock (nadie copia antes). Vista `public_profiles` para nombres sin exponer datos sensibles.

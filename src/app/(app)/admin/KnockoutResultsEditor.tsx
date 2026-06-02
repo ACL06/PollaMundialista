@@ -17,6 +17,7 @@ interface Draft {
   awayCode: string;
   home: string;
   away: string;
+  winnerCode: string; // '' = inferir del marcador (solo final/3er)
   status: MatchStatus;
 }
 
@@ -46,6 +47,11 @@ export function KnockoutResultsEditor({ matches, teams }: KnockoutResultsEditorP
     () => [...teams].sort((a, b) => a.name.localeCompare(b.name)),
     [teams],
   );
+  const teamName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of teams) map.set(t.code, t.name);
+    return (code: string) => map.get(code) ?? code;
+  }, [teams]);
 
   const [drafts, setDrafts] = useState<Map<string, Draft>>(() => {
     const map = new Map<string, Draft>();
@@ -55,6 +61,7 @@ export function KnockoutResultsEditor({ matches, teams }: KnockoutResultsEditorP
         awayCode: m.away_team?.code ?? '',
         home: m.home_score != null ? String(m.home_score) : '',
         away: m.away_score != null ? String(m.away_score) : '',
+        winnerCode: m.winner_code ?? '',
         status: m.status,
       });
     }
@@ -112,6 +119,18 @@ export function KnockoutResultsEditor({ matches, teams }: KnockoutResultsEditorP
     persist(id, { ...current, ...patch });
   };
 
+  // Cambia un equipo y, si el ganador declarado ya no juega el partido,
+  // lo limpia (evita un winner_code huérfano que el server rechazaría).
+  const changeTeam = (id: string, side: 'homeCode' | 'awayCode', code: string) => {
+    const current = drafts.get(id);
+    if (!current) return;
+    const next: Draft = { ...current, [side]: code };
+    if (next.winnerCode && next.winnerCode !== next.homeCode && next.winnerCode !== next.awayCode) {
+      next.winnerCode = '';
+    }
+    changeAndPersist(id, { [side]: code, winnerCode: next.winnerCode });
+  };
+
   const persist = (id: string, override?: Draft) => {
     const d = override ?? drafts.get(id);
     if (!d) return;
@@ -131,6 +150,7 @@ export function KnockoutResultsEditor({ matches, teams }: KnockoutResultsEditorP
         awayTeamCode: d.awayCode || null,
         homeScore: d.home === '' ? null : Number(d.home),
         awayScore: d.away === '' ? null : Number(d.away),
+        winnerCode: d.winnerCode || null,
         status: d.status,
       });
       if (res.error) {
@@ -199,7 +219,7 @@ export function KnockoutResultsEditor({ matches, teams }: KnockoutResultsEditorP
                     value={d.homeCode}
                     hint={match.bracket_source_home}
                     teams={sortedTeams}
-                    onChange={(code) => changeAndPersist(match.id, { homeCode: code })}
+                    onChange={(code) => changeTeam(match.id, 'homeCode', code)}
                   />
                   <div className="flex items-center gap-1.5 justify-center pt-0.5">
                     <ScoreInput value={d.home} onChange={(v) => update(match.id, { home: sanitizeScore(v) })} onBlur={() => persist(match.id)} />
@@ -210,9 +230,40 @@ export function KnockoutResultsEditor({ matches, teams }: KnockoutResultsEditorP
                     value={d.awayCode}
                     hint={match.bracket_source_away}
                     teams={sortedTeams}
-                    onChange={(code) => changeAndPersist(match.id, { awayCode: code })}
+                    onChange={(code) => changeTeam(match.id, 'awayCode', code)}
                   />
                 </div>
+
+                {/* Ganador declarado (solo final/3er, útil cuando el 90' fue empate
+                    y se define por penales). Si no se declara, se infiere del marcador. */}
+                {(match.stage === 'final' || match.stage === '3rd') && d.homeCode && d.awayCode && (
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                      Ganador (si hubo penales)
+                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {[
+                        { code: '', label: 'Según marcador' },
+                        { code: d.homeCode, label: teamName(d.homeCode) },
+                        { code: d.awayCode, label: teamName(d.awayCode) },
+                      ].map((opt) => (
+                        <button
+                          key={opt.code || 'auto'}
+                          type="button"
+                          onClick={() => changeAndPersist(match.id, { winnerCode: opt.code })}
+                          className={cn(
+                            'px-2.5 py-1 rounded-full text-[12px] font-medium border transition-colors',
+                            d.winnerCode === opt.code
+                              ? 'border-primary bg-primary/10 text-foreground'
+                              : 'border-border bg-surface text-muted-foreground hover:text-foreground',
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Status */}
                 <div className="flex items-center gap-2">

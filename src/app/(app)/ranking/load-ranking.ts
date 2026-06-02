@@ -55,7 +55,7 @@ export async function loadRanking(): Promise<RankingResult> {
           `
           id, match_number, stage, group_code,
           bracket_source_home, bracket_source_away,
-          kicks_off_at, venue, home_score, away_score, status,
+          kicks_off_at, venue, home_score, away_score, winner_code, status,
           home_team:teams!matches_home_team_code_fkey(code, name, flag, group_code),
           away_team:teams!matches_away_team_code_fkey(code, name, flag, group_code)
         `,
