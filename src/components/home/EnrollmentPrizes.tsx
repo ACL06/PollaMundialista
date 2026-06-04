@@ -12,32 +12,38 @@ import {
   formatCOP,
 } from '@/lib/prizes';
 
+/** Un ganador real del podio (top-3 del ranking). */
+export interface PodiumWinner {
+  /** Posición de competición (empates comparten número). */
+  rank: number;
+  /** Nombre y apellidos (displayName) — NUNCA el nickname. */
+  name: string;
+}
+
 interface EnrollmentPrizesProps {
   enrolledCount: number;
   /** Pre-inscritos: registrados que aún no confirman pago. */
   preEnrolledCount: number;
   /** true cuando ya arrancó el torneo (partido inaugural) → se revelan montos. */
   revealed: boolean;
+  /**
+   * Top-3 real del ranking (Nombre Apellidos), o null si aún no hay resultados
+   * → se muestra el podio de ejemplo. El podio NO muestra montos (esos viven en
+   * la sección de reparto, ya explicados).
+   */
+  podium?: PodiumWinner[] | null;
+  /** True si el torneo terminó (hay campeón) → podio definitivo; si no, provisional. */
+  podiumFinal?: boolean;
 }
-
-/** Nicknames de ejemplo para el podio (solo visual, hasta que haya ranking real). */
-const PODIUM_EXAMPLE = [
-  { place: 2 as const, nickname: 'mile23' },
-  { place: 1 as const, nickname: 'crack_07' },
-  { place: 3 as const, nickname: 'la_pana' },
-];
 
 export function EnrollmentPrizes({
   enrolledCount,
   preEnrolledCount,
   revealed,
+  podium = null,
+  podiumFinal = false,
 }: EnrollmentPrizesProps) {
   const prizes = computePrizes(enrolledCount);
-  const prizeByPlace: Record<number, number> = {
-    1: prizes.podium[0],
-    2: prizes.podium[1],
-    3: prizes.podium[2],
-  };
 
   return (
     <section className="flex flex-col gap-5">
@@ -126,8 +132,8 @@ export function EnrollmentPrizes({
         )}
       </div>
 
-      {/* Podio */}
-      <Podium prizeByPlace={prizeByPlace} revealed={revealed} />
+      {/* Podio (solo personas, sin montos — los montos están arriba en reparto) */}
+      <Podium winners={podium} isFinal={podiumFinal} />
 
       {/* Reparto + empates */}
       <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground space-y-2">
@@ -228,60 +234,108 @@ function Row({
   );
 }
 
-// Colores de podio: oro / plata / bronce, en tintes suaves para no romper el
-// diseño (mismo enfoque que ya usaban los íconos de medalla).
-const STEP: Record<number, { h: string; bar: string; icon: React.ReactNode }> = {
+// Cada "escalón" visual del podio: altura, color (oro/plata/bronce suaves) e
+// ícono. La clave (1/2/3) es la POSICIÓN VISUAL (1 = centro/alto), no el rank.
+const STEP: Record<1 | 2 | 3, { h: string; bar: string; icon: React.ReactNode }> = {
   1: { h: 'h-24', bar: 'bg-amber-400/15 border-amber-400/50', icon: <Crown className="h-5 w-5 text-amber-500 fill-amber-400" /> },
   2: { h: 'h-16', bar: 'bg-zinc-400/15 border-zinc-400/50', icon: <Medal className="h-4 w-4 text-zinc-400 fill-zinc-300" /> },
   3: { h: 'h-12', bar: 'bg-amber-700/15 border-amber-700/50', icon: <Medal className="h-4 w-4 text-amber-700 fill-amber-700/40" /> },
 };
 
-function Podium({
-  prizeByPlace,
-  revealed,
-}: {
-  prizeByPlace: Record<number, number>;
-  revealed: boolean;
-}) {
+interface PodiumEntry {
+  /** Escalón visual: 1 centro/alto, 2 izquierda, 3 derecha. */
+  slot: 1 | 2 | 3;
+  /** Etiqueta de posición a mostrar (rank real, p.ej. "1°"; con empate se repite). */
+  rankLabel: string;
+  /** Nombre a mostrar (real = Nombre Apellidos; o ejemplo). */
+  name: string;
+  /** Datos de ejemplo (atenúa el estilo). */
+  example?: boolean;
+}
+
+/** Arma los escalones en orden visual [izquierda(2°), centro(1°), derecha(3°)]. */
+function buildPodiumEntries(winners: PodiumWinner[] | null): PodiumEntry[] {
+  if (winners && winners.length > 0) {
+    const [first, second, third] = winners;
+    const entries: PodiumEntry[] = [];
+    if (second) entries.push({ slot: 2, rankLabel: `${second.rank}°`, name: second.name });
+    if (first) entries.push({ slot: 1, rankLabel: `${first.rank}°`, name: first.name });
+    if (third) entries.push({ slot: 3, rankLabel: `${third.rank}°`, name: third.name });
+    return entries;
+  }
+  // Ejemplo (aún sin resultados). Nombres genéricos, no usuarios reales.
+  return [
+    { slot: 2, rankLabel: '2°', name: 'Jugador', example: true },
+    { slot: 1, rankLabel: '1°', name: 'Jugadora', example: true },
+    { slot: 3, rankLabel: '3°', name: 'Jugador', example: true },
+  ];
+}
+
+function Podium({ winners, isFinal }: { winners: PodiumWinner[] | null; isFinal: boolean }) {
+  const entries = buildPodiumEntries(winners);
+  const isExample = !winners || winners.length === 0;
+  // Estado del podio: ejemplo (sin resultados) → provisional (en curso) → final.
+  const status: 'example' | 'provisional' | 'final' = isExample
+    ? 'example'
+    : isFinal
+      ? 'final'
+      : 'provisional';
+
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
-      <p className="mb-3 text-center text-xs text-muted-foreground uppercase tracking-wider">
-        El podio de la polla
-      </p>
+      <div className="mb-3 flex items-center justify-center gap-2">
+        <p className="text-center text-xs text-muted-foreground uppercase tracking-wider">
+          El podio de la polla
+        </p>
+        {status === 'provisional' && (
+          <span className="inline-flex items-center rounded-full bg-tertiary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-tertiary">
+            Provisional
+          </span>
+        )}
+        {status === 'final' && (
+          <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+            Final
+          </span>
+        )}
+      </div>
       <div className="grid grid-cols-3 gap-2 items-end">
-        {PODIUM_EXAMPLE.map(({ place, nickname }) => {
-          const s = STEP[place];
+        {entries.map(({ slot, rankLabel, name, example }) => {
+          const s = STEP[slot];
           return (
-            <div key={place} className="flex flex-col items-center gap-1.5">
+            <div key={slot} className="flex flex-col items-center gap-1.5">
               <span
                 className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-muted"
                 aria-hidden="true"
               >
                 {s.icon}
               </span>
-              <span className="max-w-full truncate text-[13px] font-medium text-foreground">
-                {nickname}
+              <span
+                className={cn(
+                  'max-w-full truncate text-[13px] font-medium',
+                  example ? 'text-muted-foreground/60 italic' : 'text-foreground',
+                )}
+              >
+                {name}
               </span>
               <div
                 className={cn(
-                  'flex w-full flex-col items-center justify-start gap-0.5 rounded-t-md border-x border-t pt-1.5',
+                  'flex w-full flex-col items-center justify-start rounded-t-md border-x border-t pt-1.5',
                   s.bar,
                   s.h,
                 )}
               >
-                <span className="text-lg font-bold tabular-nums text-foreground">{place}°</span>
-                {revealed && (
-                  <span className="text-[11px] font-semibold tabular-nums text-foreground/80">
-                    {formatCOP(prizeByPlace[place])}
-                  </span>
-                )}
+                <span className="text-lg font-bold tabular-nums text-foreground">{rankLabel}</span>
               </div>
             </div>
           );
         })}
       </div>
       <p className="mt-2 text-center text-[11px] text-muted-foreground">
-        Nombres de ejemplo. El podio real se arma con el ranking final.
+        {status === 'example'
+          ? 'Ejemplo. El podio se arma con el ranking cuando haya resultados.'
+          : status === 'provisional'
+            ? 'Así va el podio por ahora — cambia a medida que avanza el Mundial.'
+            : '¡Podio final del Mundial! 🏆'}
       </p>
     </div>
   );
