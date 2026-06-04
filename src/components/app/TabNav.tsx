@@ -7,18 +7,23 @@ import { cn } from '@/lib/utils';
 import { useCenterActiveTab } from '@/lib/use-center-active-tab';
 
 const tabs = [
-  { href: '/home', label: 'Inicio', Icon: Home },
-  { href: '/calendar', label: 'Calendario', Icon: CalendarDays },
-  { href: '/grupos', label: 'Fase de grupos', Icon: ListOrdered },
-  { href: '/pronosticos', label: 'Pronósticos', Icon: Target },
-  { href: '/comunidad', label: 'Comunidad', Icon: Users },
-  { href: '/ranking', label: 'Ranking', Icon: Trophy },
+  { href: '/home', label: 'Inicio', Icon: Home, polla: false },
+  { href: '/calendar', label: 'Calendario', Icon: CalendarDays, polla: false },
+  { href: '/grupos', label: 'Fase de grupos', Icon: ListOrdered, polla: false },
+  { href: '/pronosticos', label: 'Pronósticos', Icon: Target, polla: true },
+  { href: '/comunidad', label: 'Comunidad', Icon: Users, polla: true },
+  { href: '/ranking', label: 'Ranking', Icon: Trophy, polla: true },
 ] as const;
 
-export function TabNav() {
+/**
+ * Navegación principal. En modo espectador (post-lock, no inscrito) se ocultan
+ * las pestañas de la polla; quedan Inicio, Calendario y Fase de grupos.
+ */
+export function TabNav({ isSpectator = false }: { isSpectator?: boolean }) {
   const pathname = usePathname();
+  const visibleTabs = isSpectator ? tabs.filter((t) => !t.polla) : tabs;
   const activeHref =
-    tabs.find((t) => pathname === t.href || pathname.startsWith(t.href + '/'))?.href ?? null;
+    visibleTabs.find((t) => pathname === t.href || pathname.startsWith(t.href + '/'))?.href ?? null;
   const { containerRef, activeRef } = useCenterActiveTab<HTMLAnchorElement>(activeHref);
 
   return (
@@ -32,7 +37,7 @@ export function TabNav() {
           ref={containerRef}
           className="flex gap-1 overflow-x-auto overflow-y-hidden touch-pan-x overscroll-x-contain scroll-smooth px-5"
         >
-          {tabs.map(({ href, label, Icon }) => {
+          {visibleTabs.map(({ href, label, Icon }) => {
           const isActive = href === activeHref;
           return (
             <Link

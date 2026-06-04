@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
+import { getViewerAccess } from '@/lib/access';
+import { SpectatorBlocked } from '@/components/app/SpectatorBlocked';
 import { PredictionView } from '../../pronosticos/PredictionView';
 import { displayName } from '../shared';
 import type { Match, Team } from '@/lib/types/match';
@@ -26,6 +28,10 @@ export default async function ComunidadUserPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
+
+  // Modo espectador (post-lock, no inscrito): bloqueado.
+  const { isSpectator } = await getViewerAccess();
+  if (isSpectator) return <SpectatorBlocked />;
 
   // Antes del lock no se pueden ver pronósticos de otros → al gate.
   const lockAt = await getPredictionsLockAt();

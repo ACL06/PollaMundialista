@@ -77,6 +77,10 @@ export default async function HomePage() {
   const registeredCount = registeredCountResult.count ?? 0;
   const preEnrolledCount = Math.max(0, registeredCount - enrolledCount);
   const isEnrolled = profile?.is_enrolled ?? false;
+  const isAdmin = profile?.is_admin ?? false;
+  // Modo espectador: post-lock + no inscrito. En /home solo ve su encabezado,
+  // las reglas y los accesos a calendario / fase de grupos.
+  const isSpectator = isLocked && !isEnrolled && !isAdmin;
   const metaCount =
     (prediction?.champion_code ? 1 : 0) +
     (prediction?.runner_up_code ? 1 : 0) +
@@ -129,39 +133,43 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* Pre-lock: estado del pronóstico (countdown + progreso).
-          Post-lock: tu posición + accesos a ranking y comunidad. */}
-      {isLocked ? (
-        <HomeStandingCard
-          rank={myRow?.rank ?? null}
-          participants={ranking.rows.length}
-          total={myRow?.breakdown.total ?? 0}
-          exactCount={
-            (myRow?.breakdown.groupExactCount ?? 0) + (myRow?.breakdown.knockoutExactCount ?? 0)
-          }
-          hasResults={ranking.hasResults}
-        />
-      ) : (
-        <PredictionStatusCard
-          lockAtIso={lockAt?.toISOString() ?? null}
-          isLocked={isLocked}
-          isSubmitted={isSubmitted}
-          scoresCount={scoresCount}
-          bracketCount={bracketCount}
-          metaCount={metaCount}
-          isEnrolled={isEnrolled}
-        />
-      )}
+      {/* Estado del pronóstico / posición — solo para participantes.
+          Pre-lock: countdown + progreso. Post-lock: tu posición. El espectador
+          (no inscrito) no ve esta tarjeta ni la de inscripción y premios. */}
+      {!isSpectator &&
+        (isLocked ? (
+          <HomeStandingCard
+            rank={myRow?.rank ?? null}
+            participants={ranking.rows.length}
+            total={myRow?.breakdown.total ?? 0}
+            exactCount={
+              (myRow?.breakdown.groupExactCount ?? 0) + (myRow?.breakdown.knockoutExactCount ?? 0)
+            }
+            hasResults={ranking.hasResults}
+          />
+        ) : (
+          <PredictionStatusCard
+            lockAtIso={lockAt?.toISOString() ?? null}
+            isLocked={isLocked}
+            isSubmitted={isSubmitted}
+            scoresCount={scoresCount}
+            bracketCount={bracketCount}
+            metaCount={metaCount}
+            isEnrolled={isEnrolled}
+          />
+        ))}
 
       {/* Reglas del juego */}
       <GameRules />
 
-      {/* Inscripción y premios */}
-      <EnrollmentPrizes
-        enrolledCount={enrolledCount}
-        preEnrolledCount={preEnrolledCount}
-        revealed={isLocked}
-      />
+      {/* Inscripción y premios (oculto para el espectador). */}
+      {!isSpectator && (
+        <EnrollmentPrizes
+          enrolledCount={enrolledCount}
+          preEnrolledCount={preEnrolledCount}
+          revealed={isLocked}
+        />
+      )}
 
       {/* Explora */}
       <div className="flex flex-col gap-4">
@@ -169,9 +177,13 @@ export default async function HomePage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <ExploreCard href="/calendar" Icon={CalendarDays} label="Calendario" />
           <ExploreCard href="/grupos" Icon={ListOrdered} label="Fase de grupos" />
-          <ExploreCard href="/pronosticos" Icon={Target} label="Pronósticos" />
-          <ExploreCard href="/comunidad" Icon={Users} label="Comunidad" />
-          <ExploreCard href="/ranking" Icon={Trophy} label="Ranking" />
+          {!isSpectator && (
+            <>
+              <ExploreCard href="/pronosticos" Icon={Target} label="Pronósticos" />
+              <ExploreCard href="/comunidad" Icon={Users} label="Comunidad" />
+              <ExploreCard href="/ranking" Icon={Trophy} label="Ranking" />
+            </>
+          )}
         </div>
 
         {profile?.is_admin && (
