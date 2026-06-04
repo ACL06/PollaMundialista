@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { Lock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { getViewerAccess } from '@/lib/access';
+import { SpectatorBlocked } from '@/components/app/SpectatorBlocked';
 import { Countdown } from '@/components/pronosticos/Countdown';
 import { loadRanking } from './load-ranking';
 import { RankingView } from './RankingView';
@@ -13,6 +15,10 @@ export default async function RankingPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
+
+  // Modo espectador (post-lock, no inscrito): el ranking queda bloqueado.
+  const { isSpectator } = await getViewerAccess();
+  if (isSpectator) return <SpectatorBlocked />;
 
   const { lockAt, locked, hasResults, rows } = await loadRanking();
 

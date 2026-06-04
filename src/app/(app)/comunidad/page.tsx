@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { Lock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
+import { getViewerAccess } from '@/lib/access';
+import { SpectatorBlocked } from '@/components/app/SpectatorBlocked';
 import { Countdown } from '@/components/pronosticos/Countdown';
 import { CommunityView } from './CommunityView';
 import {
@@ -21,6 +23,10 @@ export default async function ComunidadPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
+
+  // Modo espectador (post-lock, no inscrito): Comunidad queda bloqueada.
+  const { isSpectator } = await getViewerAccess();
+  if (isSpectator) return <SpectatorBlocked />;
 
   const lockAt = await getPredictionsLockAt();
   const locked = isLockedAt(lockAt);

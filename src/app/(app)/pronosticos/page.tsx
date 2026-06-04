@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
+import { getViewerAccess } from '@/lib/access';
+import { SpectatorBlocked } from '@/components/app/SpectatorBlocked';
 import { KNOCKOUT_SCORE_STAGES } from '@/lib/knockout-window';
 import { PredictionWizard } from './PredictionWizard';
 import { PredictionView } from './PredictionView';
@@ -41,6 +43,10 @@ export default async function PronosticosPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
+
+  // Modo espectador (post-lock, no inscrito): la polla queda bloqueada.
+  const { isSpectator } = await getViewerAccess();
+  if (isSpectator) return <SpectatorBlocked />;
 
   // Carga en paralelo: pronóstico principal, marcadores, bracket, partidos de
   // grupos, partidos de eliminatoria, marcadores de eliminatoria, equipos y
