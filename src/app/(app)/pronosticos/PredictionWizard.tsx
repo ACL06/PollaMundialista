@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WizardNav, type WizardStep } from './WizardNav';
@@ -93,9 +94,18 @@ export function PredictionWizard({
   teams,
   lockAt,
 }: PredictionWizardProps) {
+  const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   // `submittedNow` cubre el envío hecho en esta misma sesión (sin recargar).
   const [submittedNow, setSubmittedNow] = useState(false);
+
+  // Si un autosave es rechazado por el lock global (plazo cerrado), refrescamos:
+  // el server component re-renderiza y, con la hora del servidor, muestra la
+  // vista read-only. Corrige el caso de un dispositivo con el reloj atrasado
+  // (la UI se veía editable, pero el guardado falla → acá se autocorrige).
+  const reflectLockClosed = (result: { locked?: boolean }) => {
+    if (result.locked) router.refresh();
+  };
 
   const isLocked = lockAt ? new Date() >= new Date(lockAt) : false;
   const isSubmitted = initialPrediction?.locked_at != null || submittedNow;
@@ -172,6 +182,7 @@ export function PredictionWizard({
         home_score: home,
         away_score: away,
       });
+      reflectLockClosed(result);
       if (result.error) {
         setGroupScoreError(matchId, result.error);
         setGroupScoresSavedIds((prev) => {
@@ -229,6 +240,7 @@ export function PredictionWizard({
   const persistMeta = (patch: MetaPatch) => {
     startMetaSave(async () => {
       const result = await savePredictionMeta(patch);
+      reflectLockClosed(result);
       setMetaError(result.error ?? null);
     });
   };
@@ -279,6 +291,7 @@ export function PredictionWizard({
 
     startMetaSave(async () => {
       const result = await savePredictionMeta(patch);
+      reflectLockClosed(result);
       if (result.error) {
         setMetaError(result.error);
         setMetaSaved(false);
@@ -331,6 +344,7 @@ export function PredictionWizard({
         team_code: teamCode,
         selected: !isSelected,
       });
+      reflectLockClosed(result);
       if (result.error) {
         setBracket(bracketSnapshot); // revertir bracket
         setChampion(podiumSnapshot.champion); // y podio
@@ -437,6 +451,7 @@ export function PredictionWizard({
   const handleSubmit = () => {
     startSubmit(async () => {
       const result = await submitPrediction();
+      reflectLockClosed(result);
       if (result.error) {
         setSubmitError(result.error);
       } else {
