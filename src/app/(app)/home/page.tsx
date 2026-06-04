@@ -81,6 +81,13 @@ export default async function HomePage() {
   // Modo espectador: post-lock + no inscrito. En /home solo ve su encabezado,
   // las reglas y los accesos a calendario / fase de grupos.
   const isSpectator = isLocked && !isEnrolled && !isAdmin;
+
+  // Podio real (top-3 del ranking, por Nombre y Apellidos) para "Inscripción y
+  // premios". Solo cuando ya hay resultados; si no, el podio muestra el ejemplo.
+  // Sin montos: esos ya se explican en la sección de reparto.
+  const topThree = ranking.hasResults ? ranking.rows.slice(0, 3) : [];
+  const podiumWinners =
+    topThree.length > 0 ? topThree.map((r) => ({ rank: r.rank, name: r.name })) : null;
   const metaCount =
     (prediction?.champion_code ? 1 : 0) +
     (prediction?.runner_up_code ? 1 : 0) +
@@ -168,6 +175,7 @@ export default async function HomePage() {
           enrolledCount={enrolledCount}
           preEnrolledCount={preEnrolledCount}
           revealed={isLocked}
+          podium={podiumWinners}
         />
       )}
 
