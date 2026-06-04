@@ -63,7 +63,7 @@
 - **Pestaña Eliminatorias** (Fase 9B+9C, `PronosticosTabs` + `KnockoutScoresPanel`): `/pronosticos` tiene 2 tabs — *Mi pronóstico* (wizard/read-only) y *Eliminatorias* (marcadores de R32..3er lugar). Cada partido: `pending` (cruce tipo calendario) → `open` (inputs + autosave vía `saveKnockoutScore`) → `closed` (read-only) según `knockoutMatchState()`. Puntúan 5/2 en el scoring y ranking (9C)
 
 #### Scoring (Fase 4D + 9C)
-- Motor TS puro `src/lib/scoring.ts` con **tests Vitest** (`scoring.test.ts`, 39 tests):
+- Motor TS puro `src/lib/scoring.ts` con **tests Vitest** (`scoring.test.ts`, 59 tests):
   - `computeScore(user, official)` → desglose + total (máx **798**)
   - `deriveOfficialResults(matches, topScorer)` → construye resultados oficiales desde `matches` (incl. `knockoutScores`)
   - `buildRanking(predictions, groupScores, bracket, knockoutScores, official)` → agrupa por usuario, ordena
@@ -101,11 +101,11 @@
   - **Recordatorio** (`EnrollmentReminderModal`): pre-inscritos ven 1×/día (localStorage) en los últimos 5 días antes del arranque un modal con la llave Bre-B + WhatsApp.
 
 #### Tests (Vitest)
-- `scoring.test.ts` (43): reglas de scoring (incl. marcadores de eliminatoria y marcador de la final estricto por equipo, **campeón/3er por `winner_code` cuando el 90' fue empate y se definió por penales**, gate de `status === 'final'`), deriveOfficialResults, buildRanking, pronóstico perfecto = 798.
+- `scoring.test.ts` (59): reglas de scoring (incl. marcadores de eliminatoria y marcador de la final estricto por equipo, **campeón/3er por `winner_code` cuando el 90' fue empate y se definió por penales**, gate de `status === 'final'`, negativos explícitos campeón/3ero/goleador, gana-visitante, independencia por ronda del bracket) + **test de integración `deriveOfficialResults` → `computeScore`** (pipeline real), deriveOfficialResults, buildRanking, pronóstico perfecto = 798.
 - `knockout-window.test.ts` (7): estados de la ventana de captura por partido (pending/open/closed).
 - `prizes.test.ts` (5): reparto de premios (10% admin + podio 70/20/10, el 1° absorbe el redondeo).
 - `compute-standings.test.ts`, `format-bracket-source.test.ts`, `predictions-lock.test.ts`, `validators/profile.test.ts`, `validators/prediction.test.ts`.
-- **81 tests en total**, corren en CI (`npm test`).
+- **97 tests en total**, corren en CI (`npm test`).
 
 ### ⏳ Pendiente / Roadmap
 

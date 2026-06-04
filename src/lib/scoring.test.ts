@@ -130,6 +130,34 @@ describe('computeScore — grupos', () => {
     const r = computeScore(user, actual);
     expect(r.total).toBe(5); // no 7
   });
+
+  it('solo resultado (gana visitante) = 2', () => {
+    const user = emptyUser({ groupScores: [gs('m1', 0, 2)] });
+    const actual = emptyOfficial({ groupScores: new Map([['m1', { home: 1, away: 3 }]]) });
+    const r = computeScore(user, actual);
+    expect(r.groupExact).toBe(0);
+    expect(r.groupOutcome).toBe(2);
+    expect(r.groupOutcomeCount).toBe(1);
+  });
+
+  it('varios partidos: suma exactos y resultados por separado', () => {
+    const user = emptyUser({
+      groupScores: [gs('m1', 2, 1), gs('m2', 3, 0), gs('m3', 0, 0)],
+    });
+    const actual = emptyOfficial({
+      groupScores: new Map([
+        ['m1', { home: 2, away: 1 }], // exacto → 5
+        ['m2', { home: 1, away: 0 }], // solo resultado → 2
+        ['m3', { home: 1, away: 2 }], // equivocado → 0
+      ]),
+    });
+    const r = computeScore(user, actual);
+    expect(r.groupExact).toBe(5);
+    expect(r.groupExactCount).toBe(1);
+    expect(r.groupOutcome).toBe(2);
+    expect(r.groupOutcomeCount).toBe(1);
+    expect(r.total).toBe(7);
+  });
 });
 
 // ── Marcadores de eliminatoria ──────────────────────────────────────
@@ -189,6 +217,14 @@ describe('computeScore — marcadores de eliminatoria', () => {
     });
     expect(computeScore(user, actual).total).toBe(10); // 5 + 5
   });
+
+  it('solo resultado (gana visitante) = 2', () => {
+    const user = emptyUser({ knockoutScores: [ks('r32a', 0, 2)] });
+    const actual = emptyOfficial({ knockoutScores: new Map([['r32a', { home: 1, away: 4 }]]) });
+    const r = computeScore(user, actual);
+    expect(r.knockoutExact).toBe(0);
+    expect(r.knockoutOutcome).toBe(2);
+  });
 });
 
 // ── Bracket ─────────────────────────────────────────────────────────
@@ -225,6 +261,26 @@ describe('computeScore — bracket', () => {
     const actual = emptyOfficial({ advancers: { r32: new Set(['YYY']), r16: new Set(), qf: new Set(), sf: new Set() } });
     expect(computeScore(user, actual).r32).toBe(0);
   });
+
+  it('independencia por ronda: acertar r32 pero no r16 da solo el r32', () => {
+    // AAA llegó a R32 pero NO a Octavos; el usuario lo puso en ambas rondas.
+    const user = emptyUser({ bracket: [br('r32', 'AAA'), br('r16', 'AAA')] });
+    const actual = emptyOfficial({
+      advancers: { r32: new Set(['AAA']), r16: new Set(['BBB']), qf: new Set(), sf: new Set() },
+    });
+    const r = computeScore(user, actual);
+    expect(r.r32).toBe(SCORING.bracket.r32); // 2
+    expect(r.r16).toBe(0);
+    expect(r.total).toBe(SCORING.bracket.r32);
+  });
+
+  it('cuenta cada equipo acertado de la ronda (2 en r32 = 2×2)', () => {
+    const user = emptyUser({ bracket: [br('r32', 'AAA'), br('r32', 'BBB'), br('r32', 'XXX')] });
+    const actual = emptyOfficial({
+      advancers: { r32: new Set(['AAA', 'BBB']), r16: new Set(), qf: new Set(), sf: new Set() },
+    });
+    expect(computeScore(user, actual).r32).toBe(2 * SCORING.bracket.r32); // AAA + BBB, no XXX
+  });
 });
 
 // ── Podio / campeón / final / goleador ──────────────────────────────
@@ -250,6 +306,18 @@ describe('computeScore — podio y extras', () => {
     const user = emptyUser({ prediction: makePrediction({ champion_code: 'AAA' }) });
     const actual = emptyOfficial({ champion: 'AAA' });
     expect(computeScore(user, actual).champion).toBe(30);
+  });
+
+  it('campeón equivocado = 0', () => {
+    const user = emptyUser({ prediction: makePrediction({ champion_code: 'AAA' }) });
+    const actual = emptyOfficial({ champion: 'ZZZ' });
+    expect(computeScore(user, actual).champion).toBe(0);
+  });
+
+  it('campeón sin resultado oficial (final no jugada) = 0', () => {
+    const user = emptyUser({ prediction: makePrediction({ champion_code: 'AAA' }) });
+    const actual = emptyOfficial({ champion: null });
+    expect(computeScore(user, actual).champion).toBe(0);
   });
 
   it('campeón por penales: acertar campeón suma 30 aunque el 90 fuera empate', () => {
@@ -282,6 +350,12 @@ describe('computeScore — podio y extras', () => {
     const user = emptyUser({ prediction: makePrediction({ third_place_code: 'CCC' }) });
     const actual = emptyOfficial({ thirdPlace: 'CCC' });
     expect(computeScore(user, actual).thirdPlace).toBe(15);
+  });
+
+  it('tercer lugar equivocado = 0', () => {
+    const user = emptyUser({ prediction: makePrediction({ third_place_code: 'CCC' }) });
+    const actual = emptyOfficial({ thirdPlace: 'DDD' });
+    expect(computeScore(user, actual).thirdPlace).toBe(0);
   });
 
   it('marcador final estricto, en orden y con finalistas correctos = 15', () => {
@@ -431,6 +505,36 @@ describe('computeScore — podio y extras', () => {
     const user = emptyUser({ prediction: makePrediction({ top_scorer: 'Messi' }) });
     const actual = emptyOfficial({ topScorer: 'Haaland' });
     expect(computeScore(user, actual).topScorer).toBe(0);
+  });
+
+  it('goleador predicho pero sin goleador oficial cargado = 0', () => {
+    const user = emptyUser({ prediction: makePrediction({ top_scorer: 'Messi' }) });
+    const actual = emptyOfficial({ topScorer: null });
+    expect(computeScore(user, actual).topScorer).toBe(0);
+  });
+
+  it('goleador vacío / solo espacios = 0 (no rompe)', () => {
+    const user = emptyUser({ prediction: makePrediction({ top_scorer: '   ' }) });
+    const actual = emptyOfficial({ topScorer: 'Haaland' });
+    expect(computeScore(user, actual).topScorer).toBe(0);
+  });
+
+  it('finalistas correctos pero final aún no jugada (finalScore null) → marcador = 0', () => {
+    const user = emptyUser({
+      prediction: makePrediction({
+        champion_code: 'AAA',
+        runner_up_code: 'BBB',
+        final_home_score: 2,
+        final_away_score: 1,
+      }),
+    });
+    const actual = emptyOfficial({
+      finalists: new Set(['AAA', 'BBB']),
+      finalScore: null,
+    });
+    const r = computeScore(user, actual);
+    expect(r.finalExact).toBe(0);
+    expect(r.finalists).toBe(24); // los finalistas sí, el marcador no
   });
 });
 
@@ -675,6 +779,174 @@ describe('deriveOfficialResults', () => {
     expect(r.finalScore).toBeNull();
     // Los finalistas sí: ya están en la final aunque no haya terminado.
     expect(r.finalists).toEqual(new Set(['AAA', 'BBB']));
+  });
+
+  it('r32 finalizado con marcador entra a knockoutScores y a clasificados r32', () => {
+    const matches: Match[] = [
+      match({
+        id: 'k73',
+        match_number: 73,
+        stage: 'r32',
+        home_team: team('AAA'),
+        away_team: team('CCC'),
+        home_score: 1,
+        away_score: 0,
+        status: 'final',
+      }),
+    ];
+    const r = deriveOfficialResults(matches);
+    expect(r.knockoutScores.get('k73')).toEqual({ home: 1, away: 0 });
+    expect(r.advancers.r32).toEqual(new Set(['AAA', 'CCC']));
+  });
+
+  it('eliminatoria en vivo NO entra a knockoutScores pero sí a clasificados', () => {
+    const matches: Match[] = [
+      match({
+        id: 'k73',
+        match_number: 73,
+        stage: 'r32',
+        home_team: team('AAA'),
+        away_team: team('CCC'),
+        home_score: 1,
+        away_score: 0,
+        status: 'live',
+      }),
+    ];
+    const r = deriveOfficialResults(matches);
+    expect(r.knockoutScores.has('k73')).toBe(false);
+    expect(r.advancers.r32).toEqual(new Set(['AAA', 'CCC']));
+  });
+
+  it('3er lugar en vivo no define tercero (status gate)', () => {
+    const matches: Match[] = [
+      match({
+        id: 'thirdm',
+        match_number: 103,
+        stage: '3rd',
+        home_team: team('CCC'),
+        away_team: team('DDD'),
+        home_score: 2,
+        away_score: 1,
+        status: 'live',
+      }),
+    ];
+    const r = deriveOfficialResults(matches);
+    expect(r.thirdPlace).toBeNull();
+    expect(r.knockoutScores.has('thirdm')).toBe(false);
+  });
+});
+
+// ── Integración: derive → score (pipeline real) ─────────────────────
+// El test "perfecto" usa OfficialResults armado a mano; acá derivamos los
+// resultados desde `matches` (como en producción) y luego puntuamos, para
+// confirmar que cada regla se enciende de punta a punta.
+describe('integración deriveOfficialResults → computeScore', () => {
+  it('puntúa cada regla desde matches reales (grupos, eliminatoria, bracket, podio, final, goleador)', () => {
+    const matches: Match[] = [
+      // Grupo finalizado AAA 2-1 BBB
+      match({
+        id: 'g1',
+        match_number: 1,
+        stage: 'group',
+        status: 'final',
+        home_team: team('AAA'),
+        away_team: team('BBB'),
+        home_score: 2,
+        away_score: 1,
+      }),
+      // R32 finalizado AAA 1-0 CCC → clasificados {AAA, CCC} + marcador
+      match({
+        id: 'k73',
+        match_number: 73,
+        stage: 'r32',
+        status: 'final',
+        home_team: team('AAA'),
+        away_team: team('CCC'),
+        home_score: 1,
+        away_score: 0,
+      }),
+      // Tercer lugar EEE 2-0 FFF → tercero EEE + marcador de eliminatoria
+      match({
+        id: 't',
+        match_number: 103,
+        stage: '3rd',
+        status: 'final',
+        home_team: team('EEE'),
+        away_team: team('FFF'),
+        home_score: 2,
+        away_score: 0,
+      }),
+      // Final AAA 3-1 DDD → finalistas {AAA, DDD}, campeón AAA, marcador 3-1
+      match({
+        id: 'f',
+        match_number: 104,
+        stage: 'final',
+        status: 'final',
+        home_team: team('AAA'),
+        away_team: team('DDD'),
+        home_score: 3,
+        away_score: 1,
+      }),
+    ];
+    const official = deriveOfficialResults(matches, 'Goleador X');
+
+    const user = emptyUser({
+      prediction: makePrediction({
+        champion_code: 'AAA', // 30
+        runner_up_code: 'DDD', // finalista
+        third_place_code: 'EEE', // 15
+        final_home_score: 3, // goles de mi campeón AAA
+        final_away_score: 1, // goles de mi subcampeón DDD
+        top_scorer: 'goleador x', // 15 (match flexible)
+      }),
+      groupScores: [gs('g1', 2, 1)], // exacto → 5
+      knockoutScores: [
+        ks('k73', 1, 0), // exacto → 5
+        ks('t', 1, 0), // solo resultado (real 2-0, ambos gana local) → 2
+      ],
+      bracket: [br('r32', 'AAA'), br('r32', 'ZZZ')], // AAA clasificó (2), ZZZ no (0)
+    });
+
+    const r = computeScore(user, official);
+    expect(r.groupExact).toBe(5);
+    expect(r.knockoutExact).toBe(5);
+    expect(r.knockoutOutcome).toBe(2);
+    expect(r.r32).toBe(SCORING.bracket.r32); // 2
+    expect(r.finalists).toBe(24); // AAA + DDD llegaron a la final
+    expect(r.thirdPlace).toBe(15); // EEE
+    expect(r.champion).toBe(30); // AAA
+    expect(r.finalExact).toBe(15); // 3-1 por equipo
+    expect(r.topScorer).toBe(15);
+    expect(r.total).toBe(5 + 5 + 2 + 2 + 24 + 15 + 30 + 15 + 15); // 113
+  });
+
+  it('3er lugar definido por penales: marcador (resultado) y tercero (winner_code) desde el mismo partido', () => {
+    // 3er lugar 1-1 a 90', ganó FFF por penales (winner_code). El usuario
+    // predijo el empate 1-1 (marcador exacto → 5) y a FFF como tercero (→ 15).
+    const matches: Match[] = [
+      match({
+        id: 't',
+        match_number: 103,
+        stage: '3rd',
+        status: 'final',
+        home_team: team('EEE'),
+        away_team: team('FFF'),
+        home_score: 1,
+        away_score: 1,
+        winner_code: 'FFF',
+      }),
+    ];
+    const official = deriveOfficialResults(matches);
+    expect(official.thirdPlace).toBe('FFF');
+
+    const user = emptyUser({
+      prediction: makePrediction({ third_place_code: 'FFF' }),
+      knockoutScores: [ks('t', 1, 1)],
+    });
+    const r = computeScore(user, official);
+    expect(r.knockoutExact).toBe(5); // empate 1-1 exacto
+    expect(r.thirdPlace).toBe(15); // tercero correcto (por penales)
+    expect(r.total).toBe(20);
   });
 });
 
