@@ -176,6 +176,7 @@ export default async function HomePage() {
           preEnrolledCount={preEnrolledCount}
           revealed={isLocked}
           podium={podiumWinners}
+          podiumFinal={ranking.complete}
         />
       )}
 

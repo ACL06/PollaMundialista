@@ -24,6 +24,8 @@ export interface RankingResult {
   lockAt: Date | null;
   locked: boolean;
   hasResults: boolean;
+  /** True cuando el torneo terminó (la final ya tiene campeón) → podio definitivo. */
+  complete: boolean;
   rows: RankingRow[];
 }
 
@@ -38,7 +40,7 @@ export async function loadRanking(): Promise<RankingResult> {
   const lockAt = await getPredictionsLockAt();
 
   if (!isLockedAt(lockAt)) {
-    return { lockAt, locked: false, hasResults: false, rows: [] };
+    return { lockAt, locked: false, hasResults: false, complete: false, rows: [] };
   }
 
   const [predsRes, scoresRes, bracketRes, knockoutScoresRes, matchesRes, profilesRes, settingsRes] =
@@ -94,6 +96,8 @@ export async function loadRanking(): Promise<RankingResult> {
   const officialTopScorer = (settingsRes.data?.top_scorer as string | undefined) ?? null;
   const official = deriveOfficialResults(matches, officialTopScorer);
   const hasResults = matches.some((m) => m.status === 'final');
+  // Torneo terminado = ya hay campeón (la final, último partido, está finalizada).
+  const complete = official.champion != null;
 
   const profileById = new Map(profiles.map((p) => [p.id, p]));
 
@@ -120,5 +124,5 @@ export async function loadRanking(): Promise<RankingResult> {
     return { ...r, rank };
   });
 
-  return { lockAt, locked: true, hasResults, rows };
+  return { lockAt, locked: true, hasResults, complete, rows };
 }

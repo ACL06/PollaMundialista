@@ -32,6 +32,8 @@ interface EnrollmentPrizesProps {
    * la sección de reparto, ya explicados).
    */
   podium?: PodiumWinner[] | null;
+  /** True si el torneo terminó (hay campeón) → podio definitivo; si no, provisional. */
+  podiumFinal?: boolean;
 }
 
 export function EnrollmentPrizes({
@@ -39,6 +41,7 @@ export function EnrollmentPrizes({
   preEnrolledCount,
   revealed,
   podium = null,
+  podiumFinal = false,
 }: EnrollmentPrizesProps) {
   const prizes = computePrizes(enrolledCount);
 
@@ -130,7 +133,7 @@ export function EnrollmentPrizes({
       </div>
 
       {/* Podio (solo personas, sin montos — los montos están arriba en reparto) */}
-      <Podium winners={podium} />
+      <Podium winners={podium} isFinal={podiumFinal} />
 
       {/* Reparto + empates */}
       <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground space-y-2">
@@ -268,15 +271,33 @@ function buildPodiumEntries(winners: PodiumWinner[] | null): PodiumEntry[] {
   ];
 }
 
-function Podium({ winners }: { winners: PodiumWinner[] | null }) {
+function Podium({ winners, isFinal }: { winners: PodiumWinner[] | null; isFinal: boolean }) {
   const entries = buildPodiumEntries(winners);
   const isExample = !winners || winners.length === 0;
+  // Estado del podio: ejemplo (sin resultados) → provisional (en curso) → final.
+  const status: 'example' | 'provisional' | 'final' = isExample
+    ? 'example'
+    : isFinal
+      ? 'final'
+      : 'provisional';
 
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
-      <p className="mb-3 text-center text-xs text-muted-foreground uppercase tracking-wider">
-        El podio de la polla
-      </p>
+      <div className="mb-3 flex items-center justify-center gap-2">
+        <p className="text-center text-xs text-muted-foreground uppercase tracking-wider">
+          El podio de la polla
+        </p>
+        {status === 'provisional' && (
+          <span className="inline-flex items-center rounded-full bg-tertiary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-tertiary">
+            Provisional
+          </span>
+        )}
+        {status === 'final' && (
+          <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+            Final
+          </span>
+        )}
+      </div>
       <div className="grid grid-cols-3 gap-2 items-end">
         {entries.map(({ slot, rankLabel, name, example }) => {
           const s = STEP[slot];
@@ -310,9 +331,11 @@ function Podium({ winners }: { winners: PodiumWinner[] | null }) {
         })}
       </div>
       <p className="mt-2 text-center text-[11px] text-muted-foreground">
-        {isExample
+        {status === 'example'
           ? 'Ejemplo. El podio se arma con el ranking cuando haya resultados.'
-          : 'Top 3 del ranking. Se actualiza con los resultados oficiales.'}
+          : status === 'provisional'
+            ? 'Así va el podio por ahora — cambia a medida que avanza el Mundial.'
+            : '¡Podio final del Mundial! 🏆'}
       </p>
     </div>
   );
