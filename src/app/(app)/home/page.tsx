@@ -82,12 +82,15 @@ export default async function HomePage() {
   // las reglas y los accesos a calendario / fase de grupos.
   const isSpectator = isLocked && !isEnrolled && !isAdmin;
 
-  // Podio real (top-3 del ranking, por Nombre y Apellidos) para "Inscripción y
-  // premios". Solo cuando ya hay resultados; si no, el podio muestra el ejemplo.
+  // Podio real (puestos 1-3 del ranking, por Nombre y Apellidos) para
+  // "Inscripción y premios". Incluye TODOS los de cada puesto → tolera empates
+  // (varios en 1°, etc.). Solo con puntaje > 0; si no, el podio muestra ejemplo.
   // Sin montos: esos ya se explican en la sección de reparto.
-  const topThree = ranking.hasResults ? ranking.rows.slice(0, 3) : [];
+  const podiumRows = ranking.hasResults
+    ? ranking.rows.filter((r) => r.rank <= 3 && r.breakdown.total > 0)
+    : [];
   const podiumWinners =
-    topThree.length > 0 ? topThree.map((r) => ({ rank: r.rank, name: r.name })) : null;
+    podiumRows.length > 0 ? podiumRows.map((r) => ({ rank: r.rank, name: r.name })) : null;
   const metaCount =
     (prediction?.champion_code ? 1 : 0) +
     (prediction?.runner_up_code ? 1 : 0) +
