@@ -14,6 +14,8 @@ import {
 
 interface EnrollmentPrizesProps {
   enrolledCount: number;
+  /** Pre-inscritos: registrados que aún no confirman pago. */
+  preEnrolledCount: number;
   /** true cuando ya arrancó el torneo (partido inaugural) → se revelan montos. */
   revealed: boolean;
 }
@@ -25,7 +27,11 @@ const PODIUM_EXAMPLE = [
   { place: 3 as const, nickname: 'la_pana' },
 ];
 
-export function EnrollmentPrizes({ enrolledCount, revealed }: EnrollmentPrizesProps) {
+export function EnrollmentPrizes({
+  enrolledCount,
+  preEnrolledCount,
+  revealed,
+}: EnrollmentPrizesProps) {
   const prizes = computePrizes(enrolledCount);
   const prizeByPlace: Record<number, number> = {
     1: prizes.podium[0],
@@ -53,7 +59,7 @@ export function EnrollmentPrizes({ enrolledCount, revealed }: EnrollmentPrizesPr
         <Fact
           label="Inscritos"
           value={String(enrolledCount)}
-          hint={enrolledCount === 1 ? 'participante' : 'participantes'}
+          hint={`+ ${preEnrolledCount} pre-inscrito${preEnrolledCount === 1 ? '' : 's'}`}
           icon={<Users className="h-5 w-5 text-tertiary" />}
         />
       </div>
@@ -65,8 +71,8 @@ export function EnrollmentPrizes({ enrolledCount, revealed }: EnrollmentPrizesPr
           Cómo pagar tu inscripción
         </h3>
         <p className="text-sm text-muted-foreground">
-          Consigna a esta llave <span className="font-medium text-foreground">Bre-B</span> y avísale al
-          administrador para que te marque como inscrito.
+          Consigna a esta llave <span className="font-medium text-foreground">Bre-B</span> y guarda tu
+          comprobante de pago, lo necesitarás más adelante.
         </p>
         <div className="flex flex-col gap-1 rounded-md bg-muted/40 p-3 text-sm">
           <div className="flex items-center justify-between gap-3">
@@ -86,7 +92,7 @@ export function EnrollmentPrizes({ enrolledCount, revealed }: EnrollmentPrizesPr
         <div className="flex items-start gap-2.5 rounded-md border border-tertiary/30 bg-tertiary/10 p-3 text-sm text-foreground">
           <MessageCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-tertiary" />
           <p>
-            Luego de pagar, <span className="font-semibold">envía el comprobante</span> al WhatsApp{' '}
+            Luego de consignar, <span className="font-semibold">envía el comprobante</span> al WhatsApp{' '}
             <a
               href={PAYMENT_WHATSAPP_URL}
               target="_blank"
@@ -222,10 +228,12 @@ function Row({
   );
 }
 
+// Colores de podio: oro / plata / bronce, en tintes suaves para no romper el
+// diseño (mismo enfoque que ya usaban los íconos de medalla).
 const STEP: Record<number, { h: string; bar: string; icon: React.ReactNode }> = {
-  1: { h: 'h-24', bar: 'bg-primary/15 border-primary/40', icon: <Crown className="h-5 w-5 text-amber-500 fill-amber-400" /> },
-  2: { h: 'h-16', bar: 'bg-muted border-border', icon: <Medal className="h-4 w-4 text-zinc-400" /> },
-  3: { h: 'h-12', bar: 'bg-muted border-border', icon: <Medal className="h-4 w-4 text-amber-700" /> },
+  1: { h: 'h-24', bar: 'bg-amber-400/15 border-amber-400/50', icon: <Crown className="h-5 w-5 text-amber-500 fill-amber-400" /> },
+  2: { h: 'h-16', bar: 'bg-zinc-400/15 border-zinc-400/50', icon: <Medal className="h-4 w-4 text-zinc-400 fill-zinc-300" /> },
+  3: { h: 'h-12', bar: 'bg-amber-700/15 border-amber-700/50', icon: <Medal className="h-4 w-4 text-amber-700 fill-amber-700/40" /> },
 };
 
 function Podium({

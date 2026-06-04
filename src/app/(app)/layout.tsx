@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Logo } from '@/components/shared/Logo';
 import { TabNav } from '@/components/app/TabNav';
-import { UserBadge } from '@/components/app/UserBadge';
 import { ProfileMenu } from '@/components/app/ProfileMenu';
 import { NotEnrolledScreen } from '@/components/app/NotEnrolledScreen';
 import { EnrollmentReminderModal } from '@/components/app/EnrollmentReminderModal';
@@ -66,12 +65,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           <Logo variant="full" width={180} height={45} />
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <UserBadge
-              firstName={profile.first_name}
-              lastName={profile.last_name}
-              favoriteTeam={favoriteTeam}
-            />
-            <div className="h-6 w-px bg-border" aria-hidden="true" />
             <ProfileMenu
               email={profile.email ?? user.email ?? ''}
               avatarUrl={profile.avatar_url}
@@ -79,7 +72,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               lastName={profile.last_name}
               nickname={profile.nickname}
               phone={profile.phone}
-              favoriteTeam={profile.favorite_team ?? null}
+              favoriteTeam={favoriteTeam}
             />
             <ThemeToggle />
             <LogoutButton />

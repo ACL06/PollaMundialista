@@ -25,6 +25,7 @@ export default async function HomePage() {
     scoresCountResult,
     bracketCountResult,
     enrolledCountResult,
+    registeredCountResult,
     lockAt,
     ranking,
   ] = await Promise.all([
@@ -52,6 +53,9 @@ export default async function HomePage() {
         .from('public_profiles')
         .select('*', { count: 'exact', head: true })
         .eq('is_enrolled', true),
+      supabase
+        .from('public_profiles')
+        .select('*', { count: 'exact', head: true }),
       getPredictionsLockAt(),
       loadRanking(),
     ]);
@@ -70,6 +74,9 @@ export default async function HomePage() {
   const scoresCount = scoresCountResult.count ?? 0;
   const bracketCount = bracketCountResult.count ?? 0;
   const enrolledCount = enrolledCountResult.count ?? 0;
+  const registeredCount = registeredCountResult.count ?? 0;
+  const preEnrolledCount = Math.max(0, registeredCount - enrolledCount);
+  const isEnrolled = profile?.is_enrolled ?? false;
   const metaCount =
     (prediction?.champion_code ? 1 : 0) +
     (prediction?.runner_up_code ? 1 : 0) +
@@ -142,6 +149,7 @@ export default async function HomePage() {
           scoresCount={scoresCount}
           bracketCount={bracketCount}
           metaCount={metaCount}
+          isEnrolled={isEnrolled}
         />
       )}
 
@@ -149,7 +157,11 @@ export default async function HomePage() {
       <GameRules />
 
       {/* Inscripción y premios */}
-      <EnrollmentPrizes enrolledCount={enrolledCount} revealed={isLocked} />
+      <EnrollmentPrizes
+        enrolledCount={enrolledCount}
+        preEnrolledCount={preEnrolledCount}
+        revealed={isLocked}
+      />
 
       {/* Explora */}
       <div className="flex flex-col gap-4">

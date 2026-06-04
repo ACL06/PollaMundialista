@@ -33,7 +33,7 @@
 - Workflows GitHub Actions (CI lint/typecheck/**test**/build + keep-alive Supabase cada 6 días)
 - Deploy automático en Vercel; Vercel Analytics + Speed Insights
 - Footer global "By Álvaro Castaño"; UserBadge en header (nombre + bandera del equipo favorito)
-- **Modal de editar perfil** desde el header (avatar clickeable): edita **avatar** (galería DiceBear + "Otras opciones"), nombre/apellidos/nickname/celular y **equipo favorito**; el email se muestra pero no se edita (PR #29 + avatar/equipo)
+- **Modal de editar perfil** desde el header (avatar **o** nombre/bandera clickeables — el `UserBadge` vive dentro de `ProfileMenu`): edita **avatar** (galería DiceBear + "Otras opciones"), nombre/apellidos/nickname/celular y **equipo favorito**; el email se muestra pero no se edita (PR #29 + avatar/equipo)
 
 #### Perfil (Fase 2 + 2.1)
 - Onboarding en una pantalla: avatar (galería de 6 DiceBear), nombre, apellidos, celular colombiano (10 díg., empieza por 3), nickname único, equipo favorito
@@ -93,7 +93,7 @@
 
 #### Inscripción y premios (Fase 10)
 - **10A** — `profiles.is_enrolled` + admin (ver Panel admin).
-- **10B** — Sección **Inscripción y premios** en `/home` (entre Reglas y Explora, `EnrollmentPrizes`): estado pre-inscrito/inscrito, costo (`ENROLLMENT_COST_COP` = $50.000, configurable), contador de inscritos (de `public_profiles`), **monto acumulado** que **se revela en el partido inaugural** (gate `isLockedAt`), reparto **10% administración + podio 70/20/10** (`src/lib/prizes.ts` `computePrizes` con `ADMIN_CUT`, con tests), regla de **empates** (movida desde `game-rules.ts`), sección **"Cómo pagar"** (llave Bre-B `BREB_KEY`/`BREB_HOLDER` + aviso azul de **enviar comprobante** al WhatsApp `PAYMENT_WHATSAPP_DISPLAY`/`PAYMENT_WHATSAPP_URL`) y botón al **grupo de WhatsApp** (`WHATSAPP_GROUP_URL`). Podio gráfico con datos de ejemplo.
+- **10B** — Sección **Inscripción y premios** en `/home` (entre Reglas y Explora, `EnrollmentPrizes`): estado pre-inscrito/inscrito, costo (`ENROLLMENT_COST_COP` = $50.000, configurable), contador de **inscritos + pre-inscritos** (de `public_profiles`), **monto acumulado** que **se revela en el partido inaugural** (gate `isLockedAt`), reparto **10% administración + podio 70/20/10** (`src/lib/prizes.ts` `computePrizes` con `ADMIN_CUT`, con tests), regla de **empates** (movida desde `game-rules.ts`), sección **"Cómo pagar"** (llave Bre-B `BREB_KEY`/`BREB_HOLDER` + aviso azul de **enviar comprobante** al WhatsApp `PAYMENT_WHATSAPP_DISPLAY`/`PAYMENT_WHATSAPP_URL`) y botón al **grupo de WhatsApp** (`WHATSAPP_GROUP_URL`). Podio gráfico con datos de ejemplo.
 - **Badge de estado** bajo el saludo en `/home` (`EnrollmentBadge`): rojo = pre-inscrito, verde = inscrito.
 - **10C — Acceso de pre-inscritos** (todo app-layer, sin SQL):
   - **Gate** en `AppLayout`: al pasar el lock global, un usuario con `!is_enrolled && !is_admin` ve `NotEnrolledScreen` (sin acceso a las rutas privadas).

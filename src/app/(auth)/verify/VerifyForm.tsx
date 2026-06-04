@@ -87,6 +87,10 @@ export function VerifyForm({ email }: VerifyFormProps) {
             Enviamos un código a{' '}
             <span className="font-medium text-foreground">{maskEmail(email)}</span>
           </p>
+          <p className="text-xs text-muted-foreground">
+            ¿No lo ves en tu bandeja de entrada? Revisa la carpeta de{' '}
+            <span className="font-medium text-foreground">spam</span> o correo no deseado.
+          </p>
         </div>
       </div>
 
