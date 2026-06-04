@@ -57,7 +57,7 @@
   3. **Bracket** — Eliminatorias de 32→Semis, subset + cascada al deseleccionar, **regla 2-3 por grupo** en R32, agrupado por grupo
   4. **Cierre** — campeón/subcampeón/tercer lugar (entre los 4 semifinalistas), marcador exacto de la final (bonus), goleador (texto libre)
   5. **Revisión** — resumen + submit que setea `locked_at` (marca "enviado"; sigue editable hasta el lock global)
-- Autosave por server action; `editBlockReason()` bloquea edición tras submit propio o lock global
+- Autosave por server action; `editBlockReason()` bloquea edición tras lock global y devuelve `{ locked: true }` → el wizard hace `router.refresh()` y cambia a read-only (autocorrige un dispositivo con el reloj atrasado, que veía la UI editable de más)
 - **Vista read-only** (`PredictionView`, Fase 4C): cuando enviaste o cerró el plazo, en vez del wizard se muestra el pronóstico completo (reusada también en Comunidad)
 - **Indicadores en /home** (Fase 4E): **pre-lock** `PredictionStatusCard` (countdown + progreso X/137 + CTA según estado); **post-lock** `HomeStandingCard` (tu posición #/total + pts + exactos, o estado de espera si aún no hay resultados, + accesos a Ranking/Comunidad/Mi pronóstico). La píldora "Tu posición" del encabezado se retiró: la tarjeta post-lock la absorbe
 - **Pestaña Eliminatorias** (Fase 9B+9C, `PronosticosTabs` + `KnockoutScoresPanel`): `/pronosticos` tiene 2 tabs — *Mi pronóstico* (wizard/read-only) y *Eliminatorias* (marcadores de R32..3er lugar). Cada partido: `pending` (cruce tipo calendario) → `open` (inputs + autosave vía `saveKnockoutScore`) → `closed` (read-only) según `knockoutMatchState()`. Puntúan 5/2 en el scoring y ranking (9C)
@@ -158,7 +158,7 @@
 - Las 3 tablas de predicción + reactions: **SELECT propio siempre + SELECT público post-lock** (`now() >= predictions_lock_at()`). INSERT/UPDATE/DELETE propio y solo antes del lock (predicciones) o post-lock (reacciones).
 
 ### Funciones SQL
-- `predictions_lock_at()` — `kicks_off_at` del match #1 (lock global dinámico).
+- `predictions_lock_at()` — `kicks_off_at` del match #1 (lock global dinámico). En el cliente JS, `getPredictionsLockAt()` (`src/lib/predictions-lock.ts`) lee ese kickoff con **`unstable_cache`** (cliente anon sin cookies, revalidate 1h — dato casi inmutable; fallback al cliente autenticado si el anon no pudiera leer) y se envuelve en **`cache()` de React** para deduplicar por request. El "está cerrado" siempre se compara contra `new Date()` del **servidor** (inmune al reloj del dispositivo).
 - `is_admin()` — security definer, lee `profiles.is_admin` de `auth.uid()`.
 - `knockout_match_editable(match_id)` / `knockout_match_started(match_id)` — security definer; lock **por partido** de los marcadores de eliminatoria (editable = stage R32..3er + ambos equipos + `now() < kickoff`; started = `now() >= kickoff`, abre lectura pública).
 - `handle_new_user`, `set_updated_at`, `predictions_locked_at_immutable` — triggers.

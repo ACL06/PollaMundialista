@@ -16,6 +16,8 @@ import {
 
 interface ActionResult {
   error?: string;
+  /** true si el rechazo fue por el lock global (plazo cerrado) → la UI pasa a read-only. */
+  locked?: boolean;
 }
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -65,7 +67,7 @@ export async function saveGroupScore(input: {
   }
 
   const blocked = await editBlockReason(supabase);
-  if (blocked) return { error: blocked };
+  if (blocked) return { error: blocked, locked: true };
 
   const { error } = await supabase.from('prediction_group_scores').upsert({
     user_id: user.id,
@@ -176,7 +178,7 @@ export async function toggleBracketTeam(input: {
   }
 
   const blocked = await editBlockReason(supabase);
-  if (blocked) return { error: blocked };
+  if (blocked) return { error: blocked, locked: true };
 
   if (selected) {
     // ¿Ya estaba? → no-op idempotente
@@ -319,7 +321,7 @@ export async function savePredictionMeta(input: {
   }
 
   const blocked = await editBlockReason(supabase);
-  if (blocked) return { error: blocked };
+  if (blocked) return { error: blocked, locked: true };
 
   // Solo incluir las claves definidas (las que el cliente quiso tocar).
   const row: Record<string, unknown> = { user_id: user.id };
@@ -354,7 +356,7 @@ export async function submitPrediction(): Promise<ActionResult> {
   }
 
   const blocked = await editBlockReason(supabase);
-  if (blocked) return { error: blocked };
+  if (blocked) return { error: blocked, locked: true };
 
   // Si ya está enviado, no reescribir locked_at (idempotente).
   const { data: existing } = await supabase
