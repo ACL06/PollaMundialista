@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/Input';
 import { NAME_REGEX, WORLD_CUP_TEAMS } from '@/lib/validators/profile';
 import { getAvatarVariants } from '@/lib/avatar';
 import { cn } from '@/lib/utils';
+import { UserBadge } from '@/components/app/UserBadge';
+import type { Team } from '@/lib/types/match';
 import { updateProfile } from '@/app/(app)/actions';
 
 interface ProfileMenuProps {
@@ -19,7 +21,8 @@ interface ProfileMenuProps {
   lastName: string;
   nickname: string;
   phone: string;
-  favoriteTeam: string | null;
+  /** Equipo favorito (objeto Team con bandera) para el badge y el modal. */
+  favoriteTeam: Team | null;
 }
 
 function sanitizePhone(v: string): string {
@@ -46,30 +49,56 @@ export function ProfileMenu({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Editar mi perfil"
-        className={cn(
-          'h-9 w-9 rounded-full overflow-hidden border border-border bg-muted flex-shrink-0',
-          'transition-transform hover:scale-105',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-        )}
-      >
-        {avatarUrl ? (
-          <Image src={avatarUrl} alt="" width={36} height={36} unoptimized className="h-full w-full" />
-        ) : (
-          <span className="flex h-full w-full items-center justify-center text-muted-foreground">
-            <User className="h-4 w-4" />
-          </span>
-        )}
-      </button>
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        {/* Nombre + bandera (también abre el perfil) */}
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Editar mi perfil"
+          title="Editar mi perfil"
+          className={cn(
+            'min-w-0 rounded-md px-1.5 py-1 hover:bg-muted transition-colors',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
+          )}
+        >
+          <UserBadge firstName={firstName} lastName={lastName} favoriteTeam={favoriteTeam} />
+        </button>
+
+        <div className="h-6 w-px bg-border" aria-hidden="true" />
+
+        {/* Avatar */}
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Editar mi perfil"
+          className={cn(
+            'h-9 w-9 rounded-full overflow-hidden border border-border bg-muted flex-shrink-0',
+            'transition-transform hover:scale-105',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          )}
+        >
+          {avatarUrl ? (
+            <Image src={avatarUrl} alt="" width={36} height={36} unoptimized className="h-full w-full" />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center text-muted-foreground">
+              <User className="h-4 w-4" />
+            </span>
+          )}
+        </button>
+      </div>
 
       <ProfileModal
         open={open}
         onClose={() => setOpen(false)}
         email={email}
-        initial={{ firstName, lastName, nickname, phone, avatarUrl, favoriteTeam }}
+        initial={{
+          firstName,
+          lastName,
+          nickname,
+          phone,
+          avatarUrl,
+          favoriteTeam: favoriteTeam?.code ?? null,
+        }}
         onSaved={() => {
           setOpen(false);
           router.refresh(); // refresca los server components (header, etc.)

@@ -11,6 +11,8 @@ interface PredictionStatusCardProps {
   scoresCount: number; // 0-72
   bracketCount: number; // 0-60
   metaCount: number; // 0-5 (campeón, sub, 3ero, marcador final, goleador)
+  /** Si el usuario aún es pre-inscrito, mostramos que su avance no se pierde. */
+  isEnrolled: boolean;
 }
 
 const TOTAL_GROUP = 72;
@@ -37,6 +39,7 @@ export function PredictionStatusCard({
   scoresCount,
   bracketCount,
   metaCount,
+  isEnrolled,
 }: PredictionStatusCardProps) {
   const filled = scoresCount + bracketCount + metaCount;
   const pct = Math.round((filled / TOTAL_DECISIONS) * 100);
@@ -134,6 +137,14 @@ export function PredictionStatusCard({
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
+
+      {!isEnrolled && (
+        <p className="text-xs text-muted-foreground">
+          Puedes hacer todo tu proceso mientras estás pre-inscrito. Cuando te inscribas, la
+          información que ya hayas registrado <span className="font-medium text-foreground">no se
+          perderá</span>.
+        </p>
+      )}
     </Card>
   );
 }
