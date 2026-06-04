@@ -37,7 +37,12 @@ function normalizeMatches(rows: unknown[]): Match[] {
   }) as unknown as Match[];
 }
 
-export default async function PronosticosPage() {
+export default async function PronosticosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const initialTab = (await searchParams)?.tab === 'eliminatorias' ? 'eliminatorias' : 'mio';
   const supabase = await createClient();
   const {
     data: { user },
@@ -121,6 +126,7 @@ export default async function PronosticosPage() {
 
   return (
     <PronosticosTabs
+      initialTab={initialTab}
       miPronostico={miPronostico}
       eliminatorias={
         <KnockoutScoresPanel

@@ -8,6 +8,8 @@ interface PronosticosTabsProps {
   miPronostico: ReactNode;
   /** Panel de marcadores de eliminatoria (captura por partido). */
   eliminatorias: ReactNode;
+  /** Pestaña inicial (deep-link `?tab=eliminatorias` desde el aviso de /home). */
+  initialTab?: 'mio' | 'eliminatorias';
 }
 
 /**
@@ -16,8 +18,8 @@ interface PronosticosTabsProps {
  * que abre por partido). Ambos paneles se mantienen montados y se alternan
  * con `hidden` para no perder el estado en curso al cambiar de pestaña.
  */
-export function PronosticosTabs({ miPronostico, eliminatorias }: PronosticosTabsProps) {
-  const [tab, setTab] = useState<'mio' | 'eliminatorias'>('mio');
+export function PronosticosTabs({ miPronostico, eliminatorias, initialTab = 'mio' }: PronosticosTabsProps) {
+  const [tab, setTab] = useState<'mio' | 'eliminatorias'>(initialTab);
 
   return (
     <div>
