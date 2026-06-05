@@ -24,6 +24,18 @@ interface ActionResult {
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
 /**
+ * Invalida el caché de las vistas que dependen del pronóstico del usuario,
+ * para que tras un autosave los cambios se reflejen al NAVEGAR (sin recarga
+ * dura). Sin esto, el Router Cache de Next reusa el render viejo de
+ * /pronosticos y los marcadores recién guardados se ven vacíos hasta que el
+ * usuario recarga la página. /home tiene la tarjeta de progreso/estado.
+ */
+function revalidatePredictionViews() {
+  revalidatePath('/pronosticos');
+  revalidatePath('/home');
+}
+
+/**
  * Devuelve un mensaje si el usuario NO puede editar su pronóstico.
  * El único bloqueo es el **lock global** (kickoff del match #1): mientras el
  * Mundial no arranca, el usuario puede seguir editando aunque ya haya
@@ -82,6 +94,7 @@ export async function saveGroupScore(input: {
     return { error: 'No pudimos guardar el marcador. Intenta de nuevo.' };
   }
 
+  revalidatePredictionViews();
   return {};
 }
 
@@ -142,8 +155,9 @@ export async function saveKnockoutScore(input: {
     return { error: 'No pudimos guardar el marcador. Intenta de nuevo.' };
   }
 
-  // Refresca el contador de "cruces abiertos" del aviso en /home sin reload.
-  revalidatePath('/home');
+  // Refresca /pronosticos (pestaña Eliminatorias) y el contador de "cruces
+  // abiertos" del aviso en /home, para que se reflejen al navegar sin reload.
+  revalidatePredictionViews();
   return {};
 }
 
@@ -279,6 +293,7 @@ export async function toggleBracketTeam(input: {
       console.error('[toggleBracketTeam] insert', error.message);
       return { error: 'No pudimos guardar. Intenta de nuevo.' };
     }
+    revalidatePredictionViews();
     return {};
   }
 
@@ -293,6 +308,7 @@ export async function toggleBracketTeam(input: {
     console.error('[toggleBracketTeam] delete', error.message);
     return { error: 'No pudimos guardar. Intenta de nuevo.' };
   }
+  revalidatePredictionViews();
   return {};
 }
 
@@ -338,6 +354,7 @@ export async function savePredictionMeta(input: {
     return { error: 'No pudimos guardar. Intenta de nuevo.' };
   }
 
+  revalidatePredictionViews();
   return {};
 }
 
@@ -377,5 +394,6 @@ export async function submitPrediction(): Promise<ActionResult> {
     return { error: 'No pudimos enviar tu pronóstico. Intenta de nuevo.' };
   }
 
+  revalidatePredictionViews();
   return {};
 }
