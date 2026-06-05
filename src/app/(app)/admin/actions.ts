@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 
 interface ActionResult {
@@ -7,6 +8,15 @@ interface ActionResult {
 }
 
 const VALID_STATUS = new Set(['scheduled', 'live', 'final']);
+
+// Vistas que dependen de los resultados/estado oficiales del torneo. Tras una
+// mutación del admin las marcamos obsoletas para que reflejen el cambio en la
+// próxima navegación de cualquier usuario (sin depender de que expire el caché
+// del router). Es barato: solo invalida; no re-renderiza nada al instante.
+const RESULT_VIEWS = ['/home', '/calendar', '/grupos', '/ranking', '/comunidad', '/pronosticos'];
+function revalidateResultViews() {
+  for (const path of RESULT_VIEWS) revalidatePath(path);
+}
 
 /** Verifica que el usuario actual sea admin. Devuelve el client + userId o un error. */
 async function requireAdmin() {
@@ -60,6 +70,7 @@ export async function saveMatchResult(input: {
     console.error('[saveMatchResult]', error.message);
     return { error: 'No pudimos guardar el resultado. Intenta de nuevo.' };
   }
+  revalidateResultViews();
   return {};
 }
 
@@ -118,6 +129,7 @@ export async function saveKnockoutMatch(input: {
     console.error('[saveKnockoutMatch]', error.message);
     return { error: 'No pudimos guardar el partido. Intenta de nuevo.' };
   }
+  revalidateResultViews();
   return {};
 }
 
@@ -146,6 +158,7 @@ export async function setEnrollment(input: {
     console.error('[setEnrollment]', error.message);
     return { error: 'No pudimos actualizar la inscripción. Intenta de nuevo.' };
   }
+  revalidateResultViews();
   return {};
 }
 
@@ -168,5 +181,6 @@ export async function saveTopScorer(name: string | null): Promise<ActionResult> 
     console.error('[saveTopScorer]', error.message);
     return { error: 'No pudimos guardar el goleador. Intenta de nuevo.' };
   }
+  revalidateResultViews();
   return {};
 }
