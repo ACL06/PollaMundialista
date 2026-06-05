@@ -25,15 +25,17 @@ export default async function ComunidadPage() {
   if (!user) redirect('/login');
 
   // Modo espectador (post-lock, no inscrito): Comunidad queda bloqueada.
-  const { isSpectator } = await getViewerAccess();
+  const { isSpectator, isAdmin } = await getViewerAccess();
   if (isSpectator) return <SpectatorBlocked />;
 
   const lockAt = await getPredictionsLockAt();
   const locked = isLockedAt(lockAt);
 
-  // Gate: antes del lock, los pronósticos de otros NO se muestran (para
-  // que nadie copie). Solo se abren cuando arranca el Mundial.
-  if (!locked) {
+  // Gate: antes del lock, los pronósticos de otros NO se muestran (para que
+  // nadie copie). Solo se abren cuando arranca el Mundial. Excepción: el ADMIN
+  // (organizador, no compite) puede previsualizar/monitorear antes del lock; la
+  // lectura de los demás la habilita la RLS con `or is_admin()`.
+  if (!locked && !isAdmin) {
     return (
       <div className="max-w-xl mx-auto px-5 py-16 text-center flex flex-col items-center gap-5">
         <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
