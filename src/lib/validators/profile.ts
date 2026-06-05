@@ -56,38 +56,38 @@ export const WORLD_CUP_TEAMS = [
 // Explícitamente NO se permiten números, guiones, apóstrofes ni otros símbolos.
 // Exportado porque el form también lo usa para validación inline en vivo.
 export const NAME_REGEX = /^[\p{L}\s]+$/u;
-const NAME_ERROR = 'Solo letras y espacios, sin números ni símbolos';
-
 // Celular colombiano: exactamente 10 dígitos empezando por 3.
 const PHONE_REGEX = /^3\d{9}$/;
-const PHONE_ERROR = 'Debe ser un celular de 10 dígitos que empiece por 3';
+const PHONE_ERROR = 'Celular: deben ser 10 dígitos que empiecen por 3';
 
 // Helper para campos de nombre: trim primero, luego validar largo y regex.
-// Sin el trim previo, alguien escribiendo "  " (solo espacios) pasaba el
-// min(2) y se guardaba como "" tras el .transform — bypass + bucle de
-// redirect en AppLayout porque "" es falsy. El `pipe` aplica las reglas
+// Recibe la etiqueta ("Nombre"/"Apellidos") para que el mensaje diga DE QUÉ
+// campo se trata. Sin el trim previo, alguien escribiendo "  " (solo espacios)
+// pasaba el min(2) y se guardaba como "" tras el .transform — bypass + bucle
+// de redirect en AppLayout porque "" es falsy. El `pipe` aplica las reglas
 // sobre el valor ya transformado.
-const nameField = () =>
+const nameField = (label: string) =>
   z
     .string()
-    .max(50, 'Máximo 50 caracteres')
+    .max(50, `${label}: máximo 50 caracteres`)
     .transform((v) => v.trim())
     .pipe(
       z
         .string()
-        .min(2, 'Mínimo 2 caracteres')
-        .regex(NAME_REGEX, NAME_ERROR),
+        .min(2, `${label}: mínimo 2 caracteres`)
+        .regex(NAME_REGEX, `${label}: solo letras y espacios, sin números ni símbolos`),
     );
 
 export const profileSchema = z.object({
-  first_name: nameField(),
-  last_name: nameField(),
+  first_name: nameField('Nombre'),
+  last_name: nameField('Apellidos'),
   phone: z.string().regex(PHONE_REGEX, PHONE_ERROR),
   nickname: z
     .string()
-    .min(3, 'Mínimo 3 caracteres')
-    .max(20, 'Máximo 20 caracteres')
-    .regex(/^[a-zA-Z0-9_.\-]+$/, 'Solo letras, números, puntos, guiones y guiones bajos')
+    .min(3, 'Nickname: mínimo 3 caracteres')
+    .max(20, 'Nickname: máximo 20 caracteres')
+    // Letras Unicode (incluye ñ/Ñ y acentos), números, punto, guion y guion bajo.
+    .regex(/^[\p{L}0-9._-]+$/u, 'Nickname: solo letras, números, puntos, guiones y guiones bajos')
     .transform((v) => v.trim()),
   favorite_team: z.string().nullable().optional(),
   // Validación estricta: solo URLs de DiceBear con estructura conocida

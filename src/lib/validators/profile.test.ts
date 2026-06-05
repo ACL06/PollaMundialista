@@ -39,4 +39,11 @@ describe('profileUpdateSchema', () => {
     expect(profileUpdateSchema.safeParse({ ...valid, nickname: 'con espacio' }).success).toBe(false);
     expect(profileUpdateSchema.safeParse({ ...valid, nickname: 'a.b_c-1' }).success).toBe(true);
   });
+
+  it('nickname: admite ñ/Ñ y acentos (letras Unicode)', () => {
+    expect(profileUpdateSchema.safeParse({ ...valid, nickname: 'Toño' }).success).toBe(true);
+    expect(profileUpdateSchema.safeParse({ ...valid, nickname: 'Ñoño10' }).success).toBe(true);
+    expect(profileUpdateSchema.safeParse({ ...valid, nickname: 'José_99' }).success).toBe(true);
+    expect(profileUpdateSchema.safeParse({ ...valid, nickname: 'crack@7' }).success).toBe(false); // @ no
+  });
 });
