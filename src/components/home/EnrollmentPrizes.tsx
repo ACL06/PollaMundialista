@@ -307,7 +307,10 @@ function Podium({ winners, isFinal }: { winners: PodiumWinner[] | null; isFinal:
               >
                 {s.icon}
               </span>
-              <div className="flex min-h-[2.6em] w-full flex-col items-center justify-center">
+              {/* min-h reserva ~2 líneas para que las columnas con empate
+                  (carrusel) alineen con las de un solo nombre, sin dejar tanto
+                  espacio hacia la escalera. */}
+              <div className="flex min-h-[1.75rem] w-full flex-col items-center justify-center">
                 <PodiumNames names={users.map((u) => u.name)} muted={isExample} />
               </div>
               <div
