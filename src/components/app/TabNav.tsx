@@ -31,11 +31,13 @@ export function TabNav({ isSpectator = false }: { isSpectator?: boolean }) {
       {/* En mobile las pestañas no caben: scroll SOLO horizontal
         * (touch-pan-x + overscroll-x-contain evitan el arrastre diagonal/vertical),
         * la pestaña activa queda centrada y un degradado a la derecha insinúa que
-        * hay más. */}
+        * hay más. En desktop (lg+) SÍ caben todas, así que se centran
+        * (`lg:justify-center`) — sin justify-center en mobile para no romper el
+        * scroll (con overflow, justify-center oculta el inicio inalcanzable). */}
       <div className="relative max-w-6xl mx-auto">
         <div
           ref={containerRef}
-          className="flex gap-1 overflow-x-auto overflow-y-hidden touch-pan-x overscroll-x-contain scroll-smooth px-5"
+          className="flex gap-1 overflow-x-auto overflow-y-hidden touch-pan-x overscroll-x-contain scroll-smooth px-5 lg:justify-center"
         >
           {visibleTabs.map(({ href, label, Icon }) => {
           const isActive = href === activeHref;
