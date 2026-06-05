@@ -9,7 +9,6 @@ import { Logo } from '@/components/shared/Logo';
 import { OtpInput } from '@/components/auth/OtpInput';
 import { ResendButton } from '@/components/auth/ResendButton';
 import { verifyOtp } from './actions';
-import { maskEmail } from '@/lib/utils';
 
 interface VerifyFormProps {
   email: string;
@@ -85,7 +84,7 @@ export function VerifyForm({ email }: VerifyFormProps) {
           </h1>
           <p className="text-sm text-muted-foreground">
             Enviamos un código a{' '}
-            <span className="font-medium text-foreground">{maskEmail(email)}</span>
+            <span className="font-medium text-foreground break-all">{email}</span>
           </p>
           <p className="text-xs text-muted-foreground">
             ¿No lo ves en tu bandeja de entrada? Revisa la carpeta de{' '}
