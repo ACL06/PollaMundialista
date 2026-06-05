@@ -19,6 +19,8 @@ interface ActionResult {
   error?: string;
   /** true si el rechazo fue por el lock global (plazo cerrado) → la UI pasa a read-only. */
   locked?: boolean;
+  /** true si el rechazo fue porque ESE partido de eliminatoria ya arrancó → la tarjeta se cierra. */
+  started?: boolean;
 }
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -140,7 +142,7 @@ export async function saveKnockoutScore(input: {
     return { error: 'Este cruce todavía no tiene equipos definidos' };
   }
   if (new Date() >= new Date(match.kicks_off_at)) {
-    return { error: 'Este partido ya comenzó; no se puede modificar' };
+    return { error: 'Este partido ya comenzó; no se puede modificar', started: true };
   }
 
   const { error } = await supabase.from('prediction_knockout_scores').upsert({

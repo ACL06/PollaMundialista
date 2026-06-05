@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ import { GroupScoresStep, type GroupScoreDraft } from './steps/GroupScoresStep';
 import { BracketStep } from './steps/BracketStep';
 import { ClosingStep } from './steps/ClosingStep';
 import { ReviewStep } from './steps/ReviewStep';
+import { LockNoticeModal } from './LockNoticeModal';
 import {
   saveGroupScore,
   toggleBracketTeam,
@@ -98,17 +99,42 @@ export function PredictionWizard({
   const [currentIndex, setCurrentIndex] = useState(0);
   // `submittedNow` cubre el envío hecho en esta misma sesión (sin recargar).
   const [submittedNow, setSubmittedNow] = useState(false);
+  // `lockClosed` = el plazo global cayó mientras el usuario estaba en esta
+  // pantalla (lo detecta el timer de abajo o un autosave rechazado). Congela
+  // los inputs y dispara el aviso; al cerrarlo se refresca a la vista read-only.
+  const [lockClosed, setLockClosed] = useState(false);
 
-  // Si un autosave es rechazado por el lock global (plazo cerrado), refrescamos:
-  // el server component re-renderiza y, con la hora del servidor, muestra la
-  // vista read-only. Corrige el caso de un dispositivo con el reloj atrasado
-  // (la UI se veía editable, pero el guardado falla → acá se autocorrige).
+  // Si un autosave es rechazado por el lock global (plazo cerrado), o el timer
+  // detecta que ya cayó, mostramos el aviso y congelamos la edición. Corrige
+  // también el caso de un dispositivo con el reloj atrasado (la UI se veía
+  // editable, pero el guardado falla → acá se autocorrige al cerrar el aviso).
   const reflectLockClosed = (result: { locked?: boolean }) => {
-    if (result.locked) router.refresh();
+    if (result.locked) setLockClosed(true);
   };
 
-  const isLocked = lockAt ? new Date() >= new Date(lockAt) : false;
+  const lockReached = lockAt ? new Date() >= new Date(lockAt) : false;
+  const isLocked = lockReached || lockClosed;
   const isSubmitted = initialPrediction?.locked_at != null || submittedNow;
+
+  // Detecta el lock global aunque el usuario esté quieto (sin teclear ni
+  // navegar): chequea cada 15s y, al llegar la hora de cierre, congela la UI
+  // y muestra el aviso. La hora real la sigue validando el servidor en cada
+  // guardado; esto es solo para reflejarlo proactivamente en pantalla.
+  useEffect(() => {
+    if (!lockAt) return;
+    const target = new Date(lockAt).getTime();
+    if (Date.now() >= target) {
+      setLockClosed(true);
+      return;
+    }
+    const id = setInterval(() => {
+      if (Date.now() >= target) {
+        setLockClosed(true);
+        clearInterval(id);
+      }
+    }, 15_000);
+    return () => clearInterval(id);
+  }, [lockAt]);
 
   // ── State del step "Marcadores" ──────────────────────────────────
   // Sube al wizard para persistir cuando el usuario cambia de step.
@@ -604,6 +630,14 @@ export function PredictionWizard({
           />
         )}
       </section>
+
+      <LockNoticeModal
+        open={lockClosed}
+        title="El plazo ya cerró"
+        message="El Mundial arrancó y el plazo para registrar o editar tu pronóstico se cerró. Tu pronóstico quedó tal como estaba en el último guardado."
+        actionLabel="Ver mi pronóstico"
+        onAcknowledge={() => router.refresh()}
+      />
     </div>
   );
 }

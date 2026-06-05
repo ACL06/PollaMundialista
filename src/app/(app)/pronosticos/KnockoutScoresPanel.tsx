@@ -13,6 +13,7 @@ import {
   type KnockoutScoreStage,
 } from '@/lib/knockout-window';
 import { saveKnockoutScore } from './actions';
+import { LockNoticeModal } from './LockNoticeModal';
 import type { Match } from '@/lib/types/match';
 import type { PredictionKnockoutScore } from '@/lib/types/prediction';
 
@@ -72,6 +73,8 @@ export function KnockoutScoresPanel({ matches, initialScores, nowIso }: Knockout
     () => new Set(initialScores.map((s) => s.match_id)),
   );
   const [errors, setErrors] = useState<Map<string, string>>(() => new Map());
+  // Aviso "el partido ya arrancó" cuando un guardado se rechaza por kickoff.
+  const [closedNotice, setClosedNotice] = useState(false);
   const [, startSave] = useTransition();
 
   const setError = (matchId: string, message: string | null) => {
@@ -121,6 +124,12 @@ export function KnockoutScoresPanel({ matches, initialScores, nowIso }: Knockout
       const result = await saveKnockoutScore({ match_id: matchId, home_score: home, away_score: away });
       if (result.error) {
         setError(matchId, result.error);
+        // El partido arrancó: recomputamos el reloj para que la tarjeta pase a
+        // "Cerrado" de inmediato (read-only) y mostramos el aviso al usuario.
+        if (result.started) {
+          setNow(new Date());
+          setClosedNotice(true);
+        }
         setSavedIds((prev) => {
           if (!prev.has(matchId)) return prev;
           const next = new Set(prev);
@@ -210,6 +219,13 @@ export function KnockoutScoresPanel({ matches, initialScores, nowIso }: Knockout
           );
         })
       )}
+
+      <LockNoticeModal
+        open={closedNotice}
+        title="El partido ya comenzó"
+        message="Este cruce de eliminatoria arrancó, así que su marcador quedó cerrado. Los demás cruces abiertos siguen disponibles."
+        onAcknowledge={() => setClosedNotice(false)}
+      />
     </div>
   );
 }
