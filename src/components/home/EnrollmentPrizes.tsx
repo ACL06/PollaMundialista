@@ -159,34 +159,45 @@ export function EnrollmentPrizes({
 
       {/* Reparto + empates */}
       <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground space-y-3">
-        {/* Premio por puesto en pesos — se revela junto con el pozo (post-lock). */}
-        {revealed && (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Premios por puesto
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              {PRIZE_TIERS.map((t, i) => (
-                <div
-                  key={t.place}
-                  className={cn(
-                    'flex flex-col items-center gap-1 rounded-lg border p-2.5 text-center',
-                    t.tint,
-                  )}
-                >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface/70">
-                    {t.icon}
-                  </span>
-                  <span className="text-xs font-semibold text-foreground">{t.place}</span>
-                  <span className="text-sm font-bold tabular-nums text-foreground sm:text-base">
-                    {formatCOP(prizes.podium[i])}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">{t.pct}%</span>
-                </div>
-              ))}
-            </div>
+        {/* Premios por puesto: 3 tarjetas oro/plata/bronce, llamativas pre y
+            post lock. Pre-lock el % es el protagonista (el monto en pesos se
+            revela en el partido inaugural); post-lock se muestra el monto. */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Premios por puesto
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {PRIZE_TIERS.map((t, i) => (
+              <div
+                key={t.place}
+                className={cn(
+                  'flex flex-col items-center gap-1 rounded-lg border p-2.5 text-center shadow-sm',
+                  t.tint,
+                )}
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface/70 shadow-sm">
+                  {t.icon}
+                </span>
+                <span className="text-xs font-semibold text-foreground">{t.place}</span>
+                {revealed ? (
+                  <>
+                    <span className="text-sm font-bold tabular-nums text-foreground sm:text-base">
+                      {formatCOP(prizes.podium[i])}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">{t.pct}%</span>
+                  </>
+                ) : (
+                  <span className="text-base font-bold tabular-nums text-foreground">{t.pct}%</span>
+                )}
+              </div>
+            ))}
           </div>
-        )}
+          {!revealed && (
+            <p className="text-[11px] text-muted-foreground">
+              Los montos se revelan en el partido inaugural.
+            </p>
+          )}
+        </div>
 
         <p>
           <span className="font-semibold text-foreground">Reparto:</span> del monto acumulado se
@@ -302,6 +313,18 @@ const PODIUM_EXAMPLE: PodiumWinner[] = [
   { rank: 3, name: 'Sara Peña' },
 ];
 
+// Chispas sutiles (fuegos pirotécnicos discretos) sobre el podio cuando hay
+// ganadores reales. Solo CSS (animate-ping escalonado, dorado); posiciones/
+// tiempos variados para que no se vea mecánico. Se desactiva con
+// prefers-reduced-motion (motion-reduce:hidden en el contenedor).
+const SPARKS = [
+  { left: '12%', top: 4, size: 'h-1.5 w-1.5', color: 'bg-amber-400', delay: '0s', dur: '2s' },
+  { left: '30%', top: 14, size: 'h-1 w-1', color: 'bg-amber-300', delay: '0.7s', dur: '2.4s' },
+  { left: '50%', top: 2, size: 'h-1.5 w-1.5', color: 'bg-amber-400', delay: '1.2s', dur: '2.1s' },
+  { left: '68%', top: 12, size: 'h-1 w-1', color: 'bg-amber-300', delay: '0.4s', dur: '2.5s' },
+  { left: '86%', top: 6, size: 'h-1.5 w-1.5', color: 'bg-amber-400', delay: '1.6s', dur: '2.2s' },
+] as const;
+
 function Podium({ winners, isFinal }: { winners: PodiumWinner[] | null; isFinal: boolean }) {
   // Datos reales o, si aún no hay, el ejemplo. (TS narrowea `winners` en el else.)
   const data: PodiumWinner[] = !winners || winners.length === 0 ? PODIUM_EXAMPLE : winners;
@@ -314,8 +337,19 @@ function Podium({ winners, isFinal }: { winners: PodiumWinner[] | null; isFinal:
       : 'provisional';
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
-      <div className="mb-3 flex items-center justify-center gap-2">
+    <div className="relative overflow-hidden rounded-lg border border-border bg-surface p-4">
+      {/* Chispas sutiles (fuegos pirotécnicos discretos) para hacer el podio
+          llamativo, pre y post lock. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 motion-reduce:hidden" aria-hidden="true">
+        {SPARKS.map((s, i) => (
+          <span
+            key={i}
+            className={cn('absolute rounded-full animate-ping', s.size, s.color)}
+            style={{ left: s.left, top: s.top, animationDelay: s.delay, animationDuration: s.dur }}
+          />
+        ))}
+      </div>
+      <div className="relative mb-3 flex items-center justify-center gap-2">
         <p className="text-center text-xs text-muted-foreground uppercase tracking-wider">
           El podio de la polla
         </p>
