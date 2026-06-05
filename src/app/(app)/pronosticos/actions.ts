@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import {
   groupScoreSchema,
@@ -141,6 +142,8 @@ export async function saveKnockoutScore(input: {
     return { error: 'No pudimos guardar el marcador. Intenta de nuevo.' };
   }
 
+  // Refresca el contador de "cruces abiertos" del aviso en /home sin reload.
+  revalidatePath('/home');
   return {};
 }
 

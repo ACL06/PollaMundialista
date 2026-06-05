@@ -4,9 +4,11 @@ import { createClient } from '@/lib/supabase/server';
 import { CalendarDays, CheckCircle2, ListOrdered, Settings, Target, Trophy, Users } from 'lucide-react';
 import { WORLD_CUP_TEAMS } from '@/lib/validators/profile';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
+import { KNOCKOUT_SCORE_STAGES } from '@/lib/knockout-window';
 import { loadRanking } from '@/app/(app)/ranking/load-ranking';
 import { PredictionStatusCard } from '@/components/home/PredictionStatusCard';
 import { HomeStandingCard } from '@/components/home/HomeStandingCard';
+import { OpenKnockoutNotice } from '@/components/home/OpenKnockoutNotice';
 import { GameRules } from '@/components/home/GameRules';
 import { EnrollmentPrizes, EnrollmentBadge } from '@/components/home/EnrollmentPrizes';
 
@@ -26,6 +28,8 @@ export default async function HomePage() {
     bracketCountResult,
     enrolledCountResult,
     registeredCountResult,
+    knockoutMatchesResult,
+    knockoutScoresResult,
     lockAt,
     ranking,
   ] = await Promise.all([
@@ -56,6 +60,11 @@ export default async function HomePage() {
       supabase
         .from('public_profiles')
         .select('*', { count: 'exact', head: true }),
+      supabase
+        .from('matches')
+        .select('id, home_team_code, away_team_code, kicks_off_at')
+        .in('stage', [...KNOCKOUT_SCORE_STAGES]),
+      supabase.from('prediction_knockout_scores').select('match_id').eq('user_id', userId),
       getPredictionsLockAt(),
       loadRanking(),
     ]);
@@ -81,6 +90,29 @@ export default async function HomePage() {
   // Modo espectador: post-lock + no inscrito. En /home solo ve su encabezado,
   // las reglas y los accesos a calendario / fase de grupos.
   const isSpectator = isLocked && !isEnrolled && !isAdmin;
+
+  // Aviso de cruces de eliminatoria ABIERTOS sin pronosticar: un cruce está
+  // "abierto" cuando ya se conocen sus dos equipos y aún no arranca (misma
+  // semántica que `knockoutMatchState`). Solo cuenta los que el usuario no ha
+  // registrado. now = hora de servidor (no del dispositivo). Los espectadores
+  // no participan → 0. La RLS por partido es el guard real del guardado.
+  const predictedKnockoutIds = new Set(
+    (knockoutScoresResult.data ?? []).map((r) => r.match_id as string),
+  );
+  const knockoutMatches = (knockoutMatchesResult.data ?? []) as {
+    id: string;
+    home_team_code: string | null;
+    away_team_code: string | null;
+    kicks_off_at: string;
+  }[];
+  const nowMs = Date.now();
+  const openKnockoutCount = isSpectator
+    ? 0
+    : knockoutMatches.filter((m) => {
+        const teamsKnown = m.home_team_code != null && m.away_team_code != null;
+        const open = teamsKnown && nowMs < new Date(m.kicks_off_at).getTime();
+        return open && !predictedKnockoutIds.has(m.id);
+      }).length;
 
   // Podio real (puestos 1-3 del ranking, por Nombre y Apellidos) para
   // "Inscripción y premios". Incluye TODOS los de cada puesto → tolera empates
@@ -168,6 +200,9 @@ export default async function HomePage() {
             isEnrolled={isEnrolled}
           />
         ))}
+
+      {/* Aviso: cruces de eliminatoria abiertos sin pronosticar. */}
+      {openKnockoutCount > 0 && <OpenKnockoutNotice count={openKnockoutCount} />}
 
       {/* Reglas del juego */}
       <GameRules />
