@@ -37,6 +37,14 @@ interface EnrollmentPrizesProps {
   podiumFinal?: boolean;
 }
 
+// Premios por puesto: medalla, % y tinte oro/plata/bronce (igual que el podio).
+// El monto en pesos sale de `computePrizes().podium[i]`.
+const PRIZE_TIERS = [
+  { place: '1°', pct: 70, tint: 'border-amber-400/50 bg-amber-400/10', icon: <Crown className="h-5 w-5 text-amber-500 fill-amber-400" /> },
+  { place: '2°', pct: 20, tint: 'border-zinc-400/50 bg-zinc-400/10', icon: <Medal className="h-5 w-5 text-zinc-400 fill-zinc-300" /> },
+  { place: '3°', pct: 10, tint: 'border-amber-700/50 bg-amber-700/10', icon: <Medal className="h-5 w-5 text-amber-700 fill-amber-700/40" /> },
+] as const;
+
 export function EnrollmentPrizes({
   enrolledCount,
   preEnrolledCount,
@@ -150,7 +158,36 @@ export function EnrollmentPrizes({
       <Podium winners={podium} isFinal={podiumFinal} />
 
       {/* Reparto + empates */}
-      <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground space-y-2">
+      <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground space-y-3">
+        {/* Premio por puesto en pesos — se revela junto con el pozo (post-lock). */}
+        {revealed && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Premios por puesto
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {PRIZE_TIERS.map((t, i) => (
+                <div
+                  key={t.place}
+                  className={cn(
+                    'flex flex-col items-center gap-1 rounded-lg border p-2.5 text-center',
+                    t.tint,
+                  )}
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface/70">
+                    {t.icon}
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">{t.place}</span>
+                  <span className="text-sm font-bold tabular-nums text-foreground sm:text-base">
+                    {formatCOP(prizes.podium[i])}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">{t.pct}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <p>
           <span className="font-semibold text-foreground">Reparto:</span> del monto acumulado se
           aparta un <span className="font-medium text-foreground">10% para la administración</span>{' '}
