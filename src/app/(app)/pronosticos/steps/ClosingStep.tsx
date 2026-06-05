@@ -28,6 +28,8 @@ interface ClosingStepProps {
   onBlurFinalScore: () => void;
   onChangeTopScorer: (value: string) => void;
   onBlurTopScorer: () => void;
+  /** Lleva al paso del bracket (Paso 3), donde se eligen los semifinalistas. */
+  onGoToBracket: () => void;
   /** Re-guarda todos los campos del cierre (botón "Actualizar pronóstico"). */
   onUpdate: () => void;
   /** True mientras se está guardando por el botón. */
@@ -55,6 +57,7 @@ export function ClosingStep({
   onBlurFinalScore,
   onChangeTopScorer,
   onBlurTopScorer,
+  onGoToBracket,
   onUpdate,
   updating,
   saved,
@@ -98,8 +101,16 @@ export function ClosingStep({
           <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <span>
             Primero elige tus <span className="font-medium text-foreground">Semifinalistas</span>{' '}
-            en el paso del bracket. El campeón, subcampeón y tercer lugar se eligen entre
-            esos 4 equipos.
+            en el paso del bracket{' '}
+            (
+            <button
+              type="button"
+              onClick={onGoToBracket}
+              className="font-medium text-tertiary underline underline-offset-2 hover:text-tertiary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary rounded"
+            >
+              Paso 3
+            </button>
+            ). El campeón, subcampeón y tercer lugar se eligen entre esos 4 equipos.
           </span>
         </div>
       ) : (
