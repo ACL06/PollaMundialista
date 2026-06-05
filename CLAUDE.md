@@ -90,6 +90,7 @@
   - Inscripciones (`EnrollmentEditor`, Fase 10A): lista de usuarios (de `public_profiles`) con toggle pre-inscrito/inscrito (`setEnrollment` → `profiles.is_enrolled`).
 - Patrón de guardado: `changeAndPersist(id, patch)` calcula el draft nuevo y lo persiste directo (evita el stale-closure de setState+leer-viejo que tuvo un bug en 8.2, ya corregido).
 - Esto "enciende" scoring, ranking, tablas de grupos y aciertos en Comunidad.
+- Las 4 acciones del admin (`saveMatchResult`, `saveKnockoutMatch`, `saveTopScorer`, `setEnrollment`) llaman `revalidateResultViews()` al guardar → `revalidatePath` de `/home`, `/calendar`, `/grupos`, `/ranking`, `/comunidad`, `/pronosticos`, para que los cambios se reflejen en la próxima navegación de cualquiera (no es tiempo real; no hay feed externo — los estados los pone el admin a mano).
 
 #### Inscripción y premios (Fase 10)
 - **10A** — `profiles.is_enrolled` + admin (ver Panel admin).
