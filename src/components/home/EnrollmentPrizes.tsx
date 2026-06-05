@@ -49,69 +49,82 @@ export function EnrollmentPrizes({
   return (
     <section className="flex flex-col gap-5">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold text-foreground">Inscripción y premios</h2>
-        <p className="text-sm text-muted-foreground">Así funciona el acumulado, claro y transparente.</p>
-      </div>
-
-      {/* Qué significan los estados */}
-      <div className="rounded-lg border border-border bg-surface p-4 text-sm text-muted-foreground">
-        Al registrarte quedas <span className="font-semibold text-destructive">pre-inscrito</span>. Pasas a{' '}
-        <span className="font-semibold text-primary">inscrito</span> cuando el administrador confirma tu
-        pago (se hace por un medio externo; la app no cobra en línea).
-      </div>
-
-      {/* Costo + inscritos */}
-      <div className="grid grid-cols-2 gap-3">
-        <Fact label="Costo de inscripción" value={formatCOP(ENROLLMENT_COST_COP)} />
-        <Fact
-          label="Inscritos"
-          value={String(enrolledCount)}
-          hint={`+ ${preEnrolledCount} pre-inscrito${preEnrolledCount === 1 ? '' : 's'}`}
-          icon={<Users className="h-5 w-5 text-tertiary" />}
-        />
-      </div>
-
-      {/* Cómo pagar: llave Bre-B */}
-      <div className="rounded-lg border border-border bg-surface p-4 space-y-2">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Landmark className="h-4 w-4 text-tertiary" />
-          Cómo pagar tu inscripción
-        </h3>
+        <h2 className="text-lg font-semibold text-foreground">
+          {revealed ? 'Premios' : 'Inscripción y premios'}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Consigna a esta llave <span className="font-medium text-foreground">Bre-B</span> y guarda tu
-          comprobante de pago, lo necesitarás más adelante.
+          {revealed
+            ? 'El pozo, el podio y cómo se reparte.'
+            : 'Así funciona el acumulado, claro y transparente.'}
         </p>
-        <div className="flex flex-col gap-1 rounded-md bg-muted/40 p-3 text-sm">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">Llave Bre-B</span>
-            <span className="inline-flex items-center gap-1">
-              <span className="font-semibold tabular-nums text-foreground">{BREB_KEY}</span>
-              <CopyButton value={BREB_KEY} label="Copiar la llave Bre-B" />
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">A nombre de</span>
-            <span className="font-medium text-foreground">{BREB_HOLDER}</span>
-          </div>
-        </div>
-
-        {/* Aviso: enviar comprobante por WhatsApp (recuadro azul claro) */}
-        <div className="flex items-start gap-2.5 rounded-md border border-tertiary/30 bg-tertiary/10 p-3 text-sm text-foreground">
-          <MessageCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-tertiary" />
-          <p>
-            Luego de consignar, <span className="font-semibold">envía el comprobante</span> al WhatsApp{' '}
-            <a
-              href={PAYMENT_WHATSAPP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-tertiary underline underline-offset-2 hover:no-underline"
-            >
-              {PAYMENT_WHATSAPP_DISPLAY}
-            </a>
-            .
-          </p>
-        </div>
       </div>
+
+      {/* Fase de inscripción (estados, costo, cómo pagar): se oculta al cerrar
+          el lock global — ya no se puede inscribir. Post-lock queda solo el
+          pozo, el podio, el reparto/empates y el grupo de WhatsApp. */}
+      {!revealed && (
+        <>
+          {/* Qué significan los estados */}
+          <div className="rounded-lg border border-border bg-surface p-4 text-sm text-muted-foreground">
+            Al registrarte quedas <span className="font-semibold text-destructive">pre-inscrito</span>. Pasas a{' '}
+            <span className="font-semibold text-primary">inscrito</span> cuando el administrador confirma tu
+            pago (se hace por un medio externo; la app no cobra en línea).
+          </div>
+
+          {/* Costo + inscritos */}
+          <div className="grid grid-cols-2 gap-3">
+            <Fact label="Costo de inscripción" value={formatCOP(ENROLLMENT_COST_COP)} />
+            <Fact
+              label="Inscritos"
+              value={String(enrolledCount)}
+              hint={`+ ${preEnrolledCount} pre-inscrito${preEnrolledCount === 1 ? '' : 's'}`}
+              icon={<Users className="h-5 w-5 text-tertiary" />}
+            />
+          </div>
+
+          {/* Cómo pagar: llave Bre-B */}
+          <div className="rounded-lg border border-border bg-surface p-4 space-y-2">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Landmark className="h-4 w-4 text-tertiary" />
+              Cómo pagar tu inscripción
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Consigna a esta llave <span className="font-medium text-foreground">Bre-B</span> y guarda tu
+              comprobante de pago, lo necesitarás más adelante.
+            </p>
+            <div className="flex flex-col gap-1 rounded-md bg-muted/40 p-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Llave Bre-B</span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="font-semibold tabular-nums text-foreground">{BREB_KEY}</span>
+                  <CopyButton value={BREB_KEY} label="Copiar la llave Bre-B" />
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">A nombre de</span>
+                <span className="font-medium text-foreground">{BREB_HOLDER}</span>
+              </div>
+            </div>
+
+            {/* Aviso: enviar comprobante por WhatsApp (recuadro azul claro) */}
+            <div className="flex items-start gap-2.5 rounded-md border border-tertiary/30 bg-tertiary/10 p-3 text-sm text-foreground">
+              <MessageCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-tertiary" />
+              <p>
+                Luego de consignar, <span className="font-semibold">envía el comprobante</span> al WhatsApp{' '}
+                <a
+                  href={PAYMENT_WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-tertiary underline underline-offset-2 hover:no-underline"
+                >
+                  {PAYMENT_WHATSAPP_DISPLAY}
+                </a>
+                .
+              </p>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Pozo: se revela en el partido inaugural */}
       <div className="rounded-lg border border-border bg-surface p-4">
