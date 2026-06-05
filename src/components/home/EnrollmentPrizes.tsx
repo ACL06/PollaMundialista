@@ -37,6 +37,14 @@ interface EnrollmentPrizesProps {
   podiumFinal?: boolean;
 }
 
+// Premios por puesto: medalla (mismas del podio) y %. El monto en pesos sale
+// de `computePrizes().podium[i]` (se agrega post-lock).
+const PRIZE_TIERS = [
+  { place: '1°', pct: 70, icon: <Crown className="h-5 w-5 text-amber-500 fill-amber-400" /> },
+  { place: '2°', pct: 20, icon: <Medal className="h-5 w-5 text-zinc-400 fill-zinc-300" /> },
+  { place: '3°', pct: 10, icon: <Medal className="h-5 w-5 text-amber-700 fill-amber-700/40" /> },
+] as const;
+
 export function EnrollmentPrizes({
   enrolledCount,
   preEnrolledCount,
@@ -126,8 +134,12 @@ export function EnrollmentPrizes({
         </>
       )}
 
-      {/* Pozo: se revela en el partido inaugural */}
-      <div className="rounded-lg border border-border bg-surface p-4">
+      {/* Podio (solo personas; el pozo y los montos van en la sección de premios). */}
+      <Podium winners={podium} isFinal={podiumFinal} />
+
+      {/* Premios: pozo + reparto por puesto + empates, todo junto (coherente). */}
+      <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground space-y-3">
+        {/* Pozo: post-lock los montos; pre-lock, el teaser de "se revela al arrancar". */}
         {revealed ? (
           <div className="space-y-2">
             <Row label="Monto acumulado" value={formatCOP(prizes.pot)} />
@@ -135,7 +147,7 @@ export function EnrollmentPrizes({
             <Row label="Para premios (90%)" value={formatCOP(prizes.prizePool)} strong />
           </div>
         ) : (
-          <div className="flex items-start gap-2 text-sm text-muted-foreground">
+          <div className="flex items-start gap-2">
             <Info className="h-4 w-4 flex-shrink-0 mt-0.5 text-tertiary" />
             <span>
               El premio se calcula según la cantidad de inscritos y{' '}
@@ -144,19 +156,29 @@ export function EnrollmentPrizes({
             </span>
           </div>
         )}
-      </div>
 
-      {/* Podio (solo personas, sin montos — los montos están arriba en reparto) */}
-      <Podium winners={podium} isFinal={podiumFinal} />
-
-      {/* Reparto + empates */}
-      <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground space-y-2">
         <p>
           <span className="font-semibold text-foreground">Reparto:</span> del monto acumulado se
           aparta un <span className="font-medium text-foreground">10% para la administración</span>{' '}
-          de la polla. El resto se reparte en el podio:{' '}
-          <span className="font-medium text-foreground">1° 70% · 2° 20% · 3° 10%</span>.
+          de la polla. El resto se reparte en el podio así:
         </p>
+
+        {/* Reparto por puesto como lista con las medallas del podio. Pre-lock
+            solo el %; post-lock se agrega el monto a la derecha. */}
+        <ul className="space-y-1.5">
+          {PRIZE_TIERS.map((t, i) => (
+            <li key={t.place} className="flex items-center gap-2.5">
+              <span className="flex-shrink-0">{t.icon}</span>
+              <span className="font-semibold text-foreground">{t.place}</span>
+              <span className="text-muted-foreground">{t.pct}%</span>
+              {revealed && (
+                <span className="ml-auto font-bold tabular-nums text-foreground">
+                  {formatCOP(prizes.podium[i])}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
         <p>
           <span className="font-semibold text-foreground">Empates:</span> si dos o más participantes
           terminan con los mismos puntos, ese premio se reparte en partes iguales entre ellos.
@@ -265,6 +287,18 @@ const PODIUM_EXAMPLE: PodiumWinner[] = [
   { rank: 3, name: 'Sara Peña' },
 ];
 
+// Chispas sutiles (fuegos pirotécnicos discretos) sobre el podio cuando hay
+// ganadores reales. Solo CSS (animate-ping escalonado, dorado); posiciones/
+// tiempos variados para que no se vea mecánico. Se desactiva con
+// prefers-reduced-motion (motion-reduce:hidden en el contenedor).
+const SPARKS = [
+  { left: '12%', top: 4, size: 'h-1.5 w-1.5', color: 'bg-amber-400', delay: '0s', dur: '2s' },
+  { left: '30%', top: 14, size: 'h-1 w-1', color: 'bg-amber-300', delay: '0.7s', dur: '2.4s' },
+  { left: '50%', top: 2, size: 'h-1.5 w-1.5', color: 'bg-amber-400', delay: '1.2s', dur: '2.1s' },
+  { left: '68%', top: 12, size: 'h-1 w-1', color: 'bg-amber-300', delay: '0.4s', dur: '2.5s' },
+  { left: '86%', top: 6, size: 'h-1.5 w-1.5', color: 'bg-amber-400', delay: '1.6s', dur: '2.2s' },
+] as const;
+
 function Podium({ winners, isFinal }: { winners: PodiumWinner[] | null; isFinal: boolean }) {
   // Datos reales o, si aún no hay, el ejemplo. (TS narrowea `winners` en el else.)
   const data: PodiumWinner[] = !winners || winners.length === 0 ? PODIUM_EXAMPLE : winners;
@@ -277,8 +311,19 @@ function Podium({ winners, isFinal }: { winners: PodiumWinner[] | null; isFinal:
       : 'provisional';
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
-      <div className="mb-3 flex items-center justify-center gap-2">
+    <div className="relative overflow-hidden rounded-lg border border-border bg-surface p-4">
+      {/* Chispas sutiles (fuegos pirotécnicos discretos) para hacer el podio
+          llamativo, pre y post lock. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 motion-reduce:hidden" aria-hidden="true">
+        {SPARKS.map((s, i) => (
+          <span
+            key={i}
+            className={cn('absolute rounded-full animate-ping', s.size, s.color)}
+            style={{ left: s.left, top: s.top, animationDelay: s.delay, animationDuration: s.dur }}
+          />
+        ))}
+      </div>
+      <div className="relative mb-3 flex items-center justify-center gap-2">
         <p className="text-center text-xs text-muted-foreground uppercase tracking-wider">
           El podio de la polla
         </p>
