@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { profileUpdateSchema } from '@/lib/validators/profile';
+import { fieldErrorsFrom, profileUpdateSchema } from '@/lib/validators/profile';
 
 /**
  * Cierra la sesión en el servidor y redirige a /login.
@@ -29,10 +29,10 @@ export async function updateProfile(data: {
   phone: string;
   favorite_team?: string | null;
   avatar_url?: string;
-}): Promise<{ error?: string }> {
+}): Promise<{ error?: string; fieldErrors?: Record<string, string> }> {
   const parsed = profileUpdateSchema.safeParse(data);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' };
+    return { fieldErrors: fieldErrorsFrom(parsed.error) };
   }
 
   const supabase = await createClient();
@@ -65,7 +65,7 @@ export async function updateProfile(data: {
 
   if (error) {
     if (error.code === '23505') {
-      return { error: 'Ese nickname ya está en uso. Elige otro.' };
+      return { fieldErrors: { nickname: 'Ese nickname ya está en uso. Elige otro.' } };
     }
     console.error('[updateProfile]', error.message);
     return { error: 'No pudimos guardar los cambios. Intenta de nuevo.' };

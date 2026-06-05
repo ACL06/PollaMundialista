@@ -7,7 +7,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, AtSign, Check, Mail, Phone, RefreshCw, Trophy, User, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { NAME_REGEX, PHONE_REGEX, WORLD_CUP_TEAMS } from '@/lib/validators/profile';
+import {
+  NAME_REGEX,
+  NICKNAME_ERROR,
+  NICKNAME_REGEX,
+  PHONE_REGEX,
+  WORLD_CUP_TEAMS,
+} from '@/lib/validators/profile';
 import { getAvatarVariants } from '@/lib/avatar';
 import { cn } from '@/lib/utils';
 import { UserBadge } from '@/components/app/UserBadge';
@@ -32,6 +38,11 @@ function sanitizePhone(v: string): string {
 function nameError(v: string): string | null {
   if (v.length === 0) return null;
   if (!NAME_REGEX.test(v)) return 'Solo letras y espacios';
+  return null;
+}
+
+function nicknameError(v: string): string | null {
+  if (v.length >= 3 && !NICKNAME_REGEX.test(v)) return NICKNAME_ERROR;
   return null;
 }
 
@@ -132,7 +143,20 @@ function ProfileModal({ open, onClose, email, initial, onSaved }: ProfileModalPr
   const [favorite, setFavorite] = useState(initial.favoriteTeam ?? '');
   const [generation, setGeneration] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // Errores por campo del server (Zod o nickname duplicado).
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
+
+  // Limpia el error general y el del campo tocado.
+  const clearFieldError = (key: string) => {
+    setError(null);
+    setFieldErrors((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
 
   // Opciones del galería: el avatar seleccionado y el actual van primero
   // (siempre visibles y resaltables), luego las 6 variantes de la generación.
@@ -154,6 +178,7 @@ function ProfileModal({ open, onClose, email, initial, onSaved }: ProfileModalPr
       setFavorite(initial.favoriteTeam ?? '');
       setGeneration(0);
       setError(null);
+      setFieldErrors({});
     }
   }, [
     open,
@@ -177,17 +202,26 @@ function ProfileModal({ open, onClose, email, initial, onSaved }: ProfileModalPr
 
   const firstNameErr = nameError(firstName);
   const lastNameErr = nameError(lastName);
+  const nicknameErr = nicknameError(nickname);
   const canSave =
     firstName.trim().length >= 2 &&
     !firstNameErr &&
     lastName.trim().length >= 2 &&
     !lastNameErr &&
     nickname.trim().length >= 3 &&
+    !nicknameErr &&
     PHONE_REGEX.test(phone);
+
+  // Mensaje por campo: error en vivo (cliente) o, si no, el del server.
+  const firstNameMsg = firstNameErr ?? fieldErrors.first_name ?? null;
+  const lastNameMsg = lastNameErr ?? fieldErrors.last_name ?? null;
+  const nicknameMsg = nicknameErr ?? fieldErrors.nickname ?? null;
+  const phoneMsg = fieldErrors.phone ?? null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     startTransition(async () => {
       const result = await updateProfile({
         first_name: firstName,
@@ -197,8 +231,9 @@ function ProfileModal({ open, onClose, email, initial, onSaved }: ProfileModalPr
         favorite_team: favorite || null,
         avatar_url: avatar ?? undefined,
       });
+      if (result?.fieldErrors) setFieldErrors(result.fieldErrors);
       if (result?.error) setError(result.error);
-      else onSaved();
+      if (!result?.fieldErrors && !result?.error) onSaved();
     });
   };
 
@@ -297,15 +332,15 @@ function ProfileModal({ open, onClose, email, initial, onSaved }: ProfileModalPr
               </div>
 
               {/* Nombre */}
-              <Field label="Nombre" Icon={User} error={firstNameErr}>
+              <Field label="Nombre" Icon={User} error={firstNameMsg}>
                 <Input
                   value={firstName}
                   onChange={(e) => {
                     setFirstName(e.target.value);
-                    if (error) setError(null);
+                    clearFieldError('first_name');
                   }}
                   disabled={isPending}
-                  error={!!firstNameErr}
+                  error={!!firstNameMsg}
                   className="pl-10"
                   maxLength={50}
                   autoComplete="given-name"
@@ -313,15 +348,15 @@ function ProfileModal({ open, onClose, email, initial, onSaved }: ProfileModalPr
               </Field>
 
               {/* Apellidos */}
-              <Field label="Apellidos" Icon={Users} error={lastNameErr}>
+              <Field label="Apellidos" Icon={Users} error={lastNameMsg}>
                 <Input
                   value={lastName}
                   onChange={(e) => {
                     setLastName(e.target.value);
-                    if (error) setError(null);
+                    clearFieldError('last_name');
                   }}
                   disabled={isPending}
-                  error={!!lastNameErr}
+                  error={!!lastNameMsg}
                   className="pl-10"
                   maxLength={50}
                   autoComplete="family-name"
@@ -329,14 +364,15 @@ function ProfileModal({ open, onClose, email, initial, onSaved }: ProfileModalPr
               </Field>
 
               {/* Nickname */}
-              <Field label="Nickname" Icon={AtSign}>
+              <Field label="Nickname" Icon={AtSign} error={nicknameMsg}>
                 <Input
                   value={nickname}
                   onChange={(e) => {
                     setNickname(e.target.value);
-                    if (error) setError(null);
+                    clearFieldError('nickname');
                   }}
                   disabled={isPending}
+                  error={!!nicknameMsg}
                   className="pl-10"
                   maxLength={20}
                   autoComplete="off"
@@ -344,16 +380,17 @@ function ProfileModal({ open, onClose, email, initial, onSaved }: ProfileModalPr
               </Field>
 
               {/* Celular */}
-              <Field label="Celular" Icon={Phone}>
+              <Field label="Celular" Icon={Phone} error={phoneMsg}>
                 <Input
                   type="tel"
                   inputMode="numeric"
                   value={phone}
                   onChange={(e) => {
                     setPhone(sanitizePhone(e.target.value));
-                    if (error) setError(null);
+                    clearFieldError('phone');
                   }}
                   disabled={isPending}
+                  error={!!phoneMsg}
                   className="pl-10"
                   maxLength={15}
                   autoComplete="tel"

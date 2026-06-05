@@ -15,7 +15,13 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { NAME_REGEX, PHONE_REGEX, WORLD_CUP_TEAMS } from '@/lib/validators/profile';
+import {
+  NAME_REGEX,
+  NICKNAME_ERROR,
+  NICKNAME_REGEX,
+  PHONE_REGEX,
+  WORLD_CUP_TEAMS,
+} from '@/lib/validators/profile';
 import { getAvatarVariants } from '@/lib/avatar';
 import { cn } from '@/lib/utils';
 import { saveProfile } from './actions';
@@ -38,6 +44,15 @@ function getNameError(value: string): string | null {
   return null;
 }
 
+/**
+ * Error inline del nickname. El largo mínimo (3) ya lo exige el botón; aquí
+ * avisamos de caracteres inválidos en cuanto el nickname tiene largo suficiente.
+ */
+function getNicknameError(value: string): string | null {
+  if (value.length >= 3 && !NICKNAME_REGEX.test(value)) return NICKNAME_ERROR;
+  return null;
+}
+
 export function OnboardingForm() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -47,7 +62,20 @@ export function OnboardingForm() {
   const [generation, setGeneration] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // Errores por campo devueltos por el server (Zod o nickname duplicado).
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
+
+  // Limpia el error general y el del campo tocado (al editar ese campo).
+  const clearFieldError = (key: string) => {
+    setError(null);
+    setFieldErrors((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
 
   const avatarVariants = useMemo(() => getAvatarVariants(generation), [generation]);
 
@@ -59,6 +87,7 @@ export function OnboardingForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
 
     startTransition(async () => {
       const result = await saveProfile({
@@ -69,9 +98,8 @@ export function OnboardingForm() {
         favorite_team: favoriteTeam || null,
         avatar_url: avatarVariants[selectedIndex],
       });
-      if (result?.error) {
-        setError(result.error);
-      }
+      if (result?.fieldErrors) setFieldErrors(result.fieldErrors);
+      if (result?.error) setError(result.error);
     });
   };
 
@@ -79,6 +107,14 @@ export function OnboardingForm() {
   // sin tocar lo que tipeó el usuario.
   const firstNameError = getNameError(firstName);
   const lastNameError = getNameError(lastName);
+  const nicknameError = getNicknameError(nickname);
+
+  // Mensaje a mostrar por campo: el error en vivo (cliente) o, si no, el del
+  // server (Zod o nickname duplicado). Así marcamos el campo puntual.
+  const firstNameMsg = firstNameError ?? fieldErrors.first_name ?? null;
+  const lastNameMsg = lastNameError ?? fieldErrors.last_name ?? null;
+  const phoneMsg = fieldErrors.phone ?? null;
+  const nicknameMsg = nicknameError ?? fieldErrors.nickname ?? null;
 
   // El botón "Guardar y continuar" se habilita solo cuando todos los
   // campos obligatorios tienen un valor válido. La validación estricta
@@ -89,7 +125,8 @@ export function OnboardingForm() {
     lastName.length >= 2 &&
     !lastNameError &&
     PHONE_REGEX.test(phone) &&
-    nickname.length >= 3;
+    nickname.length >= 3 &&
+    !nicknameError;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -171,20 +208,20 @@ export function OnboardingForm() {
             value={firstName}
             onChange={(e) => {
               setFirstName(e.target.value);
-              if (error) setError(null);
+              clearFieldError('first_name');
             }}
             disabled={isPending}
-            error={!!firstNameError}
+            error={!!firstNameMsg}
             className="pl-10"
             autoComplete="given-name"
             maxLength={50}
             required
           />
         </div>
-        {firstNameError ? (
+        {firstNameMsg ? (
           <p className="text-xs text-destructive flex items-center gap-1">
             <AlertCircle className="h-3 w-3 flex-shrink-0" />
-            {firstNameError}
+            {firstNameMsg}
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">Solo letras y espacios.</p>
@@ -205,20 +242,20 @@ export function OnboardingForm() {
             value={lastName}
             onChange={(e) => {
               setLastName(e.target.value);
-              if (error) setError(null);
+              clearFieldError('last_name');
             }}
             disabled={isPending}
-            error={!!lastNameError}
+            error={!!lastNameMsg}
             className="pl-10"
             autoComplete="family-name"
             maxLength={50}
             required
           />
         </div>
-        {lastNameError ? (
+        {lastNameMsg ? (
           <p className="text-xs text-destructive flex items-center gap-1">
             <AlertCircle className="h-3 w-3 flex-shrink-0" />
-            {lastNameError}
+            {lastNameMsg}
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">Solo letras y espacios.</p>
@@ -240,18 +277,26 @@ export function OnboardingForm() {
             value={phone}
             onChange={(e) => {
               setPhone(sanitizePhone(e.target.value));
-              if (error) setError(null);
+              clearFieldError('phone');
             }}
             disabled={isPending}
+            error={!!phoneMsg}
             className="pl-10"
             autoComplete="tel"
             maxLength={15}
             required
           />
         </div>
-        <p className="text-xs text-muted-foreground">
-          Solo números, entre 7 y 15 dígitos (sin espacios ni símbolos).
-        </p>
+        {phoneMsg ? (
+          <p className="text-xs text-destructive flex items-center gap-1">
+            <AlertCircle className="h-3 w-3 flex-shrink-0" />
+            {phoneMsg}
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Solo números, entre 7 y 15 dígitos (sin espacios ni símbolos).
+          </p>
+        )}
       </div>
 
       {/* Nickname */}
@@ -268,19 +313,26 @@ export function OnboardingForm() {
             value={nickname}
             onChange={(e) => {
               setNickname(e.target.value);
-              if (error) setError(null);
+              clearFieldError('nickname');
             }}
             disabled={isPending}
-            error={!!error}
+            error={!!nicknameMsg}
             className="pl-10"
             autoComplete="off"
             maxLength={20}
             required
           />
         </div>
-        <p className="text-xs text-muted-foreground">
-          3–20 caracteres. Solo letras, números, puntos y guiones.
-        </p>
+        {nicknameMsg ? (
+          <p className="text-xs text-destructive flex items-center gap-1">
+            <AlertCircle className="h-3 w-3 flex-shrink-0" />
+            {nicknameMsg}
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            3–20 caracteres. Solo letras, números, puntos y guiones.
+          </p>
+        )}
       </div>
 
       {/* Equipo favorito */}
