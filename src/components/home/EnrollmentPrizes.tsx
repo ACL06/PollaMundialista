@@ -37,12 +37,12 @@ interface EnrollmentPrizesProps {
   podiumFinal?: boolean;
 }
 
-// Premios por puesto: medalla, % y tinte oro/plata/bronce (igual que el podio).
-// El monto en pesos sale de `computePrizes().podium[i]`.
+// Premios por puesto: medalla (mismas del podio) y %. El monto en pesos sale
+// de `computePrizes().podium[i]` (se agrega post-lock).
 const PRIZE_TIERS = [
-  { place: '1°', pct: 70, tint: 'border-amber-400/50 bg-amber-400/10', icon: <Crown className="h-5 w-5 text-amber-500 fill-amber-400" /> },
-  { place: '2°', pct: 20, tint: 'border-zinc-400/50 bg-zinc-400/10', icon: <Medal className="h-5 w-5 text-zinc-400 fill-zinc-300" /> },
-  { place: '3°', pct: 10, tint: 'border-amber-700/50 bg-amber-700/10', icon: <Medal className="h-5 w-5 text-amber-700 fill-amber-700/40" /> },
+  { place: '1°', pct: 70, icon: <Crown className="h-5 w-5 text-amber-500 fill-amber-400" /> },
+  { place: '2°', pct: 20, icon: <Medal className="h-5 w-5 text-zinc-400 fill-zinc-300" /> },
+  { place: '3°', pct: 10, icon: <Medal className="h-5 w-5 text-amber-700 fill-amber-700/40" /> },
 ] as const;
 
 export function EnrollmentPrizes({
@@ -157,47 +157,28 @@ export function EnrollmentPrizes({
           </div>
         )}
 
-        {/* Premios por puesto: 3 tarjetas oro/plata/bronce. Pre-lock el % es el
-            protagonista (el monto se revela en el inaugural, ya avisado arriba);
-            post-lock se muestra el monto. */}
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Premios por puesto
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            {PRIZE_TIERS.map((t, i) => (
-              <div
-                key={t.place}
-                className={cn(
-                  'flex flex-col items-center gap-1 rounded-lg border p-2.5 text-center shadow-sm',
-                  t.tint,
-                )}
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface/70 shadow-sm">
-                  {t.icon}
-                </span>
-                <span className="text-xs font-semibold text-foreground">{t.place}</span>
-                {revealed ? (
-                  <>
-                    <span className="text-sm font-bold tabular-nums text-foreground sm:text-base">
-                      {formatCOP(prizes.podium[i])}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">{t.pct}%</span>
-                  </>
-                ) : (
-                  <span className="text-base font-bold tabular-nums text-foreground">{t.pct}%</span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
         <p>
           <span className="font-semibold text-foreground">Reparto:</span> del monto acumulado se
           aparta un <span className="font-medium text-foreground">10% para la administración</span>{' '}
-          de la polla. El resto se reparte en el podio:{' '}
-          <span className="font-medium text-foreground">1° 70% · 2° 20% · 3° 10%</span>.
+          de la polla. El resto se reparte en el podio así:
         </p>
+
+        {/* Reparto por puesto como lista con las medallas del podio. Pre-lock
+            solo el %; post-lock se agrega el monto a la derecha. */}
+        <ul className="space-y-1.5">
+          {PRIZE_TIERS.map((t, i) => (
+            <li key={t.place} className="flex items-center gap-2.5">
+              <span className="flex-shrink-0">{t.icon}</span>
+              <span className="font-semibold text-foreground">{t.place}</span>
+              <span className="text-muted-foreground">{t.pct}%</span>
+              {revealed && (
+                <span className="ml-auto font-bold tabular-nums text-foreground">
+                  {formatCOP(prizes.podium[i])}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
         <p>
           <span className="font-semibold text-foreground">Empates:</span> si dos o más participantes
           terminan con los mismos puntos, ese premio se reparte en partes iguales entre ellos.
