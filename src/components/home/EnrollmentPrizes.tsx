@@ -134,8 +134,12 @@ export function EnrollmentPrizes({
         </>
       )}
 
-      {/* Pozo: se revela en el partido inaugural */}
-      <div className="rounded-lg border border-border bg-surface p-4">
+      {/* Podio (solo personas; el pozo y los montos van en la sección de premios). */}
+      <Podium winners={podium} isFinal={podiumFinal} />
+
+      {/* Premios: pozo + reparto por puesto + empates, todo junto (coherente). */}
+      <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground space-y-3">
+        {/* Pozo: post-lock los montos; pre-lock, el teaser de "se revela al arrancar". */}
         {revealed ? (
           <div className="space-y-2">
             <Row label="Monto acumulado" value={formatCOP(prizes.pot)} />
@@ -143,7 +147,7 @@ export function EnrollmentPrizes({
             <Row label="Para premios (90%)" value={formatCOP(prizes.prizePool)} strong />
           </div>
         ) : (
-          <div className="flex items-start gap-2 text-sm text-muted-foreground">
+          <div className="flex items-start gap-2">
             <Info className="h-4 w-4 flex-shrink-0 mt-0.5 text-tertiary" />
             <span>
               El premio se calcula según la cantidad de inscritos y{' '}
@@ -152,16 +156,10 @@ export function EnrollmentPrizes({
             </span>
           </div>
         )}
-      </div>
 
-      {/* Podio (solo personas, sin montos — los montos están arriba en reparto) */}
-      <Podium winners={podium} isFinal={podiumFinal} />
-
-      {/* Reparto + empates */}
-      <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground space-y-3">
-        {/* Premios por puesto: 3 tarjetas oro/plata/bronce, llamativas pre y
-            post lock. Pre-lock el % es el protagonista (el monto en pesos se
-            revela en el partido inaugural); post-lock se muestra el monto. */}
+        {/* Premios por puesto: 3 tarjetas oro/plata/bronce. Pre-lock el % es el
+            protagonista (el monto se revela en el inaugural, ya avisado arriba);
+            post-lock se muestra el monto. */}
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Premios por puesto
@@ -192,11 +190,6 @@ export function EnrollmentPrizes({
               </div>
             ))}
           </div>
-          {!revealed && (
-            <p className="text-[11px] text-muted-foreground">
-              Los montos se revelan en el partido inaugural.
-            </p>
-          )}
         </div>
 
         <p>
