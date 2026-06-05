@@ -16,6 +16,7 @@ import {
 } from '@/lib/validators/profile';
 import { getAvatarVariants } from '@/lib/avatar';
 import { cn } from '@/lib/utils';
+import { useBodyScrollLock } from '@/lib/use-body-scroll-lock';
 import { UserBadge } from '@/components/app/UserBadge';
 import type { Team } from '@/lib/types/match';
 import { updateProfile } from '@/app/(app)/actions';
@@ -199,6 +200,9 @@ function ProfileModal({ open, onClose, email, initial, onSaved }: ProfileModalPr
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+
+  // Bloquear el scroll del fondo mientras el modal está abierto (no "scroll bleed").
+  useBodyScrollLock(open);
 
   const firstNameErr = nameError(firstName);
   const lastNameErr = nameError(lastName);
