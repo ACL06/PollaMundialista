@@ -15,14 +15,14 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { NAME_REGEX, WORLD_CUP_TEAMS } from '@/lib/validators/profile';
+import { NAME_REGEX, PHONE_REGEX, WORLD_CUP_TEAMS } from '@/lib/validators/profile';
 import { getAvatarVariants } from '@/lib/avatar';
 import { cn } from '@/lib/utils';
 import { saveProfile } from './actions';
 
-/** Permitir solo dígitos y limitar a 10 caracteres. */
+/** Permitir solo dígitos y limitar a 15 caracteres (máximo internacional E.164). */
 function sanitizePhone(value: string): string {
-  return value.replace(/\D/g, '').slice(0, 10);
+  return value.replace(/\D/g, '').slice(0, 15);
 }
 
 /**
@@ -88,8 +88,7 @@ export function OnboardingForm() {
     !firstNameError &&
     lastName.length >= 2 &&
     !lastNameError &&
-    phone.length === 10 &&
-    phone.startsWith('3') &&
+    PHONE_REGEX.test(phone) &&
     nickname.length >= 3;
 
   return (
@@ -245,13 +244,13 @@ export function OnboardingForm() {
             }}
             disabled={isPending}
             className="pl-10"
-            autoComplete="tel-national"
-            maxLength={10}
+            autoComplete="tel"
+            maxLength={15}
             required
           />
         </div>
         <p className="text-xs text-muted-foreground">
-          10 dígitos, debe empezar por 3.
+          Solo números, entre 7 y 15 dígitos (sin espacios ni símbolos).
         </p>
       </div>
 

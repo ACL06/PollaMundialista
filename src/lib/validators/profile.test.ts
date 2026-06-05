@@ -26,11 +26,16 @@ describe('profileUpdateSchema', () => {
     expect(profileUpdateSchema.safeParse({ ...valid, last_name: "O'Brien" }).success).toBe(false);
   });
 
-  it('celular: 10 dígitos empezando por 3', () => {
-    expect(profileUpdateSchema.safeParse({ ...valid, phone: '3001234567' }).success).toBe(true);
-    expect(profileUpdateSchema.safeParse({ ...valid, phone: '2001234567' }).success).toBe(false); // no empieza por 3
-    expect(profileUpdateSchema.safeParse({ ...valid, phone: '300123456' }).success).toBe(false); // 9 dígitos
-    expect(profileUpdateSchema.safeParse({ ...valid, phone: '30012345678' }).success).toBe(false); // 11
+  it('celular: solo dígitos, 7 a 15, cualquier país', () => {
+    expect(profileUpdateSchema.safeParse({ ...valid, phone: '3001234567' }).success).toBe(true); // CO 10 díg
+    expect(profileUpdateSchema.safeParse({ ...valid, phone: '2001234567' }).success).toBe(true); // ya no exige empezar por 3
+    expect(profileUpdateSchema.safeParse({ ...valid, phone: '12025550123' }).success).toBe(true); // 11 díg (+1 USA)
+    expect(profileUpdateSchema.safeParse({ ...valid, phone: '1234567' }).success).toBe(true); // 7 díg (mínimo)
+    expect(profileUpdateSchema.safeParse({ ...valid, phone: '123456789012345' }).success).toBe(true); // 15 díg (máximo E.164)
+    expect(profileUpdateSchema.safeParse({ ...valid, phone: '123456' }).success).toBe(false); // 6 < 7
+    expect(profileUpdateSchema.safeParse({ ...valid, phone: '1234567890123456' }).success).toBe(false); // 16 > 15
+    expect(profileUpdateSchema.safeParse({ ...valid, phone: '300 123 4567' }).success).toBe(false); // espacios
+    expect(profileUpdateSchema.safeParse({ ...valid, phone: '300-123-4567' }).success).toBe(false); // símbolos
     expect(profileUpdateSchema.safeParse({ ...valid, phone: '300123456a' }).success).toBe(false); // letra
   });
 
