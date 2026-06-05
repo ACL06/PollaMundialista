@@ -2,11 +2,13 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { profileSchema } from '@/lib/validators/profile';
+import { fieldErrorsFrom, profileSchema } from '@/lib/validators/profile';
 import { getAvatarUrl } from '@/lib/avatar';
 
 interface ActionResult {
   error?: string;
+  /** Errores por campo, para marcar el input puntual en el form. */
+  fieldErrors?: Record<string, string>;
 }
 
 export async function saveProfile(data: {
@@ -19,7 +21,7 @@ export async function saveProfile(data: {
 }): Promise<ActionResult> {
   const parsed = profileSchema.safeParse(data);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' };
+    return { fieldErrors: fieldErrorsFrom(parsed.error) };
   }
 
   const supabase = await createClient();
@@ -50,7 +52,7 @@ export async function saveProfile(data: {
 
   if (error) {
     if (error.code === '23505') {
-      return { error: 'Ese nickname ya está en uso. Elige otro.' };
+      return { fieldErrors: { nickname: 'Ese nickname ya está en uso. Elige otro.' } };
     }
     console.error('[saveProfile]', error.message);
     return { error: 'No pudimos guardar tu perfil. Intenta de nuevo.' };

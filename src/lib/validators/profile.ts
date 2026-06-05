@@ -62,6 +62,10 @@ export const NAME_REGEX = /^[\p{L}\s]+$/u;
 // con la misma regla que el server.
 export const PHONE_REGEX = /^\d{7,15}$/;
 const PHONE_ERROR = 'Celular: solo números, entre 7 y 15 dígitos, sin espacios ni símbolos';
+// Nickname: letras Unicode (incluye ñ/Ñ y acentos), números, punto, guion y guion bajo.
+// Exportados para que el form valide inline con la misma regla que el server.
+export const NICKNAME_REGEX = /^[\p{L}0-9._-]+$/u;
+export const NICKNAME_ERROR = 'Nickname: solo letras, números, puntos, guiones y guiones bajos';
 
 // Helper para campos de nombre: trim primero, luego validar largo y regex.
 // Recibe la etiqueta ("Nombre"/"Apellidos") para que el mensaje diga DE QUÉ
@@ -89,8 +93,7 @@ export const profileSchema = z.object({
     .string()
     .min(3, 'Nickname: mínimo 3 caracteres')
     .max(20, 'Nickname: máximo 20 caracteres')
-    // Letras Unicode (incluye ñ/Ñ y acentos), números, punto, guion y guion bajo.
-    .regex(/^[\p{L}0-9._-]+$/u, 'Nickname: solo letras, números, puntos, guiones y guiones bajos')
+    .regex(NICKNAME_REGEX, NICKNAME_ERROR)
     .transform((v) => v.trim()),
   favorite_team: z.string().nullable().optional(),
   // Validación estricta: solo URLs de DiceBear con estructura conocida
@@ -117,3 +120,17 @@ export const profileUpdateSchema = profileSchema.pick({
   favorite_team: true,
   avatar_url: true,
 });
+
+/**
+ * Reduce un ZodError a un mapa { campo: primer mensaje } para que el form
+ * marque y muestre el error en el input correspondiente (ser específicos en
+ * vez de un único mensaje genérico al pie).
+ */
+export function fieldErrorsFrom(error: z.ZodError): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const issue of error.issues) {
+    const key = issue.path[0];
+    if (typeof key === 'string' && !(key in out)) out[key] = issue.message;
+  }
+  return out;
+}
