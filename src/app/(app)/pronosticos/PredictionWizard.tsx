@@ -599,6 +599,7 @@ export function PredictionWizard({
             onBlurFinalScore={handleFinalScoreBlur}
             onChangeTopScorer={handleTopScorerChange}
             onBlurTopScorer={handleTopScorerBlur}
+            onGoToBracket={() => setCurrentIndex(2)}
             onUpdate={handleClosingUpdate}
             updating={metaSaving}
             saved={metaSaved}
