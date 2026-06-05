@@ -56,9 +56,12 @@ export const WORLD_CUP_TEAMS = [
 // Explícitamente NO se permiten números, guiones, apóstrofes ni otros símbolos.
 // Exportado porque el form también lo usa para validación inline en vivo.
 export const NAME_REGEX = /^[\p{L}\s]+$/u;
-// Celular colombiano: exactamente 10 dígitos empezando por 3.
-const PHONE_REGEX = /^3\d{9}$/;
-const PHONE_ERROR = 'Celular: deben ser 10 dígitos que empiecen por 3';
+// Celular: solo dígitos (sin espacios ni símbolos), de 7 a 15. Admite números
+// de cualquier país (no solo Colombia, que empieza por 3); 15 = máximo del
+// estándar internacional E.164. Exportado para que los forms validen inline
+// con la misma regla que el server.
+export const PHONE_REGEX = /^\d{7,15}$/;
+const PHONE_ERROR = 'Celular: solo números, entre 7 y 15 dígitos, sin espacios ni símbolos';
 
 // Helper para campos de nombre: trim primero, luego validar largo y regex.
 // Recibe la etiqueta ("Nombre"/"Apellidos") para que el mensaje diga DE QUÉ

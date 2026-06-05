@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, AtSign, Check, Mail, Phone, RefreshCw, Trophy, User, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { NAME_REGEX, WORLD_CUP_TEAMS } from '@/lib/validators/profile';
+import { NAME_REGEX, PHONE_REGEX, WORLD_CUP_TEAMS } from '@/lib/validators/profile';
 import { getAvatarVariants } from '@/lib/avatar';
 import { cn } from '@/lib/utils';
 import { UserBadge } from '@/components/app/UserBadge';
@@ -26,7 +26,7 @@ interface ProfileMenuProps {
 }
 
 function sanitizePhone(v: string): string {
-  return v.replace(/\D/g, '').slice(0, 10);
+  return v.replace(/\D/g, '').slice(0, 15);
 }
 
 function nameError(v: string): string | null {
@@ -183,8 +183,7 @@ function ProfileModal({ open, onClose, email, initial, onSaved }: ProfileModalPr
     lastName.trim().length >= 2 &&
     !lastNameErr &&
     nickname.trim().length >= 3 &&
-    phone.length === 10 &&
-    phone.startsWith('3');
+    PHONE_REGEX.test(phone);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -356,8 +355,8 @@ function ProfileModal({ open, onClose, email, initial, onSaved }: ProfileModalPr
                   }}
                   disabled={isPending}
                   className="pl-10"
-                  maxLength={10}
-                  autoComplete="tel-national"
+                  maxLength={15}
+                  autoComplete="tel"
                 />
               </Field>
 
