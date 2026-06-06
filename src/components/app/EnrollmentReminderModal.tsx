@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, MessageCircle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BREB_HOLDER, BREB_KEY, WHATSAPP_GROUP_URL } from '@/lib/prizes';
+import { CopyButton } from '@/components/home/CopyButton';
+import { BREB_HOLDER, BREB_KEY, PAYMENT_WHATSAPP_URL } from '@/lib/prizes';
 
 const STORAGE_KEY = 'polla:enrollmentReminder';
 /** Cuántos días antes del arranque se empieza a recordar. */
@@ -21,28 +22,52 @@ interface EnrollmentReminderModalProps {
 
 /**
  * Recordatorio para usuarios PRE-INSCRITOS: en los últimos 5 días antes del
- * arranque del Mundial, al entrar a cualquier sección se muestra una vez al
- * día (control por `localStorage`). Si no se inscriben antes del partido
- * inaugural, pierden el acceso (gate en el AppLayout). Solo se monta cuando
- * el usuario es pre-inscrito y el torneo aún no arranca.
+ * arranque del Mundial se muestra una vez al día (control por `localStorage`,
+ * por fecha). Se evalúa al montar (carga/login) **y al volver a la pestaña**
+ * (`visibilitychange`), para que también lo vean en sesiones largas sin
+ * recargar. Si no se inscriben antes del inaugural quedan en modo espectador
+ * (gate en el AppLayout). Solo se monta cuando el usuario es pre-inscrito y el
+ * torneo aún no arranca.
  */
 export function EnrollmentReminderModal({ lockAtIso }: EnrollmentReminderModalProps) {
   const [open, setOpen] = useState(false);
   const [daysLeft, setDaysLeft] = useState(0);
+  // Fallback de dedup por fecha cuando localStorage no está disponible.
+  const lastShownDayRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!lockAtIso) return;
-    const msLeft = new Date(lockAtIso).getTime() - Date.now();
-    const days = msLeft / 86_400_000;
-    if (days <= 0 || days > REMIND_WINDOW_DAYS) return; // solo en la ventana
-    try {
-      if (localStorage.getItem(STORAGE_KEY) === todayKey()) return; // ya hoy
-      localStorage.setItem(STORAGE_KEY, todayKey());
-    } catch {
-      // localStorage no disponible → mostramos igual (sin dedup).
-    }
-    setDaysLeft(Math.max(1, Math.ceil(days)));
-    setOpen(true);
+
+    const maybeShow = () => {
+      const msLeft = new Date(lockAtIso).getTime() - Date.now();
+      const days = msLeft / 86_400_000;
+      if (days <= 0 || days > REMIND_WINDOW_DAYS) return; // fuera de la ventana
+
+      const today = todayKey();
+      let alreadyToday: boolean;
+      try {
+        alreadyToday = localStorage.getItem(STORAGE_KEY) === today;
+        if (!alreadyToday) localStorage.setItem(STORAGE_KEY, today);
+      } catch {
+        // Sin localStorage → dedup en memoria (al menos no se repite por sesión).
+        alreadyToday = lastShownDayRef.current === today;
+      }
+      if (alreadyToday) return; // ya se mostró hoy
+      lastShownDayRef.current = today;
+
+      setDaysLeft(Math.max(1, Math.ceil(days)));
+      setOpen(true);
+    };
+
+    maybeShow(); // al montar (carga / login)
+
+    // También al volver a la pestaña: cubre la sesión larga sin recargar — un
+    // pre-inscrito que dejó la app abierta lo verá igual al día siguiente.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') maybeShow();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [lockAtIso]);
 
   if (!open) return null;
@@ -84,14 +109,18 @@ export function EnrollmentReminderModal({ lockAtIso }: EnrollmentReminderModalPr
               ? ' El Mundial arranca mañana.'
               : ` Faltan ${daysLeft} días para el arranque.`}{' '}
             Si no estás inscrito cuando empiece el partido inaugural,{' '}
-            <span className="font-medium text-foreground">perderás el acceso a la plataforma</span>.
+            <span className="font-medium text-foreground">quedarás en modo espectador</span>: podrás
+            seguir el Mundial, pero no participarás por los premios.
           </p>
 
           <div className="rounded-lg bg-muted/40 p-3 text-sm">
             <p className="mb-1 text-muted-foreground">Consigna a la llave Bre-B y avisa al admin:</p>
             <div className="flex items-center justify-between gap-3">
               <span className="text-muted-foreground">Llave Bre-B</span>
-              <span className="font-semibold text-foreground">{BREB_KEY}</span>
+              <span className="inline-flex items-center gap-1">
+                <span className="font-semibold text-foreground">{BREB_KEY}</span>
+                <CopyButton value={BREB_KEY} label="Copiar la llave Bre-B" />
+              </span>
             </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-muted-foreground">A nombre de</span>
@@ -100,7 +129,7 @@ export function EnrollmentReminderModal({ lockAtIso }: EnrollmentReminderModalPr
           </div>
 
           <a
-            href={WHATSAPP_GROUP_URL}
+            href={PAYMENT_WHATSAPP_URL}
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
@@ -110,7 +139,7 @@ export function EnrollmentReminderModal({ lockAtIso }: EnrollmentReminderModalPr
             )}
           >
             <MessageCircle className="h-4 w-4" />
-            Escribir al grupo de WhatsApp
+            Escribir al WhatsApp
           </a>
 
           <button
