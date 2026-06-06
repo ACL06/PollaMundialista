@@ -17,14 +17,15 @@ export default async function RankingPage() {
   if (!user) redirect('/login');
 
   // Modo espectador (post-lock, no inscrito): el ranking queda bloqueado.
-  const { isSpectator } = await getViewerAccess();
+  const { isSpectator, isAdmin } = await getViewerAccess();
   if (isSpectator) return <SpectatorBlocked />;
 
   const { lockAt, locked, hasResults, rows } = await loadRanking();
 
   // El ranking se abre con el lock (sin resultados no tiene sentido, y los
-  // pronósticos de otros solo son legibles post-lock).
-  if (!locked) {
+  // pronósticos de otros solo son legibles post-lock). Excepción: el ADMIN
+  // (organizador) puede previsualizar antes del lock.
+  if (!locked && !isAdmin) {
     return (
       <div className="max-w-xl mx-auto px-5 py-16 text-center flex flex-col items-center gap-5">
         <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">

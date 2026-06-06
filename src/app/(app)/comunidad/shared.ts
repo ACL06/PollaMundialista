@@ -21,9 +21,11 @@ export interface CommunityScore {
   away_score: number;
 }
 
-export interface ChampionPick {
+export interface PredictionPick {
   user_id: string;
   champion_code: string | null;
+  runner_up_code: string | null;
+  top_scorer: string | null;
 }
 
 export type ReactionKey = 'like' | 'laugh' | 'fire' | 'shock';

@@ -30,12 +30,13 @@ export default async function ComunidadUserPage({
   if (!user) redirect('/login');
 
   // Modo espectador (post-lock, no inscrito): bloqueado.
-  const { isSpectator } = await getViewerAccess();
+  const { isSpectator, isAdmin } = await getViewerAccess();
   if (isSpectator) return <SpectatorBlocked />;
 
-  // Antes del lock no se pueden ver pronósticos de otros → al gate.
+  // Antes del lock no se pueden ver pronósticos de otros → al gate. Excepción:
+  // el ADMIN (organizador) puede previsualizar.
   const lockAt = await getPredictionsLockAt();
-  if (!isLockedAt(lockAt)) redirect('/comunidad');
+  if (!isLockedAt(lockAt) && !isAdmin) redirect('/comunidad');
 
   const [predictionResult, scoresResult, bracketResult, matchesResult, teamsResult, profileResult] =
     await Promise.all([

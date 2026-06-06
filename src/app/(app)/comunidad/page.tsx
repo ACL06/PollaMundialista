@@ -8,7 +8,7 @@ import { Countdown } from '@/components/pronosticos/Countdown';
 import { CommunityView } from './CommunityView';
 import {
   displayName,
-  type ChampionPick,
+  type PredictionPick,
   type CommunityScore,
   type PublicProfile,
   type ReactionRow,
@@ -25,15 +25,17 @@ export default async function ComunidadPage() {
   if (!user) redirect('/login');
 
   // Modo espectador (post-lock, no inscrito): Comunidad queda bloqueada.
-  const { isSpectator } = await getViewerAccess();
+  const { isSpectator, isAdmin } = await getViewerAccess();
   if (isSpectator) return <SpectatorBlocked />;
 
   const lockAt = await getPredictionsLockAt();
   const locked = isLockedAt(lockAt);
 
-  // Gate: antes del lock, los pronósticos de otros NO se muestran (para
-  // que nadie copie). Solo se abren cuando arranca el Mundial.
-  if (!locked) {
+  // Gate: antes del lock, los pronósticos de otros NO se muestran (para que
+  // nadie copie). Solo se abren cuando arranca el Mundial. Excepción: el ADMIN
+  // (organizador, no compite) puede previsualizar/monitorear antes del lock; la
+  // lectura de los demás la habilita la RLS con `or is_admin()`.
+  if (!locked && !isAdmin) {
     return (
       <div className="max-w-xl mx-auto px-5 py-16 text-center flex flex-col items-center gap-5">
         <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
@@ -81,7 +83,7 @@ export default async function ComunidadPage() {
       supabase
         .from('prediction_group_scores')
         .select('user_id, match_id, home_score, away_score'),
-      supabase.from('predictions').select('user_id, champion_code'),
+      supabase.from('predictions').select('user_id, champion_code, runner_up_code, top_scorer'),
       supabase
         .from('public_profiles')
         .select('id, nickname, first_name, last_name, avatar_url, favorite_team, is_enrolled'),
@@ -113,7 +115,7 @@ export default async function ComunidadPage() {
     enrolledIds.has(s.user_id),
   );
   const teams = (teamsResult.data ?? []) as Team[];
-  const championPicks = ((predictionsResult.data ?? []) as ChampionPick[]).filter((p) =>
+  const picks = ((predictionsResult.data ?? []) as PredictionPick[]).filter((p) =>
     enrolledIds.has(p.user_id),
   );
   const reactions = ((reactionsResult.data ?? []) as ReactionRow[]).filter(
@@ -123,7 +125,7 @@ export default async function ComunidadPage() {
   // Participantes = inscritos con pronóstico (fila en predictions) o al menos
   // un marcador. Se enlazan a su pronóstico completo.
   const participantIds = new Set<string>([
-    ...championPicks.map((p) => p.user_id),
+    ...picks.map((p) => p.user_id),
     ...scores.map((s) => s.user_id),
   ]);
   const participants = profiles
@@ -137,9 +139,10 @@ export default async function ComunidadPage() {
       profiles={profiles}
       participants={participants}
       teams={teams}
-      championPicks={championPicks}
+      picks={picks}
       reactions={reactions}
       currentUserId={user.id}
+      nowIso={new Date().toISOString()}
     />
   );
 }
