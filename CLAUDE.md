@@ -25,7 +25,7 @@
 
 #### Infraestructura y auth
 - Next.js 15 App Router + React 19 + TypeScript estricto
-- Login con OTP por correo (`/login` → `/verify`), 3 intentos máx con redirect explícito
+- Login con OTP por correo (`/login` → `/verify`), 3 intentos máx con redirect explícito; en `/verify` el correo se muestra **completo** (no enmascarado, para que el usuario valide que lo escribió bien)
 - Conexión Supabase (Auth + Postgres + RLS)
 - Middleware que protege rutas privadas y refresca sesión
 - Supabase clients server + middleware (`@supabase/ssr`)
@@ -33,10 +33,10 @@
 - Workflows GitHub Actions (CI lint/typecheck/**test**/build + keep-alive Supabase cada 6 días)
 - Deploy automático en Vercel; Vercel Analytics + Speed Insights
 - Footer global "By Álvaro Castaño"; UserBadge en header (nombre + bandera del equipo favorito)
-- **Modal de editar perfil** desde el header (avatar **o** nombre/bandera clickeables — el `UserBadge` vive dentro de `ProfileMenu`): edita **avatar** (galería DiceBear + "Otras opciones"), nombre/apellidos/nickname/celular y **equipo favorito**; el email se muestra pero no se edita (PR #29 + avatar/equipo)
+- **Modal de editar perfil** desde el header (avatar **o** nombre/bandera clickeables — el `UserBadge` vive dentro de `ProfileMenu`): edita **avatar** (galería DiceBear + "Otras opciones"), nombre/apellidos/nickname/celular y **equipo favorito**; el email se muestra pero no se edita (PR #29 + avatar/equipo). Errores **específicos por campo** (marca el input culpable, no un mensaje genérico al pie — `fieldErrorsFrom(ZodError)`) y el modal **bloquea el scroll del fondo** (`useBodyScrollLock`)
 
 #### Perfil (Fase 2 + 2.1)
-- Onboarding en una pantalla: avatar (galería de 6 DiceBear), nombre, apellidos, celular colombiano (10 díg., empieza por 3), nickname único, equipo favorito
+- Onboarding en una pantalla: avatar (galería de 6 DiceBear), nombre, apellidos, **celular** (solo dígitos, **7–15**; admite números internacionales — `PHONE_REGEX` en `validators/profile`, ya no exige formato colombiano), nickname único, equipo favorito
 - Validación dual: filtros/inline en cliente + Zod en server action; nickname único (índice `lower()`)
 - Trigger `handle_new_user` (`on_auth_user_created`) crea profile vacío al registrarse; el onboarding lo completa con upsert
 - AppLayout exige nombre/apellidos/celular/nickname completos antes de entrar a `/home`
@@ -57,8 +57,8 @@
   3. **Bracket** — Eliminatorias de 32→Semis, subset + cascada al deseleccionar, **regla 2-3 por grupo** en R32, agrupado por grupo
   4. **Cierre** — campeón/subcampeón/tercer lugar (entre los 4 semifinalistas), marcador exacto de la final (bonus), goleador (texto libre)
   5. **Revisión** — resumen + submit que setea `locked_at` (marca "enviado"; sigue editable hasta el lock global)
-- Autosave por server action; `editBlockReason()` bloquea edición tras lock global y devuelve `{ locked: true }` → el wizard hace `router.refresh()` y cambia a read-only (autocorrige un dispositivo con el reloj atrasado, que veía la UI editable de más)
-- **Vista read-only** (`PredictionView`, Fase 4C): cuando enviaste o cerró el plazo, en vez del wizard se muestra el pronóstico completo (reusada también en Comunidad)
+- Autosave por server action que **revalida `/pronosticos` y `/home`** tras cada escritura (`revalidatePredictionViews()`, PR #69). **Lección:** sin esto el Router Cache de Next reusaba el render viejo y los marcadores se veían **vacíos al navegar** (solo aparecían con recarga dura) → **toda Server Action que muta datos debe `revalidatePath` de su vista**. `editBlockReason()` bloquea edición tras el lock global (`{ locked: true }`). Cuando el lock cae mientras editas (o un autosave es rechazado), un **timer (15s)** congela los inputs y muestra el **`LockNoticeModal`** ("el plazo ya cerró"); al cerrarlo, `router.refresh()` → read-only. En Eliminatorias, si el partido ya arrancó (`started`) la tarjeta pasa a "Cerrado" + aviso (PR #70)
+- **Vista read-only** (`PredictionView`, Fase 4C): cuando enviaste o cerró el plazo, en vez del wizard se muestra el pronóstico completo (reusada también en Comunidad). Los clasificados se ven como un **embudo tipo bracket** (`BracketFunnel`, PR #76): 32→16→8→4→**finalistas (2)**→**campeón (1)**, con conectores de **una sola línea** (no llaves por partido — el modelo es "quién pasa", no cruces) y el **podio integrado**; 3er lugar + marcador final + goleador en una línea-resumen
 - **Indicadores en /home** (Fase 4E): **pre-lock** `PredictionStatusCard` (countdown + progreso X/137 + CTA según estado); **post-lock** `HomeStandingCard` (tu posición #/total + pts + exactos, o estado de espera si aún no hay resultados, + accesos a Ranking/Comunidad/Mi pronóstico). La píldora "Tu posición" del encabezado se retiró: la tarjeta post-lock la absorbe
 - **Pestaña Eliminatorias** (Fase 9B+9C, `PronosticosTabs` + `KnockoutScoresPanel`): `/pronosticos` tiene 2 tabs — *Mi pronóstico* (wizard/read-only) y *Eliminatorias* (marcadores de R32..3er lugar). Cada partido: `pending` (cruce tipo calendario) → `open` (inputs + autosave vía `saveKnockoutScore`) → `closed` (read-only) según `knockoutMatchState()`. Puntúan 5/2 en el scoring y ranking (9C). **Aviso en `/home`** (`OpenKnockoutNotice`): cuando hay cruces `open` que el usuario aún no pronosticó, muestra "Tienes N cruces de eliminatoria abiertos" + CTA con deep-link `?tab=eliminatorias` (`PronosticosTabs` acepta `initialTab`). Cuenta con hora de servidor; 0 para espectadores
 
@@ -78,9 +78,11 @@
 
 #### Comunidad (Fase 4F — transparencia post-lock)
 - `/comunidad`: gate pre-lock; post-lock muestra los pronósticos de **todos** por día/partido (identificados por nombre y apellidos + avatar)
-- Módulos: **El campeón de la polla** (distribución), **Consenso por partido** (% 1X2 + marcador más repetido), **Rebeldes** ("🔥 va solo" cuando van contra un favorito ≥60%), **Reacciones emoji** (👍 😂 🔥 😱) sobre cada pronóstico
-- `/comunidad/[userId]`: pronóstico completo de cualquiera (reusa `PredictionView`)
+- Módulos: **El campeón de la polla** (distribución), **Finalistas más elegidos** (campeón+subcampeón, top 8), **Goleadores más elegidos** (top 5, agrupados con `normalizeScorer`), **Consenso por partido** (% 1X2 + marcador más repetido), **Rebeldes** ("🔥 va solo" vs favorito ≥60% con ≥3 pronósticos), **Reacciones emoji** (👍 😂 🔥 😱) sobre cada pronóstico
+- **Aciertos en vivo** (post-resultados, PR #75): cada pronóstico se marca vs el marcador oficial (`✓ Exacto` / `≈ Resultado` / `✗ Falló`) cuando el partido está `final`; **"Tabla del día"** (puntos del día 5/2 + exactos + badge **"Pleno"**); resalta **tu fila ("Tú")**. UX: día por defecto = **hoy**, participantes en **grid con scroll**, tabs de fecha **auto-centradas** (`useCenterActiveTab`), partidos en **acordeón** (uno abierto a la vez)
+- `/comunidad/[userId]`: pronóstico completo de cualquiera (reusa `PredictionView` → embudo)
 - Vista `public_profiles` (solo columnas no sensibles) para mostrar nombres/avatares sin exponer phone/email
+- **Preview de admin** (PR #75): el admin **organiza y NO compite** → el lock **no le aplica**; puede ver Comunidad, Ranking y `/comunidad/[userId]` **antes del lock** (gates `!locked && !isAdmin`). La lectura de los pronósticos de todos pre-lock la habilita una **política RLS `select ... using (is_admin())`** en las 5 tablas de predicción (`predictions`, `prediction_group_scores`, `prediction_bracket`, `prediction_knockout_scores`, `prediction_reactions`). Seguro porque el admin no concursa
 
 #### Panel admin (Fase 8.1 + 8.2 + 10A)
 - `/admin`: gated por flag `is_admin` (server-side + en cada action via `requireAdmin()` + RLS). Link "Panel admin" en /home solo para admins.
@@ -99,20 +101,20 @@
 - **10C — Acceso de pre-inscritos / modo espectador** (todo app-layer, sin SQL):
   - **Modo espectador** (`getViewerAccess()` en `src/lib/access.ts`): al pasar el lock global, un usuario con `!is_enrolled && !is_admin` (nuevo o pre-inscrito que no pagó) pasa a **acceso limitado** — ve Inicio (encabezado + reglas), Calendario y Fase de grupos, pero **NO** las secciones de la polla. `AppLayout` ya no bloquea todo: muestra un **banner "Inscripciones cerradas / modo espectador"**, oculta las pestañas de la polla en `TabNav` (`isSpectator`), y `/home` esconde la tarjeta de estado/posición y la de inscripción y premios. Cada ruta de la polla (`/pronosticos`, `/comunidad`, `/comunidad/[userId]`, `/ranking`) refuerza con `<SpectatorBlocked />` (defensa en profundidad por si entran por URL). **El login sigue abierto** (inscritos y admin necesitan entrar durante el Mundial).
   - **Filtrado** post-lock: `loadRanking` (ranking + "Tu posición") y Comunidad (lista, consenso, distribución, detalle `[userId]`) **solo muestran inscritos** — los pre-inscritos desaparecen.
-  - **Recordatorio** (`EnrollmentReminderModal`): pre-inscritos ven 1×/día (localStorage) en los últimos 5 días antes del arranque un modal con la llave Bre-B + WhatsApp.
+  - **Recordatorio** (`EnrollmentReminderModal`, montado en `(app)/layout.tsx`): pre-inscritos ven el modal **1×/día** (localStorage) en los últimos 5 días — aparece **al entrar a la app** (primer montaje del layout ese día), no en cada navegación ni a mitad de sesión. Trae la **llave Bre-B con botón de copiar** (`CopyButton`, mismo del home) y botón **"Escribir al WhatsApp"** al chat interno (`PAYMENT_WHATSAPP_URL` = 320 920 8932, **no** el grupo). Mensaje correcto: si no se inscriben **no concursan por los premios** (NO "pierden acceso a la plataforma" — pasan a modo espectador).
 
 #### Tests (Vitest)
 - `scoring.test.ts` (59): reglas de scoring (incl. marcadores de eliminatoria y marcador de la final estricto por equipo, **campeón/3er por `winner_code` cuando el 90' fue empate y se definió por penales**, gate de `status === 'final'`, negativos explícitos campeón/3ero/goleador, gana-visitante, independencia por ronda del bracket) + **test de integración `deriveOfficialResults` → `computeScore`** (pipeline real), deriveOfficialResults, buildRanking, pronóstico perfecto = 798.
 - `knockout-window.test.ts` (7): estados de la ventana de captura por partido (pending/open/closed).
 - `prizes.test.ts` (5): reparto de premios (10% admin + podio 70/20/10, el 1° absorbe el redondeo).
 - `compute-standings.test.ts`, `format-bracket-source.test.ts`, `predictions-lock.test.ts`, `validators/profile.test.ts`, `validators/prediction.test.ts`.
-- **97 tests en total**, corren en CI (`npm test`).
+- **98 tests en total**, corren en CI (`npm test`).
 
 ### ⏳ Pendiente / Roadmap
 
 - **Fase 6** — Grupos privados con código de invitación
 - ✅ **Fase 7 (cerrada)** — Dominio propio `pollafutbolera.com.co` registrado en Hostinger y **verificado en Resend** → el OTP llega a cualquier correo (probado con usuarios reales). **Decisión: notificaciones solo in-app** (la tarjeta de estado en `/home` con countdown + CTA hace de recordatorio) — sin emails automáticos, para no pasar el free tier de Resend (100/día, 3.000/mes). Si algún día se quisieran, retomar el plan 7A/7B con dedup + tope diario.
-- **Comunidad: aciertos del día / tabla en vivo** cuando haya resultados (mejora social)
+- ✅ **Comunidad: aciertos del día / tabla en vivo** — hecho (PR #75): marcas ✓/≈/✗ por pronóstico + "Tabla del día" (puntos/exactos/Pleno) + finalistas/goleadores más elegidos
 - **Refactors DRY pendientes** (maintainability, no bugs): helper de query de `matches` (7 pages comparten select+normalize), `sanitizeScore`/`sanitizePhone` a `utils`, componente `ScoreInput` unificado
 - **Regla: marcadores al minuto 90** (sin prórroga ni penaltis) — confirmado con el usuario. El **marcador exacto** se evalúa al 90' (un empate a 90' definido por penales cuenta como empate para el bonus del marcador). **Campeón/subcampeón/3er lugar** sí respetan al ganador real: el admin declara `matches.winner_code` para la final/3er lugar (selector en `KnockoutResultsEditor`) y `resolveOutcome` lo usa; si es null, infiere del marcador a los 90' (`pickWinner`). Las reglas visibles al usuario están en `src/lib/game-rules.ts`
 - **Dependabot alert #1** (PostCSS XSS) — baja prioridad, dev deps
@@ -156,7 +158,7 @@
 - **`public_profiles`** — `select id, nickname, first_name, last_name, avatar_url, favorite_team, is_enrolled from profiles`. SECURITY DEFINER (expone solo columnas no sensibles a `authenticated`; **nunca** phone/email). Permite contar inscritos y que el admin liste usuarios sin abrir SELECT global en `profiles`. El advisor lo marca pero es intencional/seguro (acknowledged).
 
 ### RLS — patrón de pronósticos
-- Las 3 tablas de predicción + reactions: **SELECT propio siempre + SELECT público post-lock** (`now() >= predictions_lock_at()`). INSERT/UPDATE/DELETE propio y solo antes del lock (predicciones) o post-lock (reacciones).
+- Las 3 tablas de predicción + reactions: **SELECT propio siempre + SELECT público post-lock** (`now() >= predictions_lock_at()`) **+ SELECT de admin** (`is_admin()`, PR #75, para el preview del organizador antes del lock). INSERT/UPDATE/DELETE propio y solo antes del lock (predicciones) o post-lock (reacciones).
 
 ### Funciones SQL
 - `predictions_lock_at()` — `kicks_off_at` del match #1 (lock global dinámico). En el cliente JS, `getPredictionsLockAt()` (`src/lib/predictions-lock.ts`) lee ese kickoff con **`unstable_cache`** (cliente anon sin cookies, revalidate 1h — dato casi inmutable; fallback al cliente autenticado si el anon no pudiera leer) y se envuelve en **`cache()` de React** para deduplicar por request. El "está cerrado" siempre se compara contra `new Date()` del **servidor** (inmune al reloj del dispositivo).
