@@ -243,6 +243,26 @@ export function CommunityView({
     setOpenMatchId(day?.matches[0]?.id ?? null);
   }, [selectedDayKey, days]);
 
+  // Cerrar el selector de emojis al interactuar fuera (clic/touch en otra
+  // parte, scroll o resize) — comportamiento estándar de un popover. Los clics
+  // dentro del propio selector/botón (marcados con data-reaction-ui) no cierran.
+  useEffect(() => {
+    if (!openPicker) return;
+    const close = () => setOpenPicker(null);
+    const onPointerDown = (e: PointerEvent) => {
+      if ((e.target as HTMLElement | null)?.closest('[data-reaction-ui]')) return;
+      setOpenPicker(null);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('scroll', close, true); // capture: también scrolls internos
+    window.addEventListener('resize', close);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [openPicker]);
+
   // ── Tabla del día: puntos de cada participante en los partidos del día
   //    que YA tienen resultado oficial. Null si el día no tiene resultados.
   const dayBoard = useMemo(() => {
@@ -289,14 +309,10 @@ export function CommunityView({
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col gap-7">
-      <header className="space-y-1">
-        <h1 className="text-[28px] sm:text-[32px] font-bold tracking-tight text-foreground">
-          Comunidad
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Los pronósticos de todos, abiertos para que sea transparente.
-        </p>
-      </header>
+      {/* Sin título "Comunidad": ya lo indica la pestaña activa del navbar. */}
+      <p className="text-sm text-muted-foreground">
+        Los pronósticos de todos, abiertos para que sea transparente.
+      </p>
 
       {/* Distribución de campeones */}
       {championDist.rows.length > 0 && (
@@ -362,8 +378,8 @@ export function CommunityView({
             Toca un participante para ver su pronóstico completo.
           </p>
         </div>
-        {/* Grid con scroll vertical: no se desborda aunque haya muchos. */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1 -mr-1">
+        {/* Grid con scroll vertical: muestra varios y solo scrollea si hay muchos. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-1 -mr-1">
           {participants.map((p) => {
             const favTeam = p.favorite_team ? teamsByCode.get(p.favorite_team) : null;
             const isYou = p.id === currentUserId;
@@ -766,7 +782,7 @@ function MatchPredictions({
                   ))}
 
                   {!isOwn && (
-                    <div className="relative">
+                    <div className="relative" data-reaction-ui>
                       <button
                         type="button"
                         onClick={() => setOpenPicker(isPickerOpen ? null : rk)}

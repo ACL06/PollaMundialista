@@ -122,15 +122,11 @@ export default async function ComunidadPage() {
     (r) => enrolledIds.has(r.reactor_id) && enrolledIds.has(r.target_user_id),
   );
 
-  // Participantes = inscritos con pronóstico (fila en predictions) o al menos
-  // un marcador. Se enlazan a su pronóstico completo.
-  const participantIds = new Set<string>([
-    ...picks.map((p) => p.user_id),
-    ...scores.map((s) => s.user_id),
-  ]);
-  const participants = profiles
-    .filter((p) => participantIds.has(p.id))
-    .sort((a, b) => displayName(a).localeCompare(displayName(b)));
+  // Participantes = TODOS los inscritos (aunque aún no hayan pronosticado).
+  // Se enlazan a su pronóstico completo (queda vacío si no registraron nada).
+  const participants = [...profiles].sort((a, b) =>
+    displayName(a).localeCompare(displayName(b)),
+  );
 
   return (
     <CommunityView
