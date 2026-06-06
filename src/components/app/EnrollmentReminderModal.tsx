@@ -85,8 +85,8 @@ export function EnrollmentReminderModal({ lockAtIso }: EnrollmentReminderModalPr
               ? ' El Mundial arranca mañana.'
               : ` Faltan ${daysLeft} días para el arranque.`}{' '}
             Si no estás inscrito cuando empiece el partido inaugural,{' '}
-            <span className="font-medium text-foreground">no podrás participar por los premios</span>{' '}
-            (podrás seguir el Mundial, pero no concursar).
+            <span className="font-medium text-foreground">quedarás en modo espectador</span>: podrás
+            seguir el Mundial, pero no participarás por los premios.
           </p>
 
           <div className="rounded-lg bg-muted/40 p-3 text-sm">
