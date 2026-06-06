@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, MessageCircle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BREB_HOLDER, BREB_KEY, WHATSAPP_GROUP_URL } from '@/lib/prizes';
+import { CopyButton } from '@/components/home/CopyButton';
+import { BREB_HOLDER, BREB_KEY, PAYMENT_WHATSAPP_URL } from '@/lib/prizes';
 
 const STORAGE_KEY = 'polla:enrollmentReminder';
 /** Cuántos días antes del arranque se empieza a recordar. */
@@ -84,14 +85,18 @@ export function EnrollmentReminderModal({ lockAtIso }: EnrollmentReminderModalPr
               ? ' El Mundial arranca mañana.'
               : ` Faltan ${daysLeft} días para el arranque.`}{' '}
             Si no estás inscrito cuando empiece el partido inaugural,{' '}
-            <span className="font-medium text-foreground">perderás el acceso a la plataforma</span>.
+            <span className="font-medium text-foreground">no podrás participar por los premios</span>{' '}
+            (podrás seguir el Mundial, pero no concursar).
           </p>
 
           <div className="rounded-lg bg-muted/40 p-3 text-sm">
             <p className="mb-1 text-muted-foreground">Consigna a la llave Bre-B y avisa al admin:</p>
             <div className="flex items-center justify-between gap-3">
               <span className="text-muted-foreground">Llave Bre-B</span>
-              <span className="font-semibold text-foreground">{BREB_KEY}</span>
+              <span className="inline-flex items-center gap-1">
+                <span className="font-semibold text-foreground">{BREB_KEY}</span>
+                <CopyButton value={BREB_KEY} label="Copiar la llave Bre-B" />
+              </span>
             </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-muted-foreground">A nombre de</span>
@@ -100,7 +105,7 @@ export function EnrollmentReminderModal({ lockAtIso }: EnrollmentReminderModalPr
           </div>
 
           <a
-            href={WHATSAPP_GROUP_URL}
+            href={PAYMENT_WHATSAPP_URL}
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
@@ -110,7 +115,7 @@ export function EnrollmentReminderModal({ lockAtIso }: EnrollmentReminderModalPr
             )}
           >
             <MessageCircle className="h-4 w-4" />
-            Escribir al grupo de WhatsApp
+            Escribir al WhatsApp
           </a>
 
           <button
