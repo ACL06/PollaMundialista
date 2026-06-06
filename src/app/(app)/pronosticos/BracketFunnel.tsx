@@ -1,12 +1,6 @@
-import { Fragment } from 'react';
-import { Crown, Medal, Trophy } from 'lucide-react';
+import { Crown, Medal } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  BRACKET_ROUNDS,
-  BRACKET_ROUND_LABEL,
-  BRACKET_ROUND_SIZE,
-  type PredictionBracketRound,
-} from '@/lib/types/prediction';
+import { BRACKET_ROUND_LABEL, type PredictionBracketRound } from '@/lib/types/prediction';
 import type { Team } from '@/lib/types/match';
 import type { Prediction, PredictionBracketEntry } from '@/lib/types/prediction';
 
@@ -17,10 +11,14 @@ interface BracketFunnelProps {
 }
 
 /**
- * Visualización tipo "embudo" del bracket del usuario: las rondas se angostan
- * de 32 → 16 → 8 → 4 → finalistas (2) → campeón (1), unidas por un conector de
- * UNA sola línea. No son llaves por partido: nuestro modelo es "qué equipos
- * cree que pasan a cada ronda", no cruces emparejados. Usa los tokens de la app.
+ * Embudo HORIZONTAL del bracket del usuario: una columna por fase que se
+ * angosta — Eliminatorias de 32 (32) → Octavos (16) → Cuartos (8) →
+ * Semifinales (4) → Final (2) → Campeón (1). Cada columna: título arriba +
+ * recuadro verde claro (`bg-primary/10`, el verde de marca) con la lista de
+ * equipos como **bandera + código** (MEX, RSA…) para ahorrar espacio. Scroll
+ * horizontal si no caben. No son llaves por partido (el modelo es "quién pasa
+ * a cada ronda", no cruces emparejados). 3er lugar + marcador final + goleador
+ * van en la línea-resumen de abajo.
  */
 export function BracketFunnel({ prediction, bracket, teams }: BracketFunnelProps) {
   const teamsByCode = new Map(teams.map((t) => [t.code, t]));
@@ -30,7 +28,7 @@ export function BracketFunnel({ prediction, bracket, teams }: BracketFunnelProps
       .filter((e) => e.round === round)
       .map((e) => teamsByCode.get(e.team_code))
       .filter((t): t is Team => !!t)
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => a.code.localeCompare(b.code));
 
   const championTeam = prediction?.champion_code ? teamsByCode.get(prediction.champion_code) ?? null : null;
   const runnerUpTeam = prediction?.runner_up_code ? teamsByCode.get(prediction.runner_up_code) ?? null : null;
@@ -41,63 +39,55 @@ export function BracketFunnel({ prediction, bracket, teams }: BracketFunnelProps
       ? `${prediction.final_home_score} – ${prediction.final_away_score}`
       : '—';
 
+  // Una columna por fase (de la más ancha a la más angosta).
+  const columns: Array<{ key: string; label: string; teams: Team[]; isChampion?: boolean }> = [
+    { key: 'r32', label: BRACKET_ROUND_LABEL.r32, teams: teamsInRound('r32') },
+    { key: 'r16', label: BRACKET_ROUND_LABEL.r16, teams: teamsInRound('r16') },
+    { key: 'qf', label: BRACKET_ROUND_LABEL.qf, teams: teamsInRound('qf') },
+    { key: 'sf', label: BRACKET_ROUND_LABEL.sf, teams: teamsInRound('sf') },
+    {
+      key: 'final',
+      label: 'Final',
+      teams: [championTeam, runnerUpTeam].filter((t): t is Team => !!t),
+    },
+    { key: 'champion', label: 'Campeón', teams: championTeam ? [championTeam] : [], isChampion: true },
+  ];
+
   return (
     <section className="space-y-3">
       <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
         Camino al título
       </h2>
 
-      <div className="rounded-xl border border-border bg-surface p-4 sm:p-6 flex flex-col items-center">
-        {BRACKET_ROUNDS.map((round, i) => {
-          const inRound = teamsInRound(round);
-          return (
-            <Fragment key={round}>
-              {i > 0 && <Connector />}
-              <RoundBand
-                label={BRACKET_ROUND_LABEL[round]}
-                count={inRound.length}
-                total={BRACKET_ROUND_SIZE[round]}
-                teams={inRound}
-                highlight={round === 'sf'}
-              />
-            </Fragment>
-          );
-        })}
-
-        <Connector />
-
-        {/* Final: los 2 finalistas (de los 4 semifinalistas salen estos 2). */}
-        <div className="w-full flex flex-col items-center gap-2 rounded-lg bg-primary/5 py-3">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Final
-          </span>
-          <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-3">
-            <PodiumSlot label="Campeón" Icon={Crown} iconClass="text-amber-500" team={championTeam} />
-            <PodiumSlot label="Subcampeón" Icon={Trophy} iconClass="text-muted-foreground" team={runnerUpTeam} />
-          </div>
-        </div>
-
-        <Connector />
-
-        {/* Campeón */}
-        <div className="flex flex-col items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-500">
-            <Trophy className="h-4 w-4" />
-            Campeón
-          </span>
-          {championTeam ? (
-            <span className="inline-flex items-center gap-2 rounded-lg border-2 border-amber-500/40 bg-amber-500/5 px-4 py-2 text-[15px] font-bold text-foreground">
-              <Flag flag={championTeam.flag} size={26} />
-              {championTeam.name}
-            </span>
-          ) : (
-            <span className="text-sm text-muted-foreground">—</span>
-          )}
+      {/* Embudo horizontal (scroll en X si no caben las fases). */}
+      <div className="overflow-x-auto pb-2 -mx-1 px-1">
+        <div className="flex items-start gap-2.5 min-w-max">
+          {columns.map((col) => (
+            <div key={col.key} className="flex flex-col items-center gap-1.5">
+              <span className="flex items-center gap-1 max-w-[88px] text-center text-[10px] font-semibold uppercase leading-tight tracking-wider text-muted-foreground">
+                {col.isChampion && <Crown className="h-3 w-3 flex-shrink-0 text-amber-500" />}
+                {col.label}
+              </span>
+              <div className="flex flex-col gap-1.5 rounded-lg bg-primary/10 p-2">
+                {col.teams.length === 0 ? (
+                  <span className="px-1.5 py-1 text-[11px] italic text-muted-foreground">—</span>
+                ) : (
+                  col.teams.map((t, j) => (
+                    <TeamCodeChip
+                      key={t.code}
+                      team={t}
+                      accent={col.isChampion || (col.key === 'final' && j === 0)}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Extras: 3.er lugar + marcador final + goleador */}
-      <div className="rounded-lg border border-border bg-surface px-4 py-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 rounded-lg border border-border bg-surface px-4 py-3 text-sm">
         <span className="inline-flex items-center gap-1.5 text-foreground">
           <Medal className="h-4 w-4 text-amber-700" />
           3.<sup>er</sup>&nbsp;lugar:&nbsp;
@@ -118,11 +108,6 @@ export function BracketFunnel({ prediction, bracket, teams }: BracketFunnelProps
   );
 }
 
-/** Conector vertical de una sola línea entre rondas (el "embudo"). */
-function Connector() {
-  return <div className="h-5 w-px bg-border" aria-hidden="true" />;
-}
-
 function Flag({ flag, size }: { flag: string; size: number }) {
   return (
     <span
@@ -133,67 +118,20 @@ function Flag({ flag, size }: { flag: string; size: number }) {
   );
 }
 
-function TeamChip({ team }: { team: Team }) {
+/** Chip compacto: bandera + código de país (MEX, RSA…). */
+function TeamCodeChip({ team, accent }: { team: Team; accent?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2 py-1 text-[13px]">
-      <Flag flag={team.flag} size={20} />
-      <span className="text-foreground">{team.name}</span>
-    </span>
-  );
-}
-
-function RoundBand({
-  label,
-  count,
-  total,
-  teams,
-  highlight,
-}: {
-  label: string;
-  count: number;
-  total: number;
-  teams: Team[];
-  highlight?: boolean;
-}) {
-  return (
-    <div className={cn('w-full flex flex-col items-center gap-2 rounded-lg py-2', highlight && 'bg-primary/5')}>
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {label}{' '}
-        <span className="text-foreground tabular-nums normal-case">
-          {count}/{total}
-        </span>
-      </span>
-      {teams.length === 0 ? (
-        <span className="text-xs text-muted-foreground italic">Sin selección</span>
-      ) : (
-        <div className="flex flex-wrap justify-center gap-1.5 max-w-2xl">
-          {teams.map((t) => (
-            <TeamChip key={t.code} team={t} />
-          ))}
-        </div>
+    <span
+      title={team.name}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-md border px-1.5 py-1 text-xs font-semibold tabular-nums whitespace-nowrap',
+        accent
+          ? 'border-amber-500/50 bg-amber-500/10 text-foreground'
+          : 'border-border bg-surface text-foreground',
       )}
-    </div>
-  );
-}
-
-function PodiumSlot({
-  label,
-  Icon,
-  iconClass,
-  team,
-}: {
-  label: string;
-  Icon: typeof Crown;
-  iconClass: string;
-  team: Team | null;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-1.5">
-      <span className={cn('inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider', iconClass)}>
-        <Icon className="h-3.5 w-3.5" />
-        {label}
-      </span>
-      {team ? <TeamChip team={team} /> : <span className="text-sm text-muted-foreground">—</span>}
-    </div>
+    >
+      <Flag flag={team.flag} size={18} />
+      {team.code}
+    </span>
   );
 }
