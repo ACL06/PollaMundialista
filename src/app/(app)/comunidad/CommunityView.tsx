@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronRight, Crown, Flame, ListOrdered, Sparkles, SmilePlus, Target, Trophy, Users } from 'lucide-react';
+import { ChevronDown, ChevronRight, Crown, Flame, ListOrdered, Sparkles, SmilePlus, Target, Trophy, Users } from 'lucide-react';
 import { TeamLabel } from '@/components/calendar/TeamLabel';
 import { BracketSlot } from '@/components/calendar/BracketSlot';
 import {
@@ -12,6 +12,7 @@ import {
   formatMatchTime,
 } from '@/lib/format-date';
 import { SCORING, normalizeScorer } from '@/lib/scoring';
+import { useCenterActiveTab } from '@/lib/use-center-active-tab';
 import { cn } from '@/lib/utils';
 import type { Match, Team } from '@/lib/types/match';
 import {
@@ -97,6 +98,8 @@ export function CommunityView({
   );
   // Qué fila tiene el selector de emojis abierto (`target|match`), o null.
   const [openPicker, setOpenPicker] = useState<string | null>(null);
+  // Acordeón: solo un partido con sus marcadores expandido a la vez.
+  const [openMatchId, setOpenMatchId] = useState<string | null>(null);
   const [, startReact] = useTransition();
 
   const handleReact = (targetUserId: string, matchId: string, reaction: ReactionKey) => {
@@ -230,6 +233,16 @@ export function CommunityView({
   });
   const selectedDay = days.find((d) => d.key === selectedDayKey) ?? days[0];
 
+  // Tabs de fecha con auto-centrado del activo (como el navbar/wizard).
+  const { containerRef: dayTabsRef, activeRef: activeDayRef } =
+    useCenterActiveTab<HTMLButtonElement>(selectedDay?.key);
+
+  // Al cambiar de día, abrir por defecto el primer partido (acordeón).
+  useEffect(() => {
+    const day = days.find((d) => d.key === selectedDayKey) ?? days[0];
+    setOpenMatchId(day?.matches[0]?.id ?? null);
+  }, [selectedDayKey, days]);
+
   // ── Tabla del día: puntos de cada participante en los partidos del día
   //    que YA tienen resultado oficial. Null si el día no tiene resultados.
   const dayBoard = useMemo(() => {
@@ -340,11 +353,17 @@ export function CommunityView({
 
       {/* Participantes → pronóstico completo */}
       <section className="space-y-3">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          <Users className="h-4 w-4" />
-          Participantes ({participants.length})
-        </h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="space-y-1">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            <Users className="h-4 w-4" />
+            Participantes ({participants.length})
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Toca un participante para ver su pronóstico completo.
+          </p>
+        </div>
+        {/* Grid con scroll vertical: no se desborda aunque haya muchos. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1 -mr-1">
           {participants.map((p) => {
             const favTeam = p.favorite_team ? teamsByCode.get(p.favorite_team) : null;
             const isYou = p.id === currentUserId;
@@ -353,36 +372,43 @@ export function CommunityView({
                 key={p.id}
                 href={`/comunidad/${p.id}`}
                 className={cn(
-                  'inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full border bg-surface',
+                  'flex items-center gap-1.5 px-2 py-1.5 rounded-lg border bg-surface min-w-0',
                   'text-[13px] font-medium text-foreground hover:border-foreground/20 transition-colors',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
                   isYou ? 'border-primary/50 bg-primary/5' : 'border-border',
                 )}
               >
                 <Avatar profile={p} size={22} />
-                <span>{displayName(p)}</span>
-                {isYou && <span className="text-[10px] font-bold uppercase text-primary">Tú</span>}
+                <span className="flex-1 min-w-0 truncate">{displayName(p)}</span>
+                {isYou && (
+                  <span className="flex-shrink-0 text-[10px] font-bold uppercase text-primary">Tú</span>
+                )}
                 {favTeam && (
                   <span
-                    className={`fi fi-${favTeam.flag} rounded-sm`}
+                    className={`fi fi-${favTeam.flag} rounded-sm flex-shrink-0`}
                     style={{ width: 16, height: 12 }}
                     aria-hidden="true"
                   />
                 )}
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
               </Link>
             );
           })}
         </div>
       </section>
 
-      {/* Tabs por día */}
-      <div className="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1" role="tablist">
+      {/* Tabs por día (auto-centra el activo al seleccionarlo) */}
+      <div
+        ref={dayTabsRef}
+        className="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1 scroll-smooth"
+        role="tablist"
+      >
         {days.map((day) => {
           const isActive = day.key === selectedDay?.key;
           return (
             <button
               key={day.key}
+              ref={isActive ? activeDayRef : undefined}
               type="button"
               role="tab"
               aria-selected={isActive}
@@ -474,6 +500,8 @@ export function CommunityView({
               openPicker={openPicker}
               setOpenPicker={setOpenPicker}
               onReact={handleReact}
+              isOpen={openMatchId === match.id}
+              onToggle={() => setOpenMatchId((cur) => (cur === match.id ? null : match.id))}
             />
           ))}
         </div>
@@ -539,6 +567,9 @@ interface MatchPredictionsProps {
   openPicker: string | null;
   setOpenPicker: (key: string | null) => void;
   onReact: (targetUserId: string, matchId: string, reaction: ReactionKey) => void;
+  /** Acordeón: si este partido tiene sus marcadores expandidos. */
+  isOpen: boolean;
+  onToggle: () => void;
 }
 
 function MatchPredictions({
@@ -550,6 +581,8 @@ function MatchPredictions({
   openPicker,
   setOpenPicker,
   onReact,
+  isOpen,
+  onToggle,
 }: MatchPredictionsProps) {
   const real = officialResult(match);
 
@@ -600,35 +633,53 @@ function MatchPredictions({
 
   return (
     <article className="border border-border bg-surface rounded-lg overflow-hidden">
-      {/* Cabecera del partido */}
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-3 items-center px-4 py-3 border-b border-border bg-muted/30">
-        {match.home_team ? (
-          <TeamLabel team={match.home_team} align="right" />
-        ) : (
-          <BracketSlot source={match.bracket_source_home} align="right" />
-        )}
-        <span className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground text-center">
-          {real ? (
-            <span className="inline-flex flex-col items-center gap-0.5">
-              <span className="font-bold text-foreground text-[14px] tabular-nums">
-                {real.home} – {real.away}
-              </span>
-              <span className="text-[10px] text-primary">Final</span>
-            </span>
+      {/* Cabecera clickeable: expande/colapsa los marcadores de todos */}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        className="w-full px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-tertiary"
+      >
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-3 items-center">
+          {match.home_team ? (
+            <TeamLabel team={match.home_team} align="right" />
           ) : (
-            formatMatchTime(new Date(match.kicks_off_at))
+            <BracketSlot source={match.bracket_source_home} align="right" />
           )}
-        </span>
-        {match.away_team ? (
-          <TeamLabel team={match.away_team} align="left" />
-        ) : (
-          <BracketSlot source={match.bracket_source_away} align="left" />
-        )}
-      </div>
+          <span className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground text-center">
+            {real ? (
+              <span className="inline-flex flex-col items-center gap-0.5">
+                <span className="font-bold text-foreground text-[14px] tabular-nums">
+                  {real.home} – {real.away}
+                </span>
+                <span className="text-[10px] text-primary">Final</span>
+              </span>
+            ) : (
+              formatMatchTime(new Date(match.kicks_off_at))
+            )}
+          </span>
+          {match.away_team ? (
+            <TeamLabel team={match.away_team} align="left" />
+          ) : (
+            <BracketSlot source={match.bracket_source_away} align="left" />
+          )}
+        </div>
+        {/* Indicador de expandir/colapsar */}
+        <div className="mt-1.5 flex items-center justify-center gap-1 text-[11px] font-medium text-muted-foreground">
+          <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isOpen && 'rotate-180')} />
+          <span>
+            {isOpen
+              ? 'Ocultar pronósticos'
+              : total > 0
+                ? `Ver ${total} pronóstico${total === 1 ? '' : 's'}`
+                : 'Sin pronósticos'}
+          </span>
+        </div>
+      </button>
 
       {/* Consenso */}
-      {total > 0 && (
-        <div className="px-4 py-2.5 border-b border-border/60 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
+      {isOpen && total > 0 && (
+        <div className="px-4 py-2.5 border-t border-border/60 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
           <span className="text-muted-foreground">Consenso:</span>
           <span className="text-foreground">
             {homeName} <strong className="tabular-nums">{pct(outcomeCounts.home)}%</strong>
@@ -647,11 +698,12 @@ function MatchPredictions({
         </div>
       )}
 
-      {preds.length === 0 ? (
-        <p className="px-4 py-3 text-[13px] text-muted-foreground italic">
+      {isOpen && preds.length === 0 && (
+        <p className="px-4 py-3 border-t border-border/60 text-[13px] text-muted-foreground italic">
           Nadie pronosticó este partido.
         </p>
-      ) : (
+      )}
+      {isOpen && preds.length > 0 && (
         <ul className="divide-y divide-border/60">
           {sorted.map((p) => {
             const profile = profileById.get(p.userId);
