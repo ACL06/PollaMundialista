@@ -1,4 +1,7 @@
-import { Crown, Medal } from 'lucide-react';
+'use client';
+
+import { useState } from 'react';
+import { ChevronDown, Crown, Medal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BRACKET_ROUND_LABEL, type PredictionBracketRound } from '@/lib/types/prediction';
 import type { Team } from '@/lib/types/match';
@@ -10,15 +13,22 @@ interface BracketFunnelProps {
   teams: Team[];
 }
 
+interface Phase {
+  key: string;
+  label: string;
+  total: number;
+  teams: Team[];
+  isChampion?: boolean;
+}
+
 /**
- * Embudo HORIZONTAL del bracket del usuario: una columna por fase que se
- * angosta — Eliminatorias de 32 (32) → Octavos (16) → Cuartos (8) →
- * Semifinales (4) → Final (2) → Campeón (1). Cada columna: título arriba +
- * recuadro verde claro (`bg-primary/10`, el verde de marca) con la lista de
- * equipos como **bandera + código** (MEX, RSA…) para ahorrar espacio. Scroll
- * horizontal si no caben. No son llaves por partido (el modelo es "quién pasa
- * a cada ronda", no cruces emparejados). 3er lugar + marcador final + goleador
- * van en la línea-resumen de abajo.
+ * Embudo del bracket del usuario como **acordeón por fase**: Eliminatorias de
+ * 32 → Octavos → Cuartos → Semifinales → Final → Campeón. Cada fase es una
+ * sección colapsable (cabecera verde claro `bg-primary/10`, el verde de marca)
+ * cuyo cuerpo lista los equipos como **bandera + código** (MEX, RSA…) en una
+ * cuadrícula centrada (≈4 por fila en móvil, envuelve a la 2.ª fila si hay
+ * más). No son llaves por partido (el modelo es "quién pasa", no cruces).
+ * 3er lugar + marcador final + goleador van en la línea-resumen de abajo.
  */
 export function BracketFunnel({ prediction, bracket, teams }: BracketFunnelProps) {
   const teamsByCode = new Map(teams.map((t) => [t.code, t]));
@@ -39,19 +49,29 @@ export function BracketFunnel({ prediction, bracket, teams }: BracketFunnelProps
       ? `${prediction.final_home_score} – ${prediction.final_away_score}`
       : '—';
 
-  // Una columna por fase (de la más ancha a la más angosta).
-  const columns: Array<{ key: string; label: string; teams: Team[]; isChampion?: boolean }> = [
-    { key: 'r32', label: BRACKET_ROUND_LABEL.r32, teams: teamsInRound('r32') },
-    { key: 'r16', label: BRACKET_ROUND_LABEL.r16, teams: teamsInRound('r16') },
-    { key: 'qf', label: BRACKET_ROUND_LABEL.qf, teams: teamsInRound('qf') },
-    { key: 'sf', label: BRACKET_ROUND_LABEL.sf, teams: teamsInRound('sf') },
+  const phases: Phase[] = [
+    { key: 'r32', label: BRACKET_ROUND_LABEL.r32, total: 32, teams: teamsInRound('r32') },
+    { key: 'r16', label: BRACKET_ROUND_LABEL.r16, total: 16, teams: teamsInRound('r16') },
+    { key: 'qf', label: BRACKET_ROUND_LABEL.qf, total: 8, teams: teamsInRound('qf') },
+    { key: 'sf', label: BRACKET_ROUND_LABEL.sf, total: 4, teams: teamsInRound('sf') },
     {
       key: 'final',
       label: 'Final',
+      total: 2,
       teams: [championTeam, runnerUpTeam].filter((t): t is Team => !!t),
     },
-    { key: 'champion', label: 'Campeón', teams: championTeam ? [championTeam] : [], isChampion: true },
+    { key: 'champion', label: 'Campeón', total: 1, teams: championTeam ? [championTeam] : [], isChampion: true },
   ];
+
+  // Acordeón multi-abierto, por defecto todas las fases CERRADAS (más compacto).
+  const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set());
+  const toggle = (key: string) =>
+    setOpenKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   return (
     <section className="space-y-3">
@@ -59,31 +79,49 @@ export function BracketFunnel({ prediction, bracket, teams }: BracketFunnelProps
         Camino al título
       </h2>
 
-      {/* Embudo horizontal (scroll en X si no caben las fases). */}
-      <div className="overflow-x-auto pb-2 -mx-1 px-1">
-        <div className="flex items-start gap-2.5 min-w-max">
-          {columns.map((col) => (
-            <div key={col.key} className="flex flex-col items-center gap-1.5">
-              <span className="flex items-center gap-1 max-w-[88px] text-center text-[10px] font-semibold uppercase leading-tight tracking-wider text-muted-foreground">
-                {col.isChampion && <Crown className="h-3 w-3 flex-shrink-0 text-amber-500" />}
-                {col.label}
-              </span>
-              <div className="flex flex-col gap-1.5 rounded-lg bg-primary/10 p-2">
-                {col.teams.length === 0 ? (
-                  <span className="px-1.5 py-1 text-[11px] italic text-muted-foreground">—</span>
-                ) : (
-                  col.teams.map((t, j) => (
-                    <TeamCodeChip
-                      key={t.code}
-                      team={t}
-                      accent={col.isChampion || (col.key === 'final' && j === 0)}
-                    />
-                  ))
-                )}
-              </div>
+      <div className="space-y-2">
+        {phases.map((phase) => {
+          const open = openKeys.has(phase.key);
+          return (
+            <div key={phase.key} className="overflow-hidden rounded-lg border border-border">
+              {/* Cabecera verde claro, clickeable (acordeón) */}
+              <button
+                type="button"
+                onClick={() => toggle(phase.key)}
+                aria-expanded={open}
+                className="flex w-full items-center justify-between gap-2 bg-primary/10 px-3 py-2.5 transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-tertiary"
+              >
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                  {phase.isChampion && <Crown className="h-4 w-4 flex-shrink-0 text-amber-500" />}
+                  {phase.label}
+                  <span className="text-xs font-normal tabular-nums text-muted-foreground">
+                    {phase.teams.length}/{phase.total}
+                  </span>
+                </span>
+                <ChevronDown
+                  className={cn('h-4 w-4 flex-shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
+                />
+              </button>
+
+              {/* Cuerpo: cuadrícula centrada de chips (≈4 por fila, envuelve) */}
+              {open && (
+                <div className="flex flex-wrap justify-center gap-2 bg-surface p-3">
+                  {phase.teams.length === 0 ? (
+                    <span className="text-[13px] italic text-muted-foreground">Sin selección</span>
+                  ) : (
+                    phase.teams.map((t, j) => (
+                      <TeamCodeChip
+                        key={t.code}
+                        team={t}
+                        accent={phase.isChampion || (phase.key === 'final' && j === 0)}
+                      />
+                    ))
+                  )}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {/* Extras: 3.er lugar + marcador final + goleador */}
@@ -124,7 +162,7 @@ function TeamCodeChip({ team, accent }: { team: Team; accent?: boolean }) {
     <span
       title={team.name}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-md border px-1.5 py-1 text-xs font-semibold tabular-nums whitespace-nowrap',
+        'inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold whitespace-nowrap',
         accent
           ? 'border-amber-500/50 bg-amber-500/10 text-foreground'
           : 'border-border bg-surface text-foreground',

@@ -237,11 +237,11 @@ export function CommunityView({
   const { containerRef: dayTabsRef, activeRef: activeDayRef } =
     useCenterActiveTab<HTMLButtonElement>(selectedDay?.key);
 
-  // Al cambiar de día, abrir por defecto el primer partido (acordeón).
+  // Acordeón de partidos: por defecto todos CERRADOS. Al cambiar de día se
+  // resetea (cierra) para no arrastrar el que estaba abierto del día anterior.
   useEffect(() => {
-    const day = days.find((d) => d.key === selectedDayKey) ?? days[0];
-    setOpenMatchId(day?.matches[0]?.id ?? null);
-  }, [selectedDayKey, days]);
+    setOpenMatchId(null);
+  }, [selectedDayKey]);
 
   // Cerrar el selector de emojis al interactuar fuera (clic/touch en otra
   // parte, scroll o resize) — comportamiento estándar de un popover. Los clics
