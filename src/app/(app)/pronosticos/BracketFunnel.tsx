@@ -21,8 +21,6 @@ interface Phase {
   isChampion?: boolean;
 }
 
-const PHASE_KEYS = ['r32', 'r16', 'qf', 'sf', 'final', 'champion'];
-
 /**
  * Embudo del bracket del usuario como **acordeón por fase**: Eliminatorias de
  * 32 → Octavos → Cuartos → Semifinales → Final → Campeón. Cada fase es una
@@ -65,8 +63,8 @@ export function BracketFunnel({ prediction, bracket, teams }: BracketFunnelProps
     { key: 'champion', label: 'Campeón', total: 1, teams: championTeam ? [championTeam] : [], isChampion: true },
   ];
 
-  // Acordeón multi-abierto: por defecto todas las fases expandidas.
-  const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set(PHASE_KEYS));
+  // Acordeón multi-abierto, por defecto todas las fases CERRADAS (más compacto).
+  const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set());
   const toggle = (key: string) =>
     setOpenKeys((prev) => {
       const next = new Set(prev);
