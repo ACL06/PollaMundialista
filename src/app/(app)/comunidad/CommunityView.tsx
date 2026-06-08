@@ -611,8 +611,13 @@ function MatchPredictions({
     : outcomeCounts.away >= outcomeCounts.draw
       ? 'away'
       : 'draw';
-  const modalShare = total > 0 ? Math.max(outcomeCounts.home, outcomeCounts.draw, outcomeCounts.away) / total : 0;
+  const modalCount = Math.max(outcomeCounts.home, outcomeCounts.draw, outcomeCounts.away);
+  const modalShare = total > 0 ? modalCount / total : 0;
   const hasClearFavorite = modalShare >= 0.6 && total >= 3;
+  // Cuántos fueron contra el favorito: "va solo" si es exactamente 1,
+  // "rebelde" si son 2 o más (ya no van "solos", van a contracorriente).
+  const againstCount = total - modalCount;
+  const rebelLabel = againstCount === 1 ? 'va solo' : 'rebelde';
 
   // Marcador más repetido
   const scoreCounts = new Map<string, number>();
@@ -748,7 +753,7 @@ function MatchPredictions({
                   {isRebel && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-500">
                       <Flame className="h-3 w-3" />
-                      va solo
+                      {rebelLabel}
                     </span>
                   )}
                   {verdict && <VerdictChip verdict={verdict} />}
