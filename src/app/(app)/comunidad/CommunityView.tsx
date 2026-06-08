@@ -614,10 +614,6 @@ function MatchPredictions({
   const modalCount = Math.max(outcomeCounts.home, outcomeCounts.draw, outcomeCounts.away);
   const modalShare = total > 0 ? modalCount / total : 0;
   const hasClearFavorite = modalShare >= 0.6 && total >= 3;
-  // Cuántos fueron contra el favorito: "va solo" si es exactamente 1,
-  // "rebelde" si son 2 o más (ya no van "solos", van a contracorriente).
-  const againstCount = total - modalCount;
-  const rebelLabel = againstCount === 1 ? 'va solo' : 'rebelde';
 
   // Marcador más repetido
   const scoreCounts = new Map<string, number>();
@@ -725,7 +721,11 @@ function MatchPredictions({
         <ul className="divide-y divide-border/60">
           {sorted.map((p) => {
             const profile = profileById.get(p.userId);
-            const isRebel = hasClearFavorite && outcomeOf(p.home, p.away) !== modal;
+            const myOutcome = outcomeOf(p.home, p.away);
+            const isRebel = hasClearFavorite && myOutcome !== modal;
+            // "va solo" si es el ÚNICO con su resultado 1X2; "rebelde" si comparte
+            // ese resultado con otro(s), pero igual van contra el favorito.
+            const rebelLabel = outcomeCounts[myOutcome] === 1 ? 'va solo' : 'rebelde';
             const rk = reactionKeyOf(p.userId, match.id);
             const inner = reactionState.get(rk);
             const isOwn = p.userId === currentUserId;
