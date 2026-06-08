@@ -78,7 +78,7 @@
 
 #### Comunidad (Fase 4F — transparencia post-lock)
 - `/comunidad`: gate pre-lock; post-lock muestra los pronósticos de **todos** por día/partido (identificados por nombre y apellidos + avatar)
-- Módulos: **El campeón de la polla** (distribución), **Finalistas más elegidos** (campeón+subcampeón, top 8), **Goleadores más elegidos** (top 5, agrupados con `normalizeScorer`), **Consenso por partido** (% 1X2 + marcador más repetido), **Rebeldes** ("🔥 va solo" vs favorito ≥60% con ≥3 pronósticos), **Reacciones emoji** (👍 😂 🔥 😱) sobre cada pronóstico
+- Módulos: **El campeón de la polla** (distribución), **Finalistas más elegidos** (campeón+subcampeón, top 8), **Goleadores más elegidos** (top 5, agrupados con `normalizeScorer`), **Consenso por partido** (% 1X2 + marcador más repetido), **Rebeldes** (van contra un favorito ≥60% con ≥3 pronósticos: "🔥 va solo" si es 1 disidente, "🔥 rebelde" si son 2+), **Reacciones emoji** (👍 😂 🔥 😱) sobre cada pronóstico
 - **Aciertos en vivo** (post-resultados, PR #75): cada pronóstico se marca vs el marcador oficial (`✓ Exacto` / `≈ Resultado` / `✗ Falló`) cuando el partido está `final`; **"Tabla del día"** (puntos del día 5/2 + exactos + badge **"Pleno"**); resalta **tu fila ("Tú")**. UX: día por defecto = **hoy**, participantes en **grid con scroll**, tabs de fecha **auto-centradas** (`useCenterActiveTab`), partidos en **acordeón** (uno abierto a la vez)
 - `/comunidad/[userId]`: pronóstico completo de cualquiera (reusa `PredictionView` → embudo)
 - Vista `public_profiles` (solo columnas no sensibles) para mostrar nombres/avatares sin exponer phone/email
