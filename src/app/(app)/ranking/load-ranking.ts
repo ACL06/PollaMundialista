@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
-import { buildRanking, deriveOfficialResults } from '@/lib/scoring';
+import { assignRanks, buildRanking, deriveOfficialResults } from '@/lib/scoring';
 import { displayName } from '@/lib/display-name';
 import type { Match } from '@/lib/types/match';
 import type {
@@ -114,15 +114,8 @@ export async function loadRanking(): Promise<RankingResult> {
     })
     .sort((a, b) => b.breakdown.total - a.breakdown.total || a.name.localeCompare(b.name));
 
-  // Asignar posiciones de competición (empates comparten número).
-  let lastTotal = Number.POSITIVE_INFINITY;
-  let lastRank = 0;
-  const rows: RankingRow[] = sorted.map((r, i) => {
-    const rank = r.breakdown.total === lastTotal ? lastRank : i + 1;
-    lastTotal = r.breakdown.total;
-    lastRank = rank;
-    return { ...r, rank };
-  });
+  // Posiciones de competición (empates comparten número) — helper puro testeado.
+  const rows: RankingRow[] = assignRanks(sorted);
 
   return { lockAt, locked: true, hasResults, complete, rows };
 }
