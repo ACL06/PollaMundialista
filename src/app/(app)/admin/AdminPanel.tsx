@@ -6,6 +6,7 @@ import { TeamLabel } from '@/components/calendar/TeamLabel';
 import {
   formatMatchDateKey,
   formatMatchDateLong,
+  formatMatchDateShort,
   formatMatchTime,
 } from '@/lib/format-date';
 import { cn } from '@/lib/utils';
@@ -264,7 +265,7 @@ export function AdminPanel({
                 isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
               )}
             >
-              {new Date(day.key).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', timeZone: 'America/Bogota' })}
+              {formatMatchDateShort(new Date(day.matches[0].kicks_off_at))}
               <span className="ml-1.5 opacity-70 tabular-nums">{finals}/{day.matches.length}</span>
             </button>
           );

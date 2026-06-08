@@ -9,6 +9,7 @@ import { BracketSlot } from '@/components/calendar/BracketSlot';
 import {
   formatMatchDateKey,
   formatMatchDateLong,
+  formatMatchDateShort,
   formatMatchTime,
 } from '@/lib/format-date';
 import { SCORING, normalizeScorer } from '@/lib/scoring';
@@ -437,11 +438,7 @@ export function CommunityView({
                   : 'bg-muted text-muted-foreground hover:text-foreground',
               )}
             >
-              {new Date(day.key).toLocaleDateString('es-CO', {
-                day: 'numeric',
-                month: 'short',
-                timeZone: 'America/Bogota',
-              })}
+              {formatMatchDateShort(new Date(day.matches[0].kicks_off_at))}
             </button>
           );
         })}
