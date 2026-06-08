@@ -27,6 +27,8 @@ interface BracketStepProps {
   error: string | null;
   isLocked: boolean;
   isSubmitted: boolean;
+  /** Lleva al paso Cierre (Paso 4). Para el enlace del aviso de semifinalistas. */
+  onGoToClosing: () => void;
 }
 
 export function BracketStep({
@@ -38,6 +40,7 @@ export function BracketStep({
   error,
   isLocked,
   isSubmitted,
+  onGoToClosing,
 }: BracketStepProps) {
   const readOnly = isLocked || isSubmitted;
 
@@ -218,8 +221,14 @@ export function BracketStep({
           <ArrowRight className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" />
           <span>
             ¡Listo! Ya tienes tus 4 semifinalistas. Continúa al paso{' '}
-            <span className="font-semibold">Cierre</span> para elegir campeón, subcampeón, tercer
-            lugar y el marcador de la final.
+            <button
+              type="button"
+              onClick={onGoToClosing}
+              className="rounded font-semibold text-tertiary underline underline-offset-2 hover:text-tertiary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary"
+            >
+              Cierre
+            </button>{' '}
+            para elegir campeón, subcampeón, tercer lugar y el marcador de la final.
           </span>
         </div>
       )}

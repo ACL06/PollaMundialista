@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCenterActiveTab } from '@/lib/use-center-active-tab';
 import { TeamLabel } from '@/components/calendar/TeamLabel';
@@ -31,6 +31,8 @@ interface GroupScoresStepProps {
   onBlurField: (matchId: string) => void;
   isLocked: boolean;
   isSubmitted: boolean;
+  /** Avanza al siguiente paso del wizard (Bracket). Para la CTA del último día. */
+  onContinue: () => void;
 }
 
 /**
@@ -50,6 +52,7 @@ export function GroupScoresStep({
   onBlurField,
   isLocked,
   isSubmitted,
+  onContinue,
 }: GroupScoresStepProps) {
   const readOnly = isLocked || isSubmitted;
 
@@ -69,6 +72,7 @@ export function GroupScoresStep({
 
   const completedCount = savedIds.size;
   const selectedDay = days.find((d) => d.key === selectedDayKey) ?? days[0];
+  const isLastDay = days.length > 0 && selectedDay?.key === days[days.length - 1]?.key;
 
   // Mantener centrado el tab del día seleccionado en el scroll horizontal.
   const { containerRef: tabsRef, activeRef: activeTabRef } = useCenterActiveTab<HTMLButtonElement>(
@@ -154,6 +158,23 @@ export function GroupScoresStep({
               />
             ))}
           </div>
+
+          {/* CTA al final del último día: empuja al Bracket (Paso 3). */}
+          {isLastDay && (
+            <div className="flex flex-col items-stretch gap-2 pt-1">
+              <p className="text-center text-xs text-muted-foreground">
+                Este es el último día de marcadores. ¡Sigue con el bracket!
+              </p>
+              <button
+                type="button"
+                onClick={onContinue}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary"
+              >
+                Siguiente paso: el bracket
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
