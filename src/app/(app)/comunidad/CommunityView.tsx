@@ -722,10 +722,14 @@ function MatchPredictions({
           {sorted.map((p) => {
             const profile = profileById.get(p.userId);
             const myOutcome = outcomeOf(p.home, p.away);
-            const isRebel = hasClearFavorite && myOutcome !== modal;
-            // "va solo" si es el ÚNICO con su resultado 1X2; "rebelde" si comparte
-            // ese resultado con otro(s), pero igual van contra el favorito.
-            const rebelLabel = outcomeCounts[myOutcome] === 1 ? 'va solo' : 'rebelde';
+            const myCount = outcomeCounts[myOutcome];
+            // "va solo": eres el ÚNICO con tu resultado 1X2 y hay otro grupo de
+            // 2+ del cual destacarte (modalCount ≥ 2). Aplica haya o no favorito.
+            const isLone = total >= 3 && myCount === 1 && modalCount >= 2;
+            // "rebelde": un grupo (2+) minoritario que fue contra un favorito ≥60%.
+            const isRebelGroup = hasClearFavorite && myOutcome !== modal && myCount >= 2;
+            const isRebel = isLone || isRebelGroup;
+            const rebelLabel = isLone ? 'va solo' : 'rebelde';
             const rk = reactionKeyOf(p.userId, match.id);
             const inner = reactionState.get(rk);
             const isOwn = p.userId === currentUserId;
