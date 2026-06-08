@@ -569,6 +569,7 @@ export function PredictionWizard({
             onBlurField={handleGroupScoreBlur}
             isLocked={isLocked}
             isSubmitted={false}
+            onContinue={goNext}
           />
         ) : currentStep.key === 'bracket' ? (
           <BracketStep
