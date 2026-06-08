@@ -436,3 +436,22 @@ export function buildRanking(
   entries.sort((a, b) => b.breakdown.total - a.breakdown.total || a.userId.localeCompare(b.userId));
   return entries;
 }
+
+/**
+ * Asigna la posición de cada fila con **ranking de competición**: los empates
+ * (mismo `breakdown.total`) comparten número y el siguiente salta (ej. 1, 1, 3).
+ * Recibe las filas YA ordenadas por puntaje desc. Puro y genérico para poder
+ * testearlo aislado del cargador del ranking (que hace I/O a Supabase).
+ */
+export function assignRanks<T extends { breakdown: { total: number } }>(
+  sorted: readonly T[],
+): Array<T & { rank: number }> {
+  let lastTotal = Number.POSITIVE_INFINITY;
+  let lastRank = 0;
+  return sorted.map((row, i) => {
+    const rank = row.breakdown.total === lastTotal ? lastRank : i + 1;
+    lastTotal = row.breakdown.total;
+    lastRank = rank;
+    return { ...row, rank };
+  });
+}

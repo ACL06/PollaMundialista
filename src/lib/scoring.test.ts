@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  assignRanks,
   buildRanking,
   computeScore,
   deriveOfficialResults,
@@ -1014,5 +1015,113 @@ describe('buildRanking', () => {
     const ranking = buildRanking(predictions, [], [], knockoutScores, official);
     expect(ranking[0].breakdown.knockoutExact).toBe(5);
     expect(ranking[0].breakdown.total).toBe(5);
+  });
+
+  it('mismo total → desempate estable por userId (asc)', () => {
+    const predictions: Prediction[] = [
+      makePrediction({ user_id: 'zoe' }),
+      makePrediction({ user_id: 'ana' }),
+    ];
+    const ranking = buildRanking(predictions, [], [], [], emptyOfficial());
+    expect(ranking.map((r) => r.userId)).toEqual(['ana', 'zoe']);
+  });
+});
+
+// ── assignRanks: posición de competición (empates comparten número) ──
+describe('assignRanks', () => {
+  const withTotals = (totals: number[]) =>
+    totals.map((total, i) => ({ userId: `u${i}`, breakdown: { total } }));
+
+  it('sin empates: 1, 2, 3', () => {
+    expect(assignRanks(withTotals([30, 20, 10])).map((r) => r.rank)).toEqual([1, 2, 3]);
+  });
+
+  it('empate arriba: 1, 1, 3 (salta el 2)', () => {
+    expect(assignRanks(withTotals([30, 30, 10])).map((r) => r.rank)).toEqual([1, 1, 3]);
+  });
+
+  it('empate intermedio: 1, 2, 2, 4', () => {
+    expect(assignRanks(withTotals([30, 20, 20, 10])).map((r) => r.rank)).toEqual([1, 2, 2, 4]);
+  });
+
+  it('todos empatados: 1, 1, 1', () => {
+    expect(assignRanks(withTotals([10, 10, 10])).map((r) => r.rank)).toEqual([1, 1, 1]);
+  });
+
+  it('lista vacía y un solo elemento', () => {
+    expect(assignRanks(withTotals([]))).toEqual([]);
+    expect(assignRanks(withTotals([5])).map((r) => r.rank)).toEqual([1]);
+  });
+
+  it('preserva los demás campos de la fila', () => {
+    const ranked = assignRanks(withTotals([30, 30]));
+    expect(ranked[0]).toEqual({ userId: 'u0', breakdown: { total: 30 }, rank: 1 });
+    expect(ranked[1]).toEqual({ userId: 'u1', breakdown: { total: 30 }, rank: 1 });
+  });
+});
+
+// ── Bordes adicionales (campeón visitante, final sin marcador, 0-0, rondas) ──
+describe('computeScore / deriveOfficialResults — bordes adicionales', () => {
+  it('final ganada por el visitante sin winner_code → campeón = visitante', () => {
+    const matches: Match[] = [
+      match({
+        id: 'finalm',
+        match_number: 104,
+        stage: 'final',
+        home_team: team('AAA'),
+        away_team: team('BBB'),
+        home_score: 1,
+        away_score: 3,
+        status: 'final',
+      }),
+    ];
+    const r = deriveOfficialResults(matches);
+    expect(r.champion).toBe('BBB');
+    expect(r.runnerUp).toBe('AAA');
+    expect(r.finalScore).toEqual({ home: 1, away: 3 });
+  });
+
+  it('final finalizada pero SIN marcador no deriva campeón ni marcador', () => {
+    const matches: Match[] = [
+      match({
+        id: 'finalm',
+        match_number: 104,
+        stage: 'final',
+        home_team: team('AAA'),
+        away_team: team('BBB'),
+        status: 'final', // sin home_score/away_score
+      }),
+    ];
+    const r = deriveOfficialResults(matches);
+    expect(r.champion).toBeNull();
+    expect(r.finalScore).toBeNull();
+    expect(r.finalists).toEqual(new Set(['AAA', 'BBB'])); // finalistas sí (equipos ya asignados)
+  });
+
+  it('marcador final 0-0 exacto entre tus finalistas = 15', () => {
+    const user = emptyUser({
+      prediction: makePrediction({
+        champion_code: 'AAA',
+        runner_up_code: 'BBB',
+        final_home_score: 0,
+        final_away_score: 0,
+      }),
+    });
+    const actual = emptyOfficial({
+      finalScore: { home: 0, away: 0 },
+      finalHomeCode: 'AAA',
+      finalAwayCode: 'BBB',
+    });
+    expect(computeScore(user, actual).finalExact).toBe(15);
+  });
+
+  it('rondas independientes al revés: equipo en r16 sin estar en r32 del usuario', () => {
+    const user = emptyUser({ bracket: [br('r16', 'AAA')] }); // solo r16
+    const actual = emptyOfficial({
+      advancers: { r32: new Set(['AAA']), r16: new Set(['AAA']), qf: new Set(), sf: new Set() },
+    });
+    const r = computeScore(user, actual);
+    expect(r.r16).toBe(SCORING.bracket.r16);
+    expect(r.r32).toBe(0); // no lo puso en r32
   });
 });

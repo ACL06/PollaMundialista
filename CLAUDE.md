@@ -63,7 +63,7 @@
 - **Pestaña Eliminatorias** (Fase 9B+9C, `PronosticosTabs` + `KnockoutScoresPanel`): `/pronosticos` tiene 2 tabs — *Mi pronóstico* (wizard/read-only) y *Eliminatorias* (marcadores de R32..3er lugar). Cada partido: `pending` (cruce tipo calendario) → `open` (inputs + autosave vía `saveKnockoutScore`) → `closed` (read-only) según `knockoutMatchState()`. Puntúan 5/2 en el scoring y ranking (9C). **Aviso en `/home`** (`OpenKnockoutNotice`): cuando hay cruces `open` que el usuario aún no pronosticó, muestra "Tienes N cruces de eliminatoria abiertos" + CTA con deep-link `?tab=eliminatorias` (`PronosticosTabs` acepta `initialTab`). Cuenta con hora de servidor; 0 para espectadores
 
 #### Scoring (Fase 4D + 9C)
-- Motor TS puro `src/lib/scoring.ts` con **tests Vitest** (`scoring.test.ts`, 59 tests):
+- Motor TS puro `src/lib/scoring.ts` con **tests Vitest** (`scoring.test.ts`, 70 tests):
   - `computeScore(user, official)` → desglose + total (máx **798**)
   - `deriveOfficialResults(matches, topScorer)` → construye resultados oficiales desde `matches` (incl. `knockoutScores`)
   - `buildRanking(predictions, groupScores, bracket, knockoutScores, official)` → agrupa por usuario, ordena
@@ -104,11 +104,11 @@
   - **Recordatorio** (`EnrollmentReminderModal`, montado en `(app)/layout.tsx`): pre-inscritos ven el modal **1×/día** (localStorage, por fecha) en los últimos 5 días — se evalúa **al entrar a la app** y **al volver a la pestaña** (`visibilitychange`), para que uno con la sesión abierta lo vea igual al día siguiente sin recargar. Trae la **llave Bre-B con botón de copiar** (`CopyButton`, mismo del home) y botón **"Escribir al WhatsApp"** al chat interno (`PAYMENT_WHATSAPP_URL` = 320 920 8932, **no** el grupo). Mensaje: si no se inscriben **quedan en modo espectador** (siguen el Mundial pero no concursan por los premios; ya NO dice "pierden acceso a la plataforma").
 
 #### Tests (Vitest)
-- `scoring.test.ts` (59): reglas de scoring (incl. marcadores de eliminatoria y marcador de la final estricto por equipo, **campeón/3er por `winner_code` cuando el 90' fue empate y se definió por penales**, gate de `status === 'final'`, negativos explícitos campeón/3ero/goleador, gana-visitante, independencia por ronda del bracket) + **test de integración `deriveOfficialResults` → `computeScore`** (pipeline real), deriveOfficialResults, buildRanking, pronóstico perfecto = 798.
+- `scoring.test.ts` (70): reglas de scoring (incl. marcadores de eliminatoria y marcador de la final estricto por equipo, **campeón/3er por `winner_code` cuando el 90' fue empate y se definió por penales**, gate de `status === 'final'`, negativos explícitos campeón/3ero/goleador, gana-visitante, **final ganada por el visitante sin `winner_code`**, independencia por ronda del bracket en ambos sentidos) + **test de integración `deriveOfficialResults` → `computeScore`** (pipeline real), deriveOfficialResults, buildRanking (con desempate determinista por userId), **`assignRanks`** (posición de competición: empates comparten número → 1,1,3), pronóstico perfecto = 798.
 - `knockout-window.test.ts` (7): estados de la ventana de captura por partido (pending/open/closed).
 - `prizes.test.ts` (5): reparto de premios (10% admin + podio 70/20/10, el 1° absorbe el redondeo).
 - `compute-standings.test.ts`, `format-bracket-source.test.ts`, `predictions-lock.test.ts`, `validators/profile.test.ts`, `validators/prediction.test.ts`.
-- **98 tests en total**, corren en CI (`npm test`).
+- **109 tests en total**, corren en CI (`npm test`).
 
 ### ⏳ Pendiente / Roadmap
 
