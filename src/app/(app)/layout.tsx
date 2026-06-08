@@ -97,8 +97,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       <main className="flex-1">{children}</main>
 
-      {/* #16: recordatorio de inscripción (pre-inscritos, últimos 5 días). */}
-      {isPreEnrolled && <EnrollmentReminderModal lockAtIso={lockAt?.toISOString() ?? null} />}
+      {/* #16: recordatorio de inscripción (pre-inscritos, últimos 5 días ANTES
+        * del lock). Post-lock no se monta: el pre-inscrito pasa a modo
+        * espectador y ve el banner de "inscripciones cerradas". */}
+      {isPreEnrolled && !isLocked && (
+        <EnrollmentReminderModal lockAtIso={lockAt?.toISOString() ?? null} />
+      )}
     </div>
   );
 }
