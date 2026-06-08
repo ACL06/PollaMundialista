@@ -41,6 +41,20 @@ export function formatMatchTime(date: Date): string {
 }
 
 /**
+ * Ej: "11 jun" (día + mes corto, TZ Bogotá). Para las etiquetas de los tabs
+ * por día. IMPORTANTE: recibe la FECHA REAL del partido (`kicks_off_at`), no
+ * la key `yyyy-MM-dd` — formatear `new Date(key)` la parsea como medianoche
+ * UTC y, al re-localizar a Bogotá (UTC−5), corre la fecha un día atrás.
+ */
+export function formatMatchDateShort(date: Date): string {
+  return new Intl.DateTimeFormat(LOCALE, {
+    day: 'numeric',
+    month: 'short',
+    timeZone: TZ,
+  }).format(date);
+}
+
+/**
  * Clave estable yyyy-MM-dd en TZ Bogotá para agrupar partidos por día.
  */
 export function formatMatchDateKey(date: Date): string {

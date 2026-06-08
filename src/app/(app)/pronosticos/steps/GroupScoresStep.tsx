@@ -9,6 +9,7 @@ import { BracketSlot } from '@/components/calendar/BracketSlot';
 import {
   formatMatchDateKey,
   formatMatchDateLong,
+  formatMatchDateShort,
   formatMatchTime,
 } from '@/lib/format-date';
 import type { Match } from '@/lib/types/match';
@@ -123,11 +124,7 @@ export function GroupScoresStep({
               )}
             >
               <span className="tabular-nums">
-                {new Date(day.key).toLocaleDateString('es-CO', {
-                  day: 'numeric',
-                  month: 'short',
-                  timeZone: 'America/Bogota',
-                })}
+                {formatMatchDateShort(new Date(day.matches[0].kicks_off_at))}
               </span>
               <span className="ml-1.5 opacity-70 tabular-nums">
                 {filled}/{day.matches.length}
