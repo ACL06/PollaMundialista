@@ -16,6 +16,7 @@ import { SCORING, normalizeScorer } from '@/lib/scoring';
 import { useCenterActiveTab } from '@/lib/use-center-active-tab';
 import { cn } from '@/lib/utils';
 import type { Match, Team } from '@/lib/types/match';
+import type { DailyFactToday } from '@/lib/daily-facts';
 import {
   displayName,
   REACTIONS,
@@ -26,6 +27,7 @@ import {
   type ReactionRow,
 } from './shared';
 import { toggleReaction } from './actions';
+import { DailyFactCapsule } from './DailyFactCapsule';
 
 interface CommunityViewProps {
   groupMatches: Match[];
@@ -38,6 +40,8 @@ interface CommunityViewProps {
   currentUserId: string;
   /** Hora del servidor (ISO) para elegir el día por defecto sin desfasar SSR. */
   nowIso: string;
+  /** Dato curioso del día (calculado server-side, TZ Bogotá). Null fuera de los 40 días. */
+  dailyFact: DailyFactToday | null;
 }
 
 /** Clave de un pronóstico concreto: el de {targetUserId} en {matchId}. */
@@ -84,6 +88,7 @@ export function CommunityView({
   reactions,
   currentUserId,
   nowIso,
+  dailyFact,
 }: CommunityViewProps) {
   // Estado de reacciones: clave `target|match` → Map<reactorId, ReactionKey>.
   const [reactionState, setReactionState] = useState<Map<string, Map<string, ReactionKey>>>(
@@ -310,6 +315,9 @@ export function CommunityView({
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col gap-7">
+      {/* Dato curioso del día (solo durante el torneo; null fuera de los 40 días). */}
+      {dailyFact && <DailyFactCapsule view={dailyFact} />}
+
       {/* Sin título "Comunidad": ya lo indica la pestaña activa del navbar. */}
       <p className="text-sm text-muted-foreground">
         Los pronósticos de todos, abiertos para que sea transparente.
