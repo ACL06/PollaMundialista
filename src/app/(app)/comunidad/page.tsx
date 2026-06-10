@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { Lock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
+import { getDailyFact } from '@/lib/daily-facts';
 import { getViewerAccess } from '@/lib/access';
 import { SpectatorBlocked } from '@/components/app/SpectatorBlocked';
 import { Countdown } from '@/components/pronosticos/Countdown';
@@ -128,6 +129,11 @@ export default async function ComunidadPage() {
     displayName(a).localeCompare(displayName(b)),
   );
 
+  // Dato curioso del día: anclado al lock (= arranque del Mundial), así el
+  // "Día 1 de 40" cae el día inaugural. Server-side y en TZ Bogotá. Para el
+  // admin previsualizando antes del lock, `now < lock` → null (no se muestra).
+  const dailyFact = getDailyFact(new Date(), lockAt);
+
   return (
     <CommunityView
       groupMatches={groupMatches}
@@ -139,6 +145,7 @@ export default async function ComunidadPage() {
       reactions={reactions}
       currentUserId={user.id}
       nowIso={new Date().toISOString()}
+      dailyFact={dailyFact}
     />
   );
 }
