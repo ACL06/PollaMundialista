@@ -25,7 +25,9 @@ export function DailyFactCapsule({ view }: DailyFactCapsuleProps) {
         </span>
       </div>
 
-      <p className="mt-2.5 text-sm font-semibold text-foreground">¿Sabías que…?</p>
+      <h3 className="mt-2.5 text-base sm:text-lg font-bold leading-snug text-foreground">
+        {view.title}
+      </h3>
       <p className="mt-1 text-sm leading-relaxed text-foreground/90">{view.text}</p>
 
       <span className="mt-3 inline-flex items-center rounded-full bg-tertiary/10 px-2 py-0.5 text-[11px] font-medium text-tertiary">

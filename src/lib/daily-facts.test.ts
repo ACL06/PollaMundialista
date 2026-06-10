@@ -34,9 +34,10 @@ describe('DAILY_FACTS (contenido)', () => {
     }
   });
 
-  it('todo dato tiene texto y fuente, y categoría válida', () => {
+  it('todo dato tiene titular, texto y fuente, y categoría válida', () => {
     const validCategories = Object.keys(CATEGORY_LABEL) as FactCategory[];
     for (const f of DAILY_FACTS) {
+      expect(f.title.trim().length).toBeGreaterThan(0);
       expect(f.text.trim().length).toBeGreaterThan(0);
       expect(f.source.trim().length).toBeGreaterThan(0);
       expect(validCategories).toContain(f.category);
@@ -58,6 +59,7 @@ describe('getDailyFact', () => {
     expect(r).not.toBeNull();
     expect(r!.day).toBe(1);
     expect(r!.total).toBe(40);
+    expect(r!.title).toBe(DAILY_FACTS[0].title);
     expect(r!.text).toBe(DAILY_FACTS[0].text);
     expect(r!.categoryLabel).toBe(CATEGORY_LABEL[DAILY_FACTS[0].category]);
   });
