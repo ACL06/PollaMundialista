@@ -103,10 +103,6 @@ export function RankingBoard({ rows, currentUserId, hasResults }: RankingBoardPr
         </table>
       </section>
 
-      <p className="text-center text-xs text-muted-foreground -mt-3">
-        Toca a cualquier participante para ver el desglose de sus puntos.
-      </p>
-
       {selected && (
         <ScoreBreakdownModal
           row={selected}
