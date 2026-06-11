@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, type LucideIcon } from 'lucide-react';
+import { Trophy, Users, X, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WelcomeItem {
@@ -9,10 +9,23 @@ interface WelcomeItem {
   text: string;
 }
 
+/**
+ * El ícono viaja como STRING y se resuelve acá adentro: este componente se
+ * monta también desde Server Components (RankingView) y las props que cruzan
+ * la frontera server→client deben ser serializables — pasar el componente de
+ * lucide directo (`icon={Trophy}`) reventaba el render con "Functions cannot
+ * be passed directly to Client Components" (500 en /ranking, 11/jun/2026).
+ */
+const ICONS: Record<WelcomeIcon, LucideIcon> = {
+  users: Users,
+  trophy: Trophy,
+};
+export type WelcomeIcon = 'users' | 'trophy';
+
 interface WelcomeModalProps {
   /** Sufijo de la clave de localStorage (ej. 'comunidad' → polla:welcome:comunidad). */
   storageKey: string;
-  icon: LucideIcon;
+  icon: WelcomeIcon;
   title: string;
   intro: string;
   items: WelcomeItem[];
@@ -28,12 +41,13 @@ interface WelcomeModalProps {
  */
 export function WelcomeModal({
   storageKey,
-  icon: Icon,
+  icon,
   title,
   intro,
   items,
   ctaLabel,
 }: WelcomeModalProps) {
+  const Icon = ICONS[icon];
   const [open, setOpen] = useState(false);
 
   useEffect(() => {

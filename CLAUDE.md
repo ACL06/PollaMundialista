@@ -200,6 +200,7 @@
 - Componentes de feature en `src/components/<feature>/` (auth, calendar, groups, pronosticos, app, home, shared, theme). UI puros en `src/components/ui/`.
 - Server Actions en `actions.ts` adyacente a la ruta. Helpers de dominio en `src/lib/`, tipos en `src/lib/types/`, validators Zod en `src/lib/validators/`.
 - ⚠️ **No importar valores (no-tipos) desde un `page.tsx` server hacia un componente cliente** — arrastra `next/headers` al bundle. Usar un módulo `shared.ts` neutro (ver `comunidad/shared.ts`).
+- ⚠️ **No pasar funciones/componentes como props de un Server Component a un Client Component** — la frontera RSC solo serializa datos planos. Pasar `icon={Trophy}` (lucide) desde `RankingView` (server) al `WelcomeModal` (client) tumbó `/ranking` con 500 en producción (11/jun/2026, "Functions cannot be passed directly to Client Components"). Patrón: pasar un **string** (`icon="trophy"`) y resolver el componente DENTRO del client component. Ojo: el build NO lo detecta (error solo en runtime), y desde un componente cliente padre sí es válido — por eso Comunidad funcionaba y Ranking no.
 
 ### Estilos
 - Tailwind + `cn()`. Colores SIEMPRE via tokens (`bg-primary`, `text-foreground`). **Tema por defecto: claro** (`ThemeProvider` `defaultTheme="light"`, sin `enableSystem`); el toggle alterna claro/oscuro.

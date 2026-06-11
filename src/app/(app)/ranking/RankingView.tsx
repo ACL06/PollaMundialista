@@ -1,4 +1,4 @@
-import { Info, Trophy } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { WelcomeModal } from '@/components/app/WelcomeModal';
 import { RankingBoard } from './RankingBoard';
 import type { RankingRow } from './types';
@@ -33,7 +33,7 @@ export function RankingView({
       {/* Bienvenida one-time a la sección (se muestra una sola vez por dispositivo). */}
       <WelcomeModal
         storageKey="ranking"
-        icon={Trophy}
+        icon="trophy"
         title="¡Arrancó el Ranking! 🏆"
         intro="Acá se define quién manda en la polla. Cada resultado oficial mueve la tabla:"
         items={WELCOME_ITEMS}
