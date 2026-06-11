@@ -163,6 +163,7 @@
 
 ### RLS — patrón de pronósticos
 - Las 3 tablas de predicción + reactions: **SELECT propio siempre + SELECT público post-lock** (`now() >= predictions_lock_at()`) **+ SELECT de admin** (`is_admin()`, PR #75, para el preview del organizador antes del lock). INSERT/UPDATE/DELETE propio y solo antes del lock (predicciones) o post-lock (reacciones).
+- ⚠️ **Incidente 11/jun/2026 (día inaugural):** en la BD real, `predictions` y `prediction_bracket` **NO tenían** la política pública post-lock (solo propia + admin). Síntomas: las 3 tarjetas Top 5 de Comunidad se veían con 1 solo voto para usuarios normales (el propio), el embudo de `/comunidad/[userId]` vacío, y el ranking habría computado los puntos de bracket incompletos al asignar los cruces de R32. El admin no lo notaba (su puerta `is_admin()` funciona). Se crearon ambas políticas ese día vía SQL Editor. **Lección: el RLS documentado acá debe verificarse contra `pg_policies`, no asumirse** — y un fallo de política de SELECT es silencioso (filas filtradas, sin error).
 
 ### Funciones SQL
 - `predictions_lock_at()` — `kicks_off_at` del match #1 (lock global dinámico). En el cliente JS, `getPredictionsLockAt()` (`src/lib/predictions-lock.ts`) lee ese kickoff con **`unstable_cache`** (cliente anon sin cookies, revalidate 1h — dato casi inmutable; fallback al cliente autenticado si el anon no pudiera leer) y se envuelve en **`cache()` de React** para deduplicar por request. El "está cerrado" siempre se compara contra `new Date()` del **servidor** (inmune al reloj del dispositivo).

@@ -58,6 +58,9 @@ export function RankingView({
           {' · '}
           <span className="tabular-nums">{rows.length}</span> participantes.
         </p>
+        <p className="text-sm text-muted-foreground">
+          Toca a cualquier participante para ver el desglose de sus puntos.
+        </p>
       </header>
 
       {!hasResults && (
