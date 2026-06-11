@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { Lock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { fetchAll } from '@/lib/supabase/fetch-all';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
 import { getDailyFact } from '@/lib/daily-facts';
 import { getViewerAccess } from '@/lib/access';
@@ -81,9 +82,15 @@ export default async function ComunidadPage() {
         )
         .eq('stage', 'group')
         .order('kicks_off_at', { ascending: true }),
-      supabase
-        .from('prediction_group_scores')
-        .select('user_id, match_id, home_score, away_score'),
+      // Lectura global (~34 usuarios × 72 marcadores ≈ 2.400 filas): supera el
+      // "Max Rows" de PostgREST → fetchAll pagina; el .order() la hace estable.
+      fetchAll(() =>
+        supabase
+          .from('prediction_group_scores')
+          .select('user_id, match_id, home_score, away_score')
+          .order('user_id')
+          .order('match_id'),
+      ),
       supabase.from('predictions').select('user_id, champion_code, runner_up_code, top_scorer'),
       supabase
         .from('public_profiles')
@@ -92,9 +99,15 @@ export default async function ComunidadPage() {
         .from('teams')
         .select('code, name, flag, group_code')
         .not('group_code', 'is', null),
-      supabase
-        .from('prediction_reactions')
-        .select('reactor_id, target_user_id, match_id, reaction'),
+      // Reacciones: única tabla sin techo natural (puede crecer todo el torneo).
+      fetchAll(() =>
+        supabase
+          .from('prediction_reactions')
+          .select('reactor_id, target_user_id, match_id, reaction')
+          .order('reactor_id')
+          .order('target_user_id')
+          .order('match_id'),
+      ),
     ]);
 
   const groupMatches = (matchesResult.data ?? []).map((row) => {

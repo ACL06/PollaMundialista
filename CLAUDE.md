@@ -248,6 +248,7 @@ Cuando se necesite SQL contra Supabase: mostrar el SQL y pedir que el usuario lo
 ## Cuidados del free tier
 - **Supabase** se pausa tras 7 días de inactividad → workflow `keep-alive.yml` cada 6 días.
 - **Resend** 100/día, 3000/mes. **Vercel** 100 GB/mes.
+- **PostgREST "Max Rows"**: la API trunca **en silencio** toda respuesta al límite configurado (default 1.000 — bug del 11/jun/2026: Comunidad mostraba ~19 pronósticos por partido; el ranking habría contado la mitad de los puntos). Mitigación: límite subido a **10.000** (Dashboard → Settings → API). Blindaje: las lecturas globales de predicciones (ranking y Comunidad) usan **`fetchAll()`** (`src/lib/supabase/fetch-all.ts`): pagina con `.range()` en bloques de 1.000 y **exige `.order()` por PK** (páginas estables). Toda lectura nueva sin filtro por usuario debe usarlo. En la nevera: cargar Comunidad **por día** (`?dia=`) solo si el egress (5 GB/mes, Dashboard → Reports) se acercara al tope — con 34 inscritos fijos no hace falta.
 
 ---
 

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { fetchAll } from '@/lib/supabase/fetch-all';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
 import { assignRanks, buildRanking, deriveOfficialResults } from '@/lib/scoring';
 import { displayName } from '@/lib/display-name';
@@ -43,14 +44,34 @@ export async function loadRanking(): Promise<RankingResult> {
     return { lockAt, locked: false, hasResults: false, complete: false, rows: [] };
   }
 
+  // Lecturas globales (todas las filas de todos los usuarios) → fetchAll:
+  // superan el "Max Rows" de PostgREST y se truncarían en silencio. El
+  // `.order()` por PK es requisito de la paginación (páginas estables).
   const [predsRes, scoresRes, bracketRes, knockoutScoresRes, matchesRes, profilesRes, settingsRes] =
     await Promise.all([
-      supabase.from('predictions').select('*'),
-      supabase.from('prediction_group_scores').select('user_id, match_id, home_score, away_score'),
-      supabase.from('prediction_bracket').select('user_id, round, team_code'),
-      supabase
-        .from('prediction_knockout_scores')
-        .select('user_id, match_id, home_score, away_score'),
+      fetchAll(() => supabase.from('predictions').select('*').order('user_id')),
+      fetchAll(() =>
+        supabase
+          .from('prediction_group_scores')
+          .select('user_id, match_id, home_score, away_score')
+          .order('user_id')
+          .order('match_id'),
+      ),
+      fetchAll(() =>
+        supabase
+          .from('prediction_bracket')
+          .select('user_id, round, team_code')
+          .order('user_id')
+          .order('round')
+          .order('team_code'),
+      ),
+      fetchAll(() =>
+        supabase
+          .from('prediction_knockout_scores')
+          .select('user_id, match_id, home_score, away_score')
+          .order('user_id')
+          .order('match_id'),
+      ),
       supabase
         .from('matches')
         .select(
