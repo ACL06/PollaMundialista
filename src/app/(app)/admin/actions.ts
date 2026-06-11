@@ -61,14 +61,21 @@ export async function saveMatchResult(input: {
   const admin = await requireAdmin();
   if ('error' in admin) return { error: admin.error };
 
-  const { error } = await admin.supabase
+  // `count: 'exact'` para detectar el fallo SILENCIOSO de RLS: un UPDATE
+  // bloqueado afecta 0 filas sin devolver error (lección del 11/jun/2026 con
+  // setEnrollment). 0 filas → error visible en vez de un falso "Guardado".
+  const { error, count } = await admin.supabase
     .from('matches')
-    .update({ home_score: homeScore, away_score: awayScore, status })
+    .update({ home_score: homeScore, away_score: awayScore, status }, { count: 'exact' })
     .eq('id', matchId);
 
   if (error) {
     console.error('[saveMatchResult]', error.message);
     return { error: 'No pudimos guardar el resultado. Intenta de nuevo.' };
+  }
+  if ((count ?? 0) === 0) {
+    console.error('[saveMatchResult] 0 filas afectadas (¿RLS?)', matchId);
+    return { error: 'No se guardó: la base de datos no aplicó el cambio (permisos/RLS).' };
   }
   revalidateResultViews();
   return {};
@@ -113,21 +120,28 @@ export async function saveKnockoutMatch(input: {
   const admin = await requireAdmin();
   if ('error' in admin) return { error: admin.error };
 
-  const { error } = await admin.supabase
+  const { error, count } = await admin.supabase
     .from('matches')
-    .update({
-      home_team_code: homeTeamCode,
-      away_team_code: awayTeamCode,
-      home_score: homeScore,
-      away_score: awayScore,
-      winner_code: winnerCode,
-      status,
-    })
+    .update(
+      {
+        home_team_code: homeTeamCode,
+        away_team_code: awayTeamCode,
+        home_score: homeScore,
+        away_score: awayScore,
+        winner_code: winnerCode,
+        status,
+      },
+      { count: 'exact' },
+    )
     .eq('id', matchId);
 
   if (error) {
     console.error('[saveKnockoutMatch]', error.message);
     return { error: 'No pudimos guardar el partido. Intenta de nuevo.' };
+  }
+  if ((count ?? 0) === 0) {
+    console.error('[saveKnockoutMatch] 0 filas afectadas (¿RLS?)', matchId);
+    return { error: 'No se guardó: la base de datos no aplicó el cambio (permisos/RLS).' };
   }
   revalidateResultViews();
   return {};
@@ -149,14 +163,19 @@ export async function setEnrollment(input: {
   const admin = await requireAdmin();
   if ('error' in admin) return { error: admin.error };
 
-  const { error } = await admin.supabase
+  const { error, count } = await admin.supabase
     .from('profiles')
-    .update({ is_enrolled: input.enrolled })
+    .update({ is_enrolled: input.enrolled }, { count: 'exact' })
     .eq('id', input.userId);
 
   if (error) {
     console.error('[setEnrollment]', error.message);
     return { error: 'No pudimos actualizar la inscripción. Intenta de nuevo.' };
+  }
+  if ((count ?? 0) === 0) {
+    // RLS sin política de UPDATE-admin en profiles bloquea en silencio (0 filas).
+    console.error('[setEnrollment] 0 filas afectadas (¿falta política RLS admin?)', input.userId);
+    return { error: 'No se guardó: la base de datos no aplicó el cambio (permisos/RLS).' };
   }
   revalidateResultViews();
   return {};
@@ -172,14 +191,18 @@ export async function saveTopScorer(name: string | null): Promise<ActionResult> 
   const admin = await requireAdmin();
   if ('error' in admin) return { error: admin.error };
 
-  const { error } = await admin.supabase
+  const { error, count } = await admin.supabase
     .from('tournament_settings')
-    .update({ top_scorer: trimmed, updated_at: new Date().toISOString() })
+    .update({ top_scorer: trimmed, updated_at: new Date().toISOString() }, { count: 'exact' })
     .eq('id', 1);
 
   if (error) {
     console.error('[saveTopScorer]', error.message);
     return { error: 'No pudimos guardar el goleador. Intenta de nuevo.' };
+  }
+  if ((count ?? 0) === 0) {
+    console.error('[saveTopScorer] 0 filas afectadas (¿RLS?)');
+    return { error: 'No se guardó: la base de datos no aplicó el cambio (permisos/RLS).' };
   }
   revalidateResultViews();
   return {};
