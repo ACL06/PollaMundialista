@@ -340,10 +340,8 @@ export function CommunityView({
       {/* Dato curioso del día (solo durante el torneo; null fuera de los 40 días). */}
       {dailyFact && <DailyFactCapsule view={dailyFact} />}
 
-      {/* Sin título "Comunidad": ya lo indica la pestaña activa del navbar. */}
-      <p className="text-sm text-muted-foreground">
-        Los pronósticos de todos, abiertos para que sea transparente.
-      </p>
+      {/* Sin título "Comunidad": ya lo indica la pestaña activa del navbar.
+          El texto de transparencia vive en la sección de Participantes. */}
 
       {/* Distribución de campeones */}
       {championDist.rows.length > 0 && (
@@ -405,6 +403,9 @@ export function CommunityView({
             <Users className="h-4 w-4" />
             Participantes ({participants.length})
           </h2>
+          <p className="text-xs text-muted-foreground">
+            Los pronósticos de todos, abiertos para que sea transparente.
+          </p>
           <p className="text-xs text-muted-foreground">
             Toca un participante para ver su pronóstico completo.
           </p>
