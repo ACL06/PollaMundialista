@@ -123,7 +123,17 @@ export async function loadRanking(): Promise<RankingResult> {
   const profileById = new Map(profiles.map((p) => [p.id, p]));
 
   // Resolver nombre/avatar, y ordenar por puntos desc → nombre asc (desempate).
-  const sorted = buildRanking(predictions, groupScores, bracket, knockoutScores, official)
+  // Se pasan TODOS los ids inscritos: quien no haya guardado nada aparece
+  // igual con 0 pts (pagó y concursa; el "de N" cuadra con los inscritos).
+  const enrolledUserIds = profiles.map((p) => p.id);
+  const sorted = buildRanking(
+    predictions,
+    groupScores,
+    bracket,
+    knockoutScores,
+    official,
+    enrolledUserIds,
+  )
     .map((entry) => {
       const profile = profileById.get(entry.userId);
       return {

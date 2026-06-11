@@ -1004,6 +1004,32 @@ describe('buildRanking', () => {
     expect(ranking.every((r) => r.breakdown.total === 0)).toBe(true);
   });
 
+  it('includeUserIds: inscrito sin NINGUNA fila aparece con 0 pts al final', () => {
+    const groupScores: PredictionGroupScore[] = [
+      { user_id: 'ana', match_id: 'm1', home_score: 2, away_score: 1 }, // exacto → 5
+    ];
+    const official = emptyOfficial({ groupScores: new Map([['m1', { home: 2, away: 1 }]]) });
+
+    // 'mudo' no tiene filas en ninguna tabla, pero está inscrito.
+    const ranking = buildRanking([], groupScores, [], [], official, ['mudo', 'ana']);
+    expect(ranking).toHaveLength(2);
+    expect(ranking[0].userId).toBe('ana');
+    expect(ranking[0].breakdown.total).toBe(5);
+    expect(ranking[1].userId).toBe('mudo');
+    expect(ranking[1].breakdown.total).toBe(0);
+  });
+
+  it('includeUserIds no duplica a quien ya tiene filas', () => {
+    const groupScores: PredictionGroupScore[] = [
+      { user_id: 'ana', match_id: 'm1', home_score: 2, away_score: 1 },
+    ];
+    const official = emptyOfficial({ groupScores: new Map([['m1', { home: 2, away: 1 }]]) });
+
+    const ranking = buildRanking([], groupScores, [], [], official, ['ana']);
+    expect(ranking).toHaveLength(1);
+    expect(ranking[0].breakdown.total).toBe(5); // conserva sus puntos
+  });
+
   it('suma los marcadores de eliminatoria al ranking', () => {
     const predictions: Prediction[] = [makePrediction({ user_id: 'ana' })];
     const knockoutScores: PredictionKnockoutScore[] = [
