@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import Image from 'next/image';
 import { X } from 'lucide-react';
 import { SCORING } from '@/lib/scoring';
+import { useBodyScrollLock } from '@/lib/use-body-scroll-lock';
 import { cn } from '@/lib/utils';
 import type { RankingRow } from './types';
 
@@ -85,6 +86,9 @@ function buildSections(b: RankingRow['breakdown']): Section[] {
  * total. Presentación pura — los números vienen del `ScoreBreakdown`.
  */
 export function ScoreBreakdownModal({ row, isCurrent, onClose }: ScoreBreakdownModalProps) {
+  // El modal solo se monta abierto → bloquear el scroll del fondo siempre.
+  useBodyScrollLock(true);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();

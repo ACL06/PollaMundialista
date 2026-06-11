@@ -18,7 +18,10 @@ const STAGE_LABEL: Record<MatchStage, string> = {
 
 export function MatchCard({ match }: { match: Match }) {
   const kicksOffAt = new Date(match.kicks_off_at);
-  const hasScore = match.status === 'live' || match.status === 'final';
+  // El marcador solo se muestra FINALIZADO: en vivo no hay feed en tiempo real
+  // (los estados los pone el admin a mano) y mostrar un marcador "congelado"
+  // daba la impresión de que se actualizaba en vivo.
+  const hasScore = match.status === 'final';
 
   return (
     <article

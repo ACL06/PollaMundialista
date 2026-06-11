@@ -133,34 +133,35 @@ function PodiumTier({
 }) {
   const meta = TIER_META[rank];
   const Icon = rank === 1 ? Crown : Medal;
+  // Título del puesto ARRIBA de la card y los jugadores como lista (uno por
+  // línea, alineados a la izquierda). Si hay varios, el empate es evidente
+  // por sí solo — sin etiqueta redundante.
   return (
-    <div className={cn('rounded-xl border p-3 flex items-center gap-3', meta.cardClass)}>
-      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground w-24 flex-shrink-0">
+    <div className={cn('rounded-xl border p-3 space-y-2', meta.cardClass)}>
+      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
         <Icon className={cn('h-5 w-5', meta.medalClass)} />
         {meta.label}
       </span>
-      <div className="flex flex-wrap gap-3 flex-1 min-w-0">
+      <ul className="space-y-1">
         {players.map((p) => (
-          <button
-            key={p.userId}
-            type="button"
-            onClick={() => onSelect(p)}
-            className="flex items-center gap-2 min-w-0 rounded-lg -m-1 p-1 hover:bg-foreground/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary"
-          >
-            <Avatar avatarUrl={p.avatarUrl} size={32} />
-            <div className="min-w-0 text-left">
-              <p className="text-[13px] font-medium text-foreground truncate">
+          <li key={p.userId}>
+            <button
+              type="button"
+              onClick={() => onSelect(p)}
+              className="flex w-full items-center gap-2.5 rounded-lg p-1 -m-1 text-left hover:bg-foreground/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary"
+            >
+              <Avatar avatarUrl={p.avatarUrl} size={28} />
+              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
                 {p.name}
                 {p.userId === currentUserId && <span className="text-primary"> (tú)</span>}
-              </p>
-              <p className="text-xs text-muted-foreground tabular-nums">{p.breakdown.total} pts</p>
-            </div>
-          </button>
+              </span>
+              <span className="flex-shrink-0 text-xs text-muted-foreground tabular-nums">
+                {p.breakdown.total} pts
+              </span>
+            </button>
+          </li>
         ))}
-        {players.length > 1 && (
-          <span className="self-center text-[11px] text-muted-foreground italic">empate</span>
-        )}
-      </div>
+      </ul>
     </div>
   );
 }
