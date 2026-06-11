@@ -12,6 +12,8 @@ interface HomeStandingCardProps {
   exactCount: number;
   /** True si ya hay al menos un resultado oficial cargado. */
   hasResults: boolean;
+  /** True si el usuario registró algo (cierre, marcadores, bracket o knockout). */
+  hasPrediction: boolean;
 }
 
 const ctaClass = cn(
@@ -38,6 +40,7 @@ export function HomeStandingCard({
   total,
   exactCount,
   hasResults,
+  hasPrediction,
 }: HomeStandingCardProps) {
   const showPosition = hasResults && rank != null;
 
@@ -68,8 +71,10 @@ export function HomeStandingCard({
             <Hourglass className="h-5 w-5" />
           </span>
           <p className="text-sm text-muted-foreground">
-            Tu pronóstico quedó registrado como definitivo. 🍀 Tu posición aparecerá aquí apenas
-            se carguen los primeros resultados oficiales.
+            {hasPrediction
+              ? 'Tu pronóstico quedó registrado como definitivo. 🍀 '
+              : 'El Mundial está en marcha. '}
+            Tu posición aparecerá aquí apenas se carguen los primeros resultados oficiales.
           </p>
         </div>
       )}

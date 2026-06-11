@@ -85,6 +85,13 @@ export default async function HomePage() {
   const enrolledCount = enrolledCountResult.count ?? 0;
   const registeredCount = registeredCountResult.count ?? 0;
   const preEnrolledCount = Math.max(0, registeredCount - enrolledCount);
+  // ¿Registró ALGO (cierre, marcadores, bracket o knockout)? Para no decirle
+  // "tu pronóstico quedó registrado" a quien nunca guardó nada.
+  const hasAnyPrediction =
+    prediction != null ||
+    scoresCount > 0 ||
+    bracketCount > 0 ||
+    (knockoutScoresResult.data?.length ?? 0) > 0;
   const isEnrolled = profile?.is_enrolled ?? false;
   const isAdmin = profile?.is_admin ?? false;
   // Modo espectador: post-lock + no inscrito. En /home solo ve su encabezado,
@@ -180,15 +187,20 @@ export default async function HomePage() {
           (no inscrito) no ve esta tarjeta ni la de inscripción y premios. */}
       {!isSpectator &&
         (isLocked ? (
-          <HomeStandingCard
-            rank={myRow?.rank ?? null}
-            participants={ranking.rows.length}
-            total={myRow?.breakdown.total ?? 0}
-            exactCount={
-              (myRow?.breakdown.groupExactCount ?? 0) + (myRow?.breakdown.knockoutExactCount ?? 0)
-            }
-            hasResults={ranking.hasResults}
-          />
+          // El admin organiza y NO compite: la tarjeta de posición no le aplica
+          // (sin fila en el ranking quedaría en "espera" eterna).
+          !isAdmin && (
+            <HomeStandingCard
+              rank={myRow?.rank ?? null}
+              participants={ranking.rows.length}
+              total={myRow?.breakdown.total ?? 0}
+              exactCount={
+                (myRow?.breakdown.groupExactCount ?? 0) + (myRow?.breakdown.knockoutExactCount ?? 0)
+              }
+              hasResults={ranking.hasResults}
+              hasPrediction={hasAnyPrediction}
+            />
+          )
         ) : (
           <PredictionStatusCard
             lockAtIso={lockAt?.toISOString() ?? null}
