@@ -87,6 +87,6 @@ export const GAME_RULES: GameRule[] = [
     id: 'ranking-ties',
     label: 'Posiciones y empates en el ranking',
     detail:
-      'Tu puesto se define por el total de puntos: quien más tiene va primero. Si dos o más quedan con los mismos puntos, comparten el puesto (p. ej. dos en el 1.° y el siguiente queda 3.°) y el premio de ese puesto se reparte en partes iguales entre ellos.',
+      'Tu puesto se define por el total de puntos: quien más tiene va primero. Si dos o más quedan empatados, comparten el puesto y se reparten en partes iguales la suma de los premios de los puestos que cubren. Ejemplos: dos empatados en el 1.° se dividen el premio del 1.° más el del 2.° y el siguiente queda de 3.°; tres o más empatados en el 1.° se dividen todos los premios y no hay 2.° ni 3.°; un 1.° y dos empatados en el 2.° → estos se dividen el premio del 2.° más el del 3.° y no hay 3.°. Así, quien hace más puntos nunca recibe menos que alguien por debajo.',
   },
 ];
