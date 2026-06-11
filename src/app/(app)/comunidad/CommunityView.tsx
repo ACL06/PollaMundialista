@@ -26,8 +26,18 @@ import {
   type ReactionKey,
   type ReactionRow,
 } from './shared';
+import { WelcomeModal } from '@/components/app/WelcomeModal';
 import { toggleReaction } from './actions';
 import { DailyFactCapsule } from './DailyFactCapsule';
+
+/** Bienvenida one-time de la sección (localStorage, por dispositivo). */
+const WELCOME_ITEMS = [
+  { emoji: '💡', text: 'Un dato curioso del Mundial, nuevo cada día.' },
+  { emoji: '🏆', text: 'Los Top 5 de la polla: campeones, finalistas y goleadores más elegidos.' },
+  { emoji: '📊', text: 'El consenso y los pronósticos de todos, partido a partido.' },
+  { emoji: '✅', text: 'Aciertos en vivo y la Tabla del día cuando hay resultados.' },
+  { emoji: '🔥', text: 'Badges para los valientes («va solo», «rebelde») y reacciones 👍 😂 🔥 😱 para los pronósticos ajenos.' },
+];
 
 interface CommunityViewProps {
   groupMatches: Match[];
@@ -317,6 +327,16 @@ export function CommunityView({
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col gap-7">
+      {/* Bienvenida one-time a la sección (se muestra una sola vez por dispositivo). */}
+      <WelcomeModal
+        storageKey="comunidad"
+        icon={Users}
+        title="¡Se abrió la Comunidad! 🎉"
+        intro="Desde hoy los pronósticos de todos quedan a la vista — máxima transparencia, ya nadie puede copiar. Esto es lo que encuentras acá:"
+        items={WELCOME_ITEMS}
+        ctaLabel="¡A chismosear! 👀"
+      />
+
       {/* Dato curioso del día (solo durante el torneo; null fuera de los 40 días). */}
       {dailyFact && <DailyFactCapsule view={dailyFact} />}
 
