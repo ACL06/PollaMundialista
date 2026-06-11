@@ -615,15 +615,9 @@ function MatchPredictions({
   const total = preds.length;
   const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
 
-  // Outcome mayoritario y si hay un favorito claro (≥60%) para marcar rebeldes
-  const modal: Outcome = outcomeCounts.home >= outcomeCounts.draw && outcomeCounts.home >= outcomeCounts.away
-    ? 'home'
-    : outcomeCounts.away >= outcomeCounts.draw
-      ? 'away'
-      : 'draw';
+  // Tamaño del grupo mayoritario: referencia para "va solo" (destacarte
+  // exige que exista otro grupo de 2+ del cual diferenciarte).
   const modalCount = Math.max(outcomeCounts.home, outcomeCounts.draw, outcomeCounts.away);
-  const modalShare = total > 0 ? modalCount / total : 0;
-  const hasClearFavorite = modalShare >= 0.6 && total >= 3;
 
   // Marcador más repetido
   const scoreCounts = new Map<string, number>();
@@ -733,11 +727,14 @@ function MatchPredictions({
             const profile = profileById.get(p.userId);
             const myOutcome = outcomeOf(p.home, p.away);
             const myCount = outcomeCounts[myOutcome];
+            const myShare = total > 0 ? myCount / total : 0;
             // "va solo": eres el ÚNICO con tu resultado 1X2 y hay otro grupo de
             // 2+ del cual destacarte (modalCount ≥ 2). Aplica haya o no favorito.
             const isLone = total >= 3 && myCount === 1 && modalCount >= 2;
-            // "rebelde": un grupo (2+) minoritario que fue contra un favorito ≥60%.
-            const isRebelGroup = hasClearFavorite && myOutcome !== modal && myCount >= 2;
+            // "rebelde": tu resultado 1X2 lo eligió ≤15% de la polla (grupo de
+            // 2+). Mide la impopularidad PROPIA — no exige favorito ≥60%: en un
+            // 51/39/10 los del 10% también son rebeldes.
+            const isRebelGroup = total >= 3 && myCount >= 2 && myShare <= 0.15;
             const isRebel = isLone || isRebelGroup;
             const rebelLabel = isLone ? 'va solo' : 'rebelde';
             const rk = reactionKeyOf(p.userId, match.id);
