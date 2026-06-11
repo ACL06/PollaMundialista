@@ -412,6 +412,12 @@ export function buildRanking(
   bracket: PredictionBracketEntry[],
   knockoutScores: PredictionKnockoutScore[],
   official: OfficialResults,
+  /**
+   * Ids que deben aparecer en el ranking aunque no tengan NINGUNA fila de
+   * predicción (inscritos que nunca guardaron nada → entran con 0 pts).
+   * Sin esto, un inscrito sin pronóstico desaparecería de la tabla.
+   */
+  includeUserIds: readonly string[] = [],
 ): RankingEntry[] {
   const byUser = new Map<string, UserPrediction>();
   const ensure = (userId: string): UserPrediction => {
@@ -423,6 +429,7 @@ export function buildRanking(
     return up;
   };
 
+  for (const id of includeUserIds) ensure(id);
   for (const p of predictions) ensure(p.user_id).prediction = p;
   for (const s of groupScores) ensure(s.user_id).groupScores.push(s);
   for (const b of bracket) ensure(b.user_id).bracket.push(b);
