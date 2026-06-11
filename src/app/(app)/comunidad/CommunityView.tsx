@@ -609,6 +609,12 @@ function MatchPredictions({
 }: MatchPredictionsProps) {
   const real = officialResult(match);
 
+  // Cuántos clavaron el marcador exacto — para el badge "único exacto"
+  // (la clavó y nadie más de la polla había puesto ese marcador).
+  const exactPredictors = real
+    ? preds.filter((p) => p.home === real.home && p.away === real.away).length
+    : 0;
+
   // Consenso 1X2
   const outcomeCounts = { home: 0, draw: 0, away: 0 };
   for (const p of preds) outcomeCounts[outcomeOf(p.home, p.away)] += 1;
@@ -741,6 +747,8 @@ function MatchPredictions({
             const inner = reactionState.get(rk);
             const isOwn = p.userId === currentUserId;
             const verdict: Verdict | null = real ? verdictOf(p.home, p.away, real) : null;
+            // "único exacto": clavó el marcador y NADIE más lo había puesto.
+            const isUniqueExact = verdict === 'exact' && exactPredictors === 1;
 
             // Conteo por emoji + cuál eligió el usuario actual
             const reactionCounts = new Map<ReactionKey, number>();
@@ -768,6 +776,12 @@ function MatchPredictions({
                     </span>
                   )}
                   {verdict && <VerdictChip verdict={verdict} />}
+                  {isUniqueExact && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-500">
+                      <Target className="h-3 w-3" />
+                      único exacto
+                    </span>
+                  )}
                   <span className="font-mono font-bold text-[15px] tabular-nums text-foreground whitespace-nowrap">
                     {p.home} – {p.away}
                   </span>
