@@ -330,7 +330,7 @@ export function CommunityView({
       {/* Bienvenida one-time a la sección (se muestra una sola vez por dispositivo). */}
       <WelcomeModal
         storageKey="comunidad"
-        icon={Users}
+        icon="users"
         title="¡Se abrió la Comunidad! 🎉"
         intro="Desde hoy los pronósticos de todos quedan a la vista — máxima transparencia, ya nadie puede copiar. Esto es lo que encuentras acá:"
         items={WELCOME_ITEMS}
