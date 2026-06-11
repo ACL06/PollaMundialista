@@ -22,7 +22,7 @@ type RangeableQuery<Row> = {
  *
  * PostgREST corta silenciosamente cualquier respuesta al "Max Rows" del
  * proyecto (default 1.000) — sin error y sin aviso. Las lecturas globales
- * (ranking, comunidad) superan ese tope con los ~34 inscritos × 72 marcadores,
+ * (ranking, comunidad) superan ese tope con los ~40 inscritos × 72 marcadores,
  * así que se paginan acá. (Bug del 11/jun/2026: Comunidad mostraba ~19
  * pronósticos por partido y el ranking habría contado la mitad de los puntos.)
  *

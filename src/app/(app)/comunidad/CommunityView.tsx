@@ -147,10 +147,12 @@ export function CommunityView({
       if (!p.champion_code) continue;
       counts.set(p.champion_code, (counts.get(p.champion_code) ?? 0) + 1);
     }
+    // Top 5; a igualdad de votos entra el alfabéticamente primero (sort estable).
     const rows = Array.from(counts.entries())
       .map(([code, count]) => ({ team: teamsByCode.get(code), count }))
       .filter((r): r is { team: Team; count: number } => !!r.team)
-      .sort((a, b) => b.count - a.count || a.team.name.localeCompare(b.team.name));
+      .sort((a, b) => b.count - a.count || a.team.name.localeCompare(b.team.name))
+      .slice(0, 5);
     const max = rows.reduce((m, r) => Math.max(m, r.count), 0);
     return { rows, max };
   }, [picks, teamsByCode]);
@@ -168,7 +170,7 @@ export function CommunityView({
       .map(([code, count]) => ({ team: teamsByCode.get(code), count }))
       .filter((r): r is { team: Team; count: number } => !!r.team)
       .sort((a, b) => b.count - a.count || a.team.name.localeCompare(b.team.name))
-      .slice(0, 8);
+      .slice(0, 5);
     const max = rows.reduce((m, r) => Math.max(m, r.count), 0);
     return { rows, max };
   }, [picks, teamsByCode]);
@@ -326,7 +328,7 @@ export function CommunityView({
       {/* Distribución de campeones */}
       {championDist.rows.length > 0 && (
         <Distribution
-          title="El campeón de la polla"
+          title="El campeón de la polla (Top 5)"
           Icon={Crown}
           iconClass="text-amber-500"
           rows={championDist.rows}
@@ -337,7 +339,7 @@ export function CommunityView({
       {/* Finalistas más elegidos (campeón + subcampeón) */}
       {finalistsDist.rows.length > 0 && (
         <Distribution
-          title="Finalistas más elegidos"
+          title="Finalistas más elegidos (Top 5)"
           Icon={Trophy}
           iconClass="text-tertiary"
           rows={finalistsDist.rows}
@@ -350,7 +352,7 @@ export function CommunityView({
         <section className="space-y-3">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
             <Target className="h-4 w-4 text-primary" />
-            Goleadores más elegidos
+            Goleadores más elegidos (Top 5)
           </h2>
           <div className="rounded-lg border border-border bg-surface p-4 space-y-2.5">
             {topScorers.rows.map((row, i) => (
