@@ -181,7 +181,10 @@ export function EnrollmentPrizes({
         </ul>
         <p>
           <span className="font-semibold text-foreground">Empates:</span> si dos o más participantes
-          terminan con los mismos puntos, ese premio se reparte en partes iguales entre ellos.
+          terminan con los mismos puntos, comparten el puesto y se reparten en partes iguales la
+          suma de los premios de los puestos que cubren. Por ejemplo: dos empatados en el 1° se
+          dividen el premio del 1° más el del 2° (y el siguiente queda de 3°); tres o más empatados
+          en el 1° se dividen todos los premios, y no hay 2° ni 3°.
         </p>
       </div>
 
