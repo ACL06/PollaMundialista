@@ -27,6 +27,10 @@ export interface RankingResult {
   hasResults: boolean;
   /** True cuando el torneo terminó (la final ya tiene campeón) → podio definitivo. */
   complete: boolean;
+  /** Partidos con resultado oficial (`status = 'final'`). */
+  finishedCount: number;
+  /** Total de partidos del torneo (104). */
+  totalMatches: number;
   rows: RankingRow[];
 }
 
@@ -41,7 +45,15 @@ export async function loadRanking(): Promise<RankingResult> {
   const lockAt = await getPredictionsLockAt();
 
   if (!isLockedAt(lockAt)) {
-    return { lockAt, locked: false, hasResults: false, complete: false, rows: [] };
+    return {
+      lockAt,
+      locked: false,
+      hasResults: false,
+      complete: false,
+      finishedCount: 0,
+      totalMatches: 0,
+      rows: [],
+    };
   }
 
   // Lecturas globales (todas las filas de todos los usuarios) → fetchAll:
@@ -116,7 +128,8 @@ export async function loadRanking(): Promise<RankingResult> {
 
   const officialTopScorer = (settingsRes.data?.top_scorer as string | undefined) ?? null;
   const official = deriveOfficialResults(matches, officialTopScorer);
-  const hasResults = matches.some((m) => m.status === 'final');
+  const finishedCount = matches.filter((m) => m.status === 'final').length;
+  const hasResults = finishedCount > 0;
   // Torneo terminado = ya hay campeón (la final, último partido, está finalizada).
   const complete = official.champion != null;
 
@@ -148,5 +161,13 @@ export async function loadRanking(): Promise<RankingResult> {
   // Posiciones de competición (empates comparten número) — helper puro testeado.
   const rows: RankingRow[] = assignRanks(sorted);
 
-  return { lockAt, locked: true, hasResults, complete, rows };
+  return {
+    lockAt,
+    locked: true,
+    hasResults,
+    complete,
+    finishedCount,
+    totalMatches: matches.length,
+    rows,
+  };
 }
