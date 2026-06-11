@@ -20,7 +20,7 @@ export default async function RankingPage() {
   const { isSpectator, isAdmin } = await getViewerAccess();
   if (isSpectator) return <SpectatorBlocked />;
 
-  const { lockAt, locked, hasResults, rows } = await loadRanking();
+  const { lockAt, locked, hasResults, finishedCount, totalMatches, rows } = await loadRanking();
 
   // El ranking se abre con el lock (sin resultados no tiene sentido, y los
   // pronósticos de otros solo son legibles post-lock). Excepción: el ADMIN
@@ -47,5 +47,13 @@ export default async function RankingPage() {
     );
   }
 
-  return <RankingView rows={rows} currentUserId={user.id} hasResults={hasResults} />;
+  return (
+    <RankingView
+      rows={rows}
+      currentUserId={user.id}
+      hasResults={hasResults}
+      finishedCount={finishedCount}
+      totalMatches={totalMatches}
+    />
+  );
 }

@@ -7,9 +7,18 @@ interface RankingViewProps {
   currentUserId: string;
   /** True si ya hay al menos un resultado oficial cargado. */
   hasResults: boolean;
+  /** Partidos con resultado oficial / total del torneo (104). */
+  finishedCount: number;
+  totalMatches: number;
 }
 
-export function RankingView({ rows, currentUserId, hasResults }: RankingViewProps) {
+export function RankingView({
+  rows,
+  currentUserId,
+  hasResults,
+  finishedCount,
+  totalMatches,
+}: RankingViewProps) {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col gap-7">
       <header className="space-y-1">
@@ -17,7 +26,18 @@ export function RankingView({ rows, currentUserId, hasResults }: RankingViewProp
           Ranking
         </h1>
         <p className="text-sm text-muted-foreground">
-          Puntos acumulados según los resultados oficiales. {rows.length} participantes.
+          Puntos acumulados según los resultados oficiales
+          {totalMatches > 0 && (
+            <>
+              {' · '}
+              <span className="tabular-nums">
+                {finishedCount} de {totalMatches}
+              </span>{' '}
+              partidos jugados
+            </>
+          )}
+          {' · '}
+          <span className="tabular-nums">{rows.length}</span> participantes.
         </p>
       </header>
 
