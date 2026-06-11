@@ -475,7 +475,31 @@ export function CommunityView({
         })}
       </div>
 
-      {/* Tabla del día (solo cuando hay resultados en el día seleccionado) */}
+      {selectedDay && (
+        <div className="space-y-4">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            {selectedDay.label}
+          </h2>
+          {selectedDay.matches.map((match) => (
+            <MatchPredictions
+              key={match.id}
+              match={match}
+              preds={predictionsByMatch.get(match.id) ?? []}
+              profileById={profileById}
+              reactionState={reactionState}
+              currentUserId={currentUserId}
+              openPicker={openPicker}
+              setOpenPicker={setOpenPicker}
+              onReact={handleReact}
+              isOpen={openMatchId === match.id}
+              onToggle={() => setOpenMatchId((cur) => (cur === match.id ? null : match.id))}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Tabla del día: al FINAL, después de los partidos del día (solo cuando
+          hay resultados en el día seleccionado). */}
       {dayBoard && (
         <section className="space-y-3">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
@@ -526,29 +550,6 @@ export function CommunityView({
             })}
           </div>
         </section>
-      )}
-
-      {selectedDay && (
-        <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            {selectedDay.label}
-          </h2>
-          {selectedDay.matches.map((match) => (
-            <MatchPredictions
-              key={match.id}
-              match={match}
-              preds={predictionsByMatch.get(match.id) ?? []}
-              profileById={profileById}
-              reactionState={reactionState}
-              currentUserId={currentUserId}
-              openPicker={openPicker}
-              setOpenPicker={setOpenPicker}
-              onReact={handleReact}
-              isOpen={openMatchId === match.id}
-              onToggle={() => setOpenMatchId((cur) => (cur === match.id ? null : match.id))}
-            />
-          ))}
-        </div>
       )}
     </div>
   );

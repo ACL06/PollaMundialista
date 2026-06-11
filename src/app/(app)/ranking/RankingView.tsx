@@ -42,7 +42,10 @@ export function RankingView({
 
       <header className="space-y-1">
         <h1 className="text-[28px] sm:text-[32px] font-bold tracking-tight text-foreground">
-          Ranking
+          Ranking{' '}
+          <span className="text-[20px] sm:text-[22px] font-semibold text-muted-foreground tabular-nums">
+            ({rows.length})
+          </span>
         </h1>
         <p className="text-sm text-muted-foreground">
           Puntos acumulados según los resultados oficiales
@@ -55,8 +58,7 @@ export function RankingView({
               partidos jugados
             </>
           )}
-          {' · '}
-          <span className="tabular-nums">{rows.length}</span> participantes.
+          .
         </p>
         <p className="text-sm text-muted-foreground">
           Toca a cualquier participante para ver el desglose de sus puntos.

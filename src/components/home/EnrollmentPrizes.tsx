@@ -62,7 +62,7 @@ export function EnrollmentPrizes({
         </h2>
         <p className="text-sm text-muted-foreground">
           {revealed
-            ? 'El pozo, el podio y cómo se reparte.'
+            ? 'El acumulado, el podio y cómo se reparte.'
             : 'Así funciona el acumulado, claro y transparente.'}
         </p>
       </div>
@@ -295,11 +295,15 @@ const PODIUM_EXAMPLE: PodiumWinner[] = [
 // tiempos variados para que no se vea mecánico. Se desactiva con
 // prefers-reduced-motion (motion-reduce:hidden en el contenedor).
 const SPARKS = [
-  { left: '12%', top: 4, size: 'h-1.5 w-1.5', color: 'bg-amber-400', delay: '0s', dur: '2s' },
-  { left: '30%', top: 14, size: 'h-1 w-1', color: 'bg-amber-300', delay: '0.7s', dur: '2.4s' },
-  { left: '50%', top: 2, size: 'h-1.5 w-1.5', color: 'bg-amber-400', delay: '1.2s', dur: '2.1s' },
-  { left: '68%', top: 12, size: 'h-1 w-1', color: 'bg-amber-300', delay: '0.4s', dur: '2.5s' },
-  { left: '86%', top: 6, size: 'h-1.5 w-1.5', color: 'bg-amber-400', delay: '1.6s', dur: '2.2s' },
+  // Más densas y un poco más grandes que la v1 (podio provisional en vivo):
+  // visibles sin volverse feria — siguen siendo puntos dorados con ping.
+  { left: '8%', top: 6, size: 'h-2 w-2', color: 'bg-amber-400', delay: '0s', dur: '1.8s' },
+  { left: '22%', top: 16, size: 'h-1.5 w-1.5', color: 'bg-amber-300', delay: '0.6s', dur: '2.2s' },
+  { left: '36%', top: 4, size: 'h-2 w-2', color: 'bg-amber-500', delay: '1.1s', dur: '2s' },
+  { left: '50%', top: 12, size: 'h-1.5 w-1.5', color: 'bg-amber-300', delay: '0.3s', dur: '1.9s' },
+  { left: '64%', top: 2, size: 'h-2 w-2', color: 'bg-amber-400', delay: '1.5s', dur: '2.3s' },
+  { left: '78%', top: 14, size: 'h-1.5 w-1.5', color: 'bg-amber-500', delay: '0.9s', dur: '2s' },
+  { left: '92%', top: 7, size: 'h-2 w-2', color: 'bg-amber-400', delay: '1.8s', dur: '2.1s' },
 ] as const;
 
 function Podium({ winners, isFinal }: { winners: PodiumWinner[] | null; isFinal: boolean }) {

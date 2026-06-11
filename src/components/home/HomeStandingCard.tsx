@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, Hourglass, Trophy, Users } from 'lucide-react';
+import { Hourglass, ListChecks, Trophy, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface HomeStandingCardProps {
@@ -14,15 +14,14 @@ interface HomeStandingCardProps {
   hasResults: boolean;
 }
 
-const ctaClass = cn(
-  'inline-flex items-center justify-center gap-2 rounded-lg h-11 px-5 text-sm font-medium',
-  'bg-primary text-primary-foreground hover:brightness-110 transition-all',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-);
-
-const secondaryClass = cn(
-  'inline-flex items-center justify-center gap-2 rounded-lg h-11 px-5 text-sm font-medium',
-  'border border-border text-foreground hover:bg-muted transition-colors',
+/**
+ * Accesos como "tiles" en una sola fila (grid de 3): icono arriba + label,
+ * cada uno con su acento de la paleta tricolor — más presencia que los
+ * botones planos anteriores, sin salirse del design system.
+ */
+const tileBase = cn(
+  'flex flex-col items-center justify-center gap-1.5 rounded-xl border py-3 px-1',
+  'text-[12px] sm:text-[13px] font-semibold whitespace-nowrap transition-colors',
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
 );
 
@@ -74,16 +73,26 @@ export function HomeStandingCard({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 pt-1">
-        <Link href="/ranking" className={ctaClass}>
-          Ver ranking
-          <ArrowRight className="h-4 w-4" />
+      <div className="grid grid-cols-3 gap-2 pt-1">
+        <Link
+          href="/ranking"
+          className={cn(tileBase, 'border-primary/40 bg-primary/10 text-primary hover:bg-primary/20')}
+        >
+          <Trophy className="h-5 w-5" />
+          Ranking
         </Link>
-        <Link href="/comunidad" className={secondaryClass}>
-          <Users className="h-4 w-4" />
+        <Link
+          href="/comunidad"
+          className={cn(tileBase, 'border-tertiary/40 bg-tertiary/10 text-tertiary hover:bg-tertiary/20')}
+        >
+          <Users className="h-5 w-5" />
           Comunidad
         </Link>
-        <Link href="/pronosticos" className={secondaryClass}>
+        <Link
+          href="/pronosticos"
+          className={cn(tileBase, 'border-border bg-muted/60 text-foreground hover:bg-muted')}
+        >
+          <ListChecks className="h-5 w-5" />
           Mi pronóstico
         </Link>
       </div>
