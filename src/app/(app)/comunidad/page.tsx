@@ -82,7 +82,7 @@ export default async function ComunidadPage() {
         )
         .eq('stage', 'group')
         .order('kicks_off_at', { ascending: true }),
-      // Lectura global (~34 usuarios × 72 marcadores ≈ 2.400 filas): supera el
+      // Lectura global (~40 usuarios × 72 marcadores ≈ 2.900 filas): supera el
       // "Max Rows" de PostgREST → fetchAll pagina; el .order() la hace estable.
       fetchAll(() =>
         supabase
