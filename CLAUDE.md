@@ -33,6 +33,7 @@
 - Workflows GitHub Actions (CI lint/typecheck/**test**/build + keep-alive Supabase cada 6 días)
 - Deploy automático en Vercel; Vercel Analytics + Speed Insights
 - Footer global "By Álvaro Castaño"; UserBadge en header (nombre + bandera del equipo favorito)
+- **Error boundary global** (`src/app/error.tsx`): cualquier excepción server-side (p. ej. un blip de red hacia Supabase, cuyo fetch rechazado NO pasa por el canal `{ error }` y revienta el render) muestra una pantalla de la app con **Reintentar** (`reset()`) + "Ir al inicio" + digest, en vez del "Application error" pelado de Next (visto en producción el 11/jun/2026, digest 932418619, transitorio)
 - **Modal de editar perfil** desde el header (avatar **o** nombre/bandera clickeables — el `UserBadge` vive dentro de `ProfileMenu`): edita **avatar** (galería DiceBear + "Otras opciones"), nombre/apellidos/nickname/celular y **equipo favorito**; el email se muestra pero no se edita (PR #29 + avatar/equipo). Errores **específicos por campo** (marca el input culpable, no un mensaje genérico al pie — `fieldErrorsFrom(ZodError)`) y el modal **bloquea el scroll del fondo** (`useBodyScrollLock`)
 
 #### Perfil (Fase 2 + 2.1)
