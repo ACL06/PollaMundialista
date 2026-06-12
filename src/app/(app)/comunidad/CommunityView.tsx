@@ -700,6 +700,15 @@ function MatchPredictions({
                 </span>
                 <span className="text-[10px] text-primary">Final</span>
               </span>
+            ) : match.status === 'live' ? (
+              // En vivo: hora + el mismo punto rojo pulsante del calendario.
+              <span className="inline-flex flex-col items-center gap-0.5">
+                <span>{formatMatchTime(new Date(match.kicks_off_at))}</span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-destructive">
+                  <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
+                  En vivo
+                </span>
+              </span>
             ) : (
               formatMatchTime(new Date(match.kicks_off_at))
             )}
