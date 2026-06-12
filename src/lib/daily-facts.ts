@@ -320,23 +320,31 @@ function bogotaDayNumber(now: Date, anchor: Date): number {
 }
 
 /**
- * Dato curioso correspondiente a `now`, anclado a `anchor` (la fecha del lock).
- * Devuelve null si:
- *   - no hay ancla (lock sin resolver),
- *   - aún no llega el día 1 (no debería pasar: Comunidad es post-lock), o
- *   - ya pasó el día 40 (el torneo terminó; la cápsula se retira).
+ * Datos curiosos desde el día 1 HASTA el día de `now` inclusive (anclado a
+ * `anchor`, la fecha del lock). Es lo que la cápsula deja navegar con las
+ * flechas: días anteriores y el actual — los futuros no se incluyen (ni
+ * siquiera viajan al cliente, así no se pueden "espiar" en el payload).
+ * Vacío si no hay ancla, aún no llega el día 1, o ya pasó el día 40 (la
+ * cápsula se retira, igual que siempre).
  */
-export function getDailyFact(now: Date, anchor: Date | null): DailyFactToday | null {
-  if (!anchor) return null;
+export function getDailyFactsUpTo(now: Date, anchor: Date | null): DailyFactToday[] {
+  if (!anchor) return [];
   const total = DAILY_FACTS.length;
   const day = bogotaDayNumber(now, anchor);
-  if (day < 1 || day > total) return null;
-  const fact = DAILY_FACTS[day - 1];
-  return {
+  if (day < 1 || day > total) return [];
+  return DAILY_FACTS.slice(0, day).map((fact, i) => ({
     title: fact.title,
     text: fact.text,
     categoryLabel: CATEGORY_LABEL[fact.category],
-    day,
+    day: i + 1,
     total,
-  };
+  }));
+}
+
+/**
+ * Dato curioso correspondiente a `now` (el último de `getDailyFactsUpTo`).
+ * Null si no hay ancla, aún no llega el día 1, o ya pasó el día 40.
+ */
+export function getDailyFact(now: Date, anchor: Date | null): DailyFactToday | null {
+  return getDailyFactsUpTo(now, anchor).at(-1) ?? null;
 }

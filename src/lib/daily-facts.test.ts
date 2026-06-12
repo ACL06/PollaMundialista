@@ -3,6 +3,7 @@ import {
   DAILY_FACTS,
   CATEGORY_LABEL,
   getDailyFact,
+  getDailyFactsUpTo,
   type FactCategory,
 } from './daily-facts';
 
@@ -94,5 +95,35 @@ describe('getDailyFact', () => {
 
   it('antes del ancla devuelve null', () => {
     expect(getDailyFact(new Date('2026-06-10T17:00:00Z'), anchor)).toBeNull();
+  });
+});
+
+describe('getDailyFactsUpTo (navegación hacia atrás de la cápsula)', () => {
+  const anchor = new Date('2026-06-11T23:00:00Z'); // día Bogotá: 2026-06-11
+
+  it('el día 1 devuelve solo el primer dato', () => {
+    const facts = getDailyFactsUpTo(anchor, anchor);
+    expect(facts).toHaveLength(1);
+    expect(facts[0].day).toBe(1);
+    expect(facts[0].text).toBe(DAILY_FACTS[0].text);
+  });
+
+  it('el día 12 devuelve los días 1..12 en orden (sin futuros)', () => {
+    const facts = getDailyFactsUpTo(new Date('2026-06-22T17:00:00Z'), anchor);
+    expect(facts).toHaveLength(12);
+    expect(facts.map((f) => f.day)).toEqual(Array.from({ length: 12 }, (_, i) => i + 1));
+    expect(facts[11].text).toBe(DAILY_FACTS[11].text); // el último = el de hoy
+    expect(facts.every((f) => f.total === 40)).toBe(true);
+  });
+
+  it('coherente con getDailyFact: el último del array es el dato del día', () => {
+    const now = new Date('2026-06-22T17:00:00Z');
+    expect(getDailyFactsUpTo(now, anchor).at(-1)).toEqual(getDailyFact(now, anchor));
+  });
+
+  it('sin ancla, antes del día 1 o pasado el día 40 → vacío', () => {
+    expect(getDailyFactsUpTo(new Date('2026-06-15T17:00:00Z'), null)).toEqual([]);
+    expect(getDailyFactsUpTo(new Date('2026-06-10T17:00:00Z'), anchor)).toEqual([]);
+    expect(getDailyFactsUpTo(new Date('2026-07-21T17:00:00Z'), anchor)).toEqual([]);
   });
 });

@@ -3,7 +3,7 @@ import { Lock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { fetchAll } from '@/lib/supabase/fetch-all';
 import { getPredictionsLockAt, isLockedAt } from '@/lib/predictions-lock';
-import { getDailyFact } from '@/lib/daily-facts';
+import { getDailyFactsUpTo } from '@/lib/daily-facts';
 import { getViewerAccess } from '@/lib/access';
 import { SpectatorBlocked } from '@/components/app/SpectatorBlocked';
 import { Countdown } from '@/components/pronosticos/Countdown';
@@ -143,9 +143,11 @@ export default async function ComunidadPage() {
   );
 
   // Dato curioso del día: anclado al lock (= arranque del Mundial), así el
-  // "Día 1 de 40" cae el día inaugural. Server-side y en TZ Bogotá. Para el
-  // admin previsualizando antes del lock, `now < lock` → null (no se muestra).
-  const dailyFact = getDailyFact(new Date(), lockAt);
+  // "Día 1 de 40" cae el día inaugural. Server-side y en TZ Bogotá. Se mandan
+  // los datos del día 1 al ACTUAL (los futuros no viajan al cliente) para que
+  // la cápsula permita repasar días anteriores. Para el admin previsualizando
+  // antes del lock, `now < lock` → vacío (no se muestra).
+  const dailyFacts = getDailyFactsUpTo(new Date(), lockAt);
 
   return (
     <CommunityView
@@ -158,7 +160,7 @@ export default async function ComunidadPage() {
       reactions={reactions}
       currentUserId={user.id}
       nowIso={new Date().toISOString()}
-      dailyFact={dailyFact}
+      dailyFacts={dailyFacts}
     />
   );
 }
