@@ -50,8 +50,8 @@ interface CommunityViewProps {
   currentUserId: string;
   /** Hora del servidor (ISO) para elegir el día por defecto sin desfasar SSR. */
   nowIso: string;
-  /** Dato curioso del día (calculado server-side, TZ Bogotá). Null fuera de los 40 días. */
-  dailyFact: DailyFactToday | null;
+  /** Datos curiosos del día 1 al actual (server-side, TZ Bogotá). Vacío fuera de los 40 días. */
+  dailyFacts: DailyFactToday[];
 }
 
 /** Clave de un pronóstico concreto: el de {targetUserId} en {matchId}. */
@@ -98,7 +98,7 @@ export function CommunityView({
   reactions,
   currentUserId,
   nowIso,
-  dailyFact,
+  dailyFacts,
 }: CommunityViewProps) {
   // Estado de reacciones: clave `target|match` → Map<reactorId, ReactionKey>.
   const [reactionState, setReactionState] = useState<Map<string, Map<string, ReactionKey>>>(
@@ -337,8 +337,9 @@ export function CommunityView({
         ctaLabel="¡A chismosear! 👀"
       />
 
-      {/* Dato curioso del día (solo durante el torneo; null fuera de los 40 días). */}
-      {dailyFact && <DailyFactCapsule view={dailyFact} />}
+      {/* Dato curioso del día (solo durante el torneo; con flechas para
+          repasar los días anteriores — nunca futuros). */}
+      {dailyFacts.length > 0 && <DailyFactCapsule facts={dailyFacts} />}
 
       {/* Sin título "Comunidad": ya lo indica la pestaña activa del navbar.
           El texto de transparencia vive en la sección de Participantes. */}
@@ -699,6 +700,15 @@ function MatchPredictions({
                   {real.home} – {real.away}
                 </span>
                 <span className="text-[10px] text-primary">Final</span>
+              </span>
+            ) : match.status === 'live' ? (
+              // En vivo: hora + el mismo punto rojo pulsante del calendario.
+              <span className="inline-flex flex-col items-center gap-0.5">
+                <span>{formatMatchTime(new Date(match.kicks_off_at))}</span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-destructive">
+                  <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
+                  En vivo
+                </span>
               </span>
             ) : (
               formatMatchTime(new Date(match.kicks_off_at))

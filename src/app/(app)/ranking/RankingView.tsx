@@ -44,7 +44,7 @@ export function RankingView({
         <h1 className="text-[28px] sm:text-[32px] font-bold tracking-tight text-foreground">
           Ranking{' '}
           <span className="text-[20px] sm:text-[22px] font-semibold text-muted-foreground tabular-nums">
-            ({rows.length})
+            ({rows.length} participantes)
           </span>
         </h1>
         <p className="text-sm text-muted-foreground">
