@@ -678,14 +678,28 @@ function MatchPredictions({
     );
   });
 
+  const isLive = match.status === 'live';
+
   return (
-    <article className="border border-border bg-surface rounded-lg overflow-hidden">
+    <article
+      className={cn(
+        'border bg-surface rounded-lg overflow-hidden transition-colors',
+        // En vivo: borde + halo rojos como la card del calendario. Solo el
+        // contorno y la cabecera — el contenido expandido no se tiñe.
+        isLive
+          ? 'border-secondary shadow-[0_0_0_1px_hsl(var(--secondary)/0.25)]'
+          : 'border-border',
+      )}
+    >
       {/* Cabecera clickeable: expande/colapsa los marcadores de todos */}
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={isOpen}
-        className="w-full px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-tertiary"
+        className={cn(
+          'w-full px-4 py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-tertiary',
+          isLive ? 'bg-secondary/5 hover:bg-secondary/10' : 'bg-muted/30 hover:bg-muted/50',
+        )}
       >
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-3 items-center">
           {match.home_team ? (
