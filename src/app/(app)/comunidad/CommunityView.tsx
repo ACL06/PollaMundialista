@@ -419,7 +419,7 @@ export function CommunityView({
           sección está cerrada por defecto, así que el flujo normal hacia los
           partidos/tabla del día ya no pasa por aquí (ese era el bug en móvil).
           Se cierra al tocar fuera (data-participants-ui marca lo que NO cierra). */}
-      <section className="space-y-3" data-participants-ui>
+      <section data-participants-ui>
         <button
           type="button"
           onClick={() => setShowParticipants((v) => !v)}
@@ -454,9 +454,20 @@ export function CommunityView({
           />
         </button>
 
-        {showParticipants && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto overscroll-contain pr-1 -mr-1">
-          {participants.map((p) => {
+        {/* Apertura/cierre suave: anima grid-template-rows 0fr↔1fr (altura
+            automática sin JS). El contenido vive montado para que la
+            transición sea fluida; `inert` cuando está cerrado evita que los
+            enlaces ocultos sean enfocables. El gap (mt-2) va dentro del área
+            animada para que no quede espacio fantasma al cerrar. */}
+        <div
+          className={cn(
+            'grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none',
+            showParticipants ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+          )}
+        >
+          <div className="overflow-hidden" inert={showParticipants ? undefined : true}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto overscroll-contain pr-1 -mr-1 mt-2">
+              {participants.map((p) => {
             const favTeam = p.favorite_team ? teamsByCode.get(p.favorite_team) : null;
             const isYou = p.id === currentUserId;
             return (
@@ -485,9 +496,10 @@ export function CommunityView({
                 <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
               </Link>
             );
-          })}
+              })}
+            </div>
+          </div>
         </div>
-        )}
       </section>
 
       {/* Tabs por día (auto-centra el activo al seleccionarlo) */}
