@@ -60,9 +60,6 @@ export function RankingView({
           )}
           .
         </p>
-        <p className="text-sm text-muted-foreground">
-          Toca a cualquier participante para ver el desglose de sus puntos.
-        </p>
       </header>
 
       {!hasResults && (

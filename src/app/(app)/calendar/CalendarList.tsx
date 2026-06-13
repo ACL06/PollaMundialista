@@ -49,7 +49,12 @@ interface CalendarListProps {
 }
 
 export function CalendarList({ matches }: CalendarListProps) {
-  const [filter, setFilter] = useState<Filter>('all');
+  // Por defecto "Hoy" — pero si hoy no hay partidos, "Todos" (no abrir en vacío).
+  const [filter, setFilter] = useState<Filter>(() => {
+    const key = formatMatchDateKey(new Date());
+    const hayHoy = matches.some((m) => formatMatchDateKey(new Date(m.kicks_off_at)) === key);
+    return hayHoy ? 'today' : 'all';
+  });
   const { containerRef, activeRef } = useCenterActiveTab<HTMLButtonElement>(filter);
 
   // `todayKey` se mantiene en estado para que el filtro "Hoy" se actualice

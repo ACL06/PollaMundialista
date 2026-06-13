@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Crown, Medal } from 'lucide-react';
+import { Crown, Eye, Medal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RankingRow } from './types';
 import { ScoreBreakdownModal } from './ScoreBreakdownModal';
@@ -58,7 +58,9 @@ export function RankingBoard({ rows, currentUserId, hasResults }: RankingBoardPr
               >
                 Exactos
               </th>
-              <th className="text-right font-medium pr-4 pl-2 py-2.5 w-16">Pts</th>
+              <th className="text-right font-medium px-2 py-2.5 w-14">Pts</th>
+              {/* Ojito: señala que cada fila se puede abrir para ver el desglose. */}
+              <th className="py-2.5 pr-4 w-9" aria-label="Ver desglose" />
             </tr>
           </thead>
           <tbody>
@@ -93,8 +95,11 @@ export function RankingBoard({ rows, currentUserId, hasResults }: RankingBoardPr
                   <td className="text-center px-2 py-2.5 text-muted-foreground tabular-nums hidden sm:table-cell">
                     {r.breakdown.groupExactCount + r.breakdown.knockoutExactCount}
                   </td>
-                  <td className="text-right pr-4 pl-2 py-2.5 font-bold tabular-nums text-foreground">
+                  <td className="text-right px-2 py-2.5 font-bold tabular-nums text-foreground">
                     {r.breakdown.total}
+                  </td>
+                  <td className="py-2.5 pr-4 text-right">
+                    <Eye className="inline h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
                   </td>
                 </tr>
               );
@@ -114,10 +119,11 @@ export function RankingBoard({ rows, currentUserId, hasResults }: RankingBoardPr
   );
 }
 
+// Mismos colores del podio de /home (oro / plata / bronce) para coherencia.
 const TIER_META: Record<number, { label: string; medalClass: string; cardClass: string }> = {
-  1: { label: '1er lugar', medalClass: 'text-amber-500', cardClass: 'border-primary/40 bg-primary/[0.06]' },
-  2: { label: '2do lugar', medalClass: 'text-zinc-400', cardClass: 'border-border bg-surface' },
-  3: { label: '3er lugar', medalClass: 'text-amber-700', cardClass: 'border-border bg-surface' },
+  1: { label: '1er lugar', medalClass: 'text-amber-500 fill-amber-400', cardClass: 'border-amber-400/50 bg-amber-400/15' },
+  2: { label: '2do lugar', medalClass: 'text-zinc-400 fill-zinc-300', cardClass: 'border-zinc-400/50 bg-zinc-400/15' },
+  3: { label: '3er lugar', medalClass: 'text-amber-700 fill-amber-700/40', cardClass: 'border-amber-700/50 bg-amber-700/15' },
 };
 
 function PodiumTier({
