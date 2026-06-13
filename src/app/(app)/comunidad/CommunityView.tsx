@@ -401,9 +401,10 @@ export function CommunityView({
       )}
 
       {/* Participantes → pronóstico completo. Colapsable (cerrada por defecto):
-          la cabecera es un CTA con avatares apilados + contador; al abrir, el
-          grid fluye con la página SIN scroll interno (en móvil ese scroll
-          anidado atrapaba el dedo y nadie llegaba a los partidos/tabla del día). */}
+          la cabecera es un CTA con avatares apilados + contador. Al abrirla, el
+          grid tiene scroll interno acotado a ~5 filas — aceptable porque la
+          sección está cerrada por defecto, así que el flujo normal hacia los
+          partidos/tabla del día ya no pasa por aquí (ese era el bug en móvil). */}
       <section className="space-y-3">
         <button
           type="button"
@@ -440,7 +441,7 @@ export function CommunityView({
         </button>
 
         {showParticipants && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto overscroll-contain pr-1 -mr-1">
           {participants.map((p) => {
             const favTeam = p.favorite_team ? teamsByCode.get(p.favorite_team) : null;
             const isYou = p.id === currentUserId;
