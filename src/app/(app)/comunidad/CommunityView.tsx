@@ -116,6 +116,9 @@ export function CommunityView({
   const [openPicker, setOpenPicker] = useState<string | null>(null);
   // Acordeón: solo un partido con sus marcadores expandido a la vez.
   const [openMatchId, setOpenMatchId] = useState<string | null>(null);
+  // Lista de participantes: colapsada por defecto (en móvil su scroll interno
+  // atrapaba el dedo y nadie llegaba a los partidos / tabla del día).
+  const [showParticipants, setShowParticipants] = useState(false);
   const [, startReact] = useTransition();
 
   const handleReact = (targetUserId: string, matchId: string, reaction: ReactionKey) => {
@@ -397,22 +400,47 @@ export function CommunityView({
         </section>
       )}
 
-      {/* Participantes → pronóstico completo */}
+      {/* Participantes → pronóstico completo. Colapsable (cerrada por defecto):
+          la cabecera es un CTA con avatares apilados + contador; al abrir, el
+          grid fluye con la página SIN scroll interno (en móvil ese scroll
+          anidado atrapaba el dedo y nadie llegaba a los partidos/tabla del día). */}
       <section className="space-y-3">
-        <div className="space-y-1">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            <Users className="h-4 w-4" />
-            Participantes ({participants.length})
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Los pronósticos de todos, abiertos para que sea transparente.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Toca un participante para ver su pronóstico completo.
-          </p>
-        </div>
-        {/* Grid con scroll vertical: muestra varios y solo scrollea si hay muchos. */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-1 -mr-1">
+        <button
+          type="button"
+          onClick={() => setShowParticipants((v) => !v)}
+          aria-expanded={showParticipants}
+          className={cn(
+            'w-full flex items-center gap-3 rounded-xl border border-tertiary/30 bg-tertiary/5 px-4 py-3 text-left',
+            'transition-colors hover:bg-tertiary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary',
+          )}
+        >
+          {/* Caras reales apiladas: deja claro que "ahí están todos". */}
+          <span className="flex -space-x-2 flex-shrink-0">
+            {participants.slice(0, 5).map((p) => (
+              <span key={p.id} className="inline-flex rounded-full ring-2 ring-surface">
+                <Avatar profile={p} size={26} />
+              </span>
+            ))}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+              <Users className="h-4 w-4 flex-shrink-0 text-tertiary" />
+              Mira el pronóstico de los {participants.length} participantes
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              {showParticipants ? 'Toca a cualquiera para ver el suyo completo.' : 'Toca para verlos y abrir el de cada uno.'}
+            </span>
+          </span>
+          <ChevronDown
+            className={cn(
+              'h-5 w-5 flex-shrink-0 text-tertiary transition-transform',
+              showParticipants && 'rotate-180',
+            )}
+          />
+        </button>
+
+        {showParticipants && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {participants.map((p) => {
             const favTeam = p.favorite_team ? teamsByCode.get(p.favorite_team) : null;
             const isYou = p.id === currentUserId;
@@ -444,6 +472,7 @@ export function CommunityView({
             );
           })}
         </div>
+        )}
       </section>
 
       {/* Tabs por día (auto-centra el activo al seleccionarlo) */}
