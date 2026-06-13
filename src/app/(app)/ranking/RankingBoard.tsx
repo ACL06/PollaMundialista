@@ -52,12 +52,6 @@ export function RankingBoard({ rows, currentUserId, hasResults }: RankingBoardPr
             <tr className="border-b border-border text-xs text-muted-foreground bg-muted/30">
               <th className="text-left font-medium pl-4 pr-2 py-2.5 w-10">#</th>
               <th className="text-left font-medium px-2 py-2.5">Participante</th>
-              <th
-                className="text-center font-medium px-2 py-2.5 w-16 hidden sm:table-cell"
-                title="Marcadores exactos"
-              >
-                Exactos
-              </th>
               <th className="text-right font-medium px-2 py-2.5 w-14">Pts</th>
               {/* Ojito: señala que cada fila se puede abrir para ver el desglose. */}
               <th className="py-2.5 pr-4 w-9" aria-label="Ver desglose" />
@@ -91,9 +85,6 @@ export function RankingBoard({ rows, currentUserId, hasResults }: RankingBoardPr
                         )}
                       </span>
                     </div>
-                  </td>
-                  <td className="text-center px-2 py-2.5 text-muted-foreground tabular-nums hidden sm:table-cell">
-                    {r.breakdown.groupExactCount + r.breakdown.knockoutExactCount}
                   </td>
                   <td className="text-right px-2 py-2.5 font-bold tabular-nums text-foreground">
                     {r.breakdown.total}
