@@ -284,6 +284,19 @@ export function CommunityView({
     };
   }, [openPicker]);
 
+  // Cerrar la lista de participantes al tocar FUERA de ella (otra acción en la
+  // página). No se ata al scroll —a diferencia del picker— porque la lista
+  // tiene scroll interno propio y cerrarla al desplazarse dentro molestaría.
+  useEffect(() => {
+    if (!showParticipants) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if ((e.target as HTMLElement | null)?.closest('[data-participants-ui]')) return;
+      setShowParticipants(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [showParticipants]);
+
   // ── Tabla del día: puntos de cada participante en los partidos del día
   //    que YA tienen resultado oficial. Null si el día no tiene resultados.
   const dayBoard = useMemo(() => {
@@ -404,8 +417,9 @@ export function CommunityView({
           la cabecera es un CTA con avatares apilados + contador. Al abrirla, el
           grid tiene scroll interno acotado a ~5 filas — aceptable porque la
           sección está cerrada por defecto, así que el flujo normal hacia los
-          partidos/tabla del día ya no pasa por aquí (ese era el bug en móvil). */}
-      <section className="space-y-3">
+          partidos/tabla del día ya no pasa por aquí (ese era el bug en móvil).
+          Se cierra al tocar fuera (data-participants-ui marca lo que NO cierra). */}
+      <section className="space-y-3" data-participants-ui>
         <button
           type="button"
           onClick={() => setShowParticipants((v) => !v)}
