@@ -27,6 +27,7 @@ import {
   type ReactionRow,
 } from './shared';
 import { WelcomeModal } from '@/components/app/WelcomeModal';
+import { AutoRefresh } from '@/components/app/AutoRefresh';
 import { toggleReaction } from './actions';
 import { DailyFactCapsule } from './DailyFactCapsule';
 
@@ -343,6 +344,10 @@ export function CommunityView({
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col gap-7">
+      {/* Refresca solo (sin recargar) para que el estado de los partidos y los
+          aciertos que carga el admin se reflejen mientras miras Comunidad. */}
+      <AutoRefresh />
+
       {/* Bienvenida one-time a la sección (se muestra una sola vez por dispositivo). */}
       <WelcomeModal
         storageKey="comunidad"
