@@ -25,6 +25,12 @@ interface Section {
   lines: Line[];
 }
 
+/** "N × valor" — el conteo se deriva dividiendo los puntos por el valor
+ *  unitario (los puntos siempre son múltiplo exacto del valor). */
+function mult(points: number, unit: number): string {
+  return `${unit ? points / unit : 0} × ${unit}`;
+}
+
 /** Arma las secciones del desglose desde el breakdown ya calculado. */
 function buildSections(b: RankingRow['breakdown']): Section[] {
   return [
@@ -61,20 +67,24 @@ function buildSections(b: RankingRow['breakdown']): Section[] {
     {
       title: 'Clasificados',
       lines: [
-        { label: 'Eliminatorias de 32', points: b.r32 },
-        { label: 'Octavos de Final', points: b.r16 },
-        { label: 'Cuartos de Final', points: b.qf },
-        { label: 'Semifinales', points: b.sf },
+        { label: 'Eliminatorias de 32', detail: mult(b.r32, SCORING.bracket.r32), points: b.r32 },
+        { label: 'Octavos de Final', detail: mult(b.r16, SCORING.bracket.r16), points: b.r16 },
+        { label: 'Cuartos de Final', detail: mult(b.qf, SCORING.bracket.qf), points: b.qf },
+        { label: 'Semifinales', detail: mult(b.sf, SCORING.bracket.sf), points: b.sf },
       ],
     },
     {
       title: 'Definiciones',
       lines: [
-        { label: 'Finalistas', points: b.finalists },
-        { label: 'Tercer lugar', points: b.thirdPlace },
-        { label: 'Campeón', points: b.champion },
-        { label: 'Marcador de la final (bonus)', points: b.finalExact },
-        { label: 'Goleador', points: b.topScorer },
+        { label: 'Finalistas', detail: mult(b.finalists, SCORING.finalist), points: b.finalists },
+        { label: 'Tercer lugar', detail: mult(b.thirdPlace, SCORING.thirdPlace), points: b.thirdPlace },
+        { label: 'Campeón', detail: mult(b.champion, SCORING.champion), points: b.champion },
+        {
+          label: 'Marcador de la final (bonus)',
+          detail: mult(b.finalExact, SCORING.finalExact),
+          points: b.finalExact,
+        },
+        { label: 'Goleador', detail: mult(b.topScorer, SCORING.topScorer), points: b.topScorer },
       ],
     },
   ];
