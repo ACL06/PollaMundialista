@@ -99,7 +99,16 @@ export function AdminPanel({
     return Array.from(grouped.values());
   }, [groupMatches]);
 
-  const [selectedDayKey, setSelectedDayKey] = useState(() => days[0]?.key ?? '');
+  // Por defecto el día de hoy (o el más cercano hacia adelante; si no, el
+  // último) — como en Comunidad, para no caer siempre en el día inaugural.
+  const [selectedDayKey, setSelectedDayKey] = useState(() => {
+    if (days.length === 0) return '';
+    const todayKey = formatMatchDateKey(new Date());
+    const today = days.find((d) => d.key === todayKey);
+    if (today) return today.key;
+    const upcoming = days.find((d) => d.key >= todayKey);
+    return (upcoming ?? days[days.length - 1]).key;
+  });
   const selectedDay = days.find((d) => d.key === selectedDayKey) ?? days[0];
 
   const finalCount = useMemo(() => {

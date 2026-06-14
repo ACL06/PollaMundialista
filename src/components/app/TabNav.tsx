@@ -37,7 +37,7 @@ export function TabNav({ isSpectator = false }: { isSpectator?: boolean }) {
       <div className="relative max-w-6xl mx-auto">
         <div
           ref={containerRef}
-          className="flex gap-1 overflow-x-auto overflow-y-hidden touch-pan-x overscroll-x-contain scroll-smooth px-5 lg:justify-center"
+          className="flex gap-1 overflow-x-auto overflow-y-hidden touch-pan-x overscroll-x-contain scroll-smooth px-5 lg:justify-center [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         >
           {visibleTabs.map(({ href, label, Icon }) => {
           const isActive = href === activeHref;
