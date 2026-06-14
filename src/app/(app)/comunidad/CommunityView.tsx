@@ -362,61 +362,8 @@ export function CommunityView({
           repasar los días anteriores — nunca futuros). */}
       {dailyFacts.length > 0 && <DailyFactCapsule facts={dailyFacts} />}
 
-      {/* Sin título "Comunidad": ya lo indica la pestaña activa del navbar.
-          El texto de transparencia vive en la sección de Participantes. */}
-
-      {/* Distribución de campeones */}
-      {championDist.rows.length > 0 && (
-        <Distribution
-          title="El campeón de la polla (Top 5)"
-          Icon={Crown}
-          iconClass="text-amber-500"
-          rows={championDist.rows}
-          max={championDist.max}
-        />
-      )}
-
-      {/* Finalistas más elegidos (campeón + subcampeón) */}
-      {finalistsDist.rows.length > 0 && (
-        <Distribution
-          title="Finalistas más elegidos (Top 5)"
-          Icon={Trophy}
-          iconClass="text-tertiary"
-          rows={finalistsDist.rows}
-          max={finalistsDist.max}
-        />
-      )}
-
-      {/* Goleadores más elegidos (top 5) */}
-      {topScorers.rows.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            <Target className="h-4 w-4 text-primary" />
-            Goleadores más elegidos (Top 5)
-          </h2>
-          <div className="rounded-lg border border-border bg-surface p-4 space-y-2.5">
-            {topScorers.rows.map((row, i) => (
-              <div key={row.name} className="flex items-center gap-3">
-                <span className="text-[13px] font-bold tabular-nums text-muted-foreground w-4 text-right">
-                  {i + 1}
-                </span>
-                <span className="text-[13px] text-foreground w-32 truncate" title={row.name}>
-                  {row.name}
-                </span>
-                <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full"
-                    style={{ width: `${(row.count / topScorers.max) * 100}%` }}
-                  />
-                </div>
-                <span className="text-[13px] font-bold tabular-nums text-foreground w-6 text-right">
-                  {row.count}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Orden de la sección (pedido): dato curioso → participantes → fechas
+          y partidos → tabla del día → Top 5 (al final). */}
 
       {/* Participantes → pronóstico completo. Colapsable (cerrada por defecto):
           la cabecera es un CTA con avatares apilados + contador. Al abrirla, el
@@ -610,6 +557,56 @@ export function CommunityView({
                 </div>
               );
             })}
+          </div>
+        </section>
+      )}
+
+      {/* Top 5 de la polla — al final de la sección (campeón, finalistas,
+          goleadores más elegidos). */}
+      {championDist.rows.length > 0 && (
+        <Distribution
+          title="El campeón de la polla (Top 5)"
+          Icon={Crown}
+          iconClass="text-amber-500"
+          rows={championDist.rows}
+          max={championDist.max}
+        />
+      )}
+      {finalistsDist.rows.length > 0 && (
+        <Distribution
+          title="Finalistas más elegidos (Top 5)"
+          Icon={Trophy}
+          iconClass="text-tertiary"
+          rows={finalistsDist.rows}
+          max={finalistsDist.max}
+        />
+      )}
+      {topScorers.rows.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            <Target className="h-4 w-4 text-primary" />
+            Goleadores más elegidos (Top 5)
+          </h2>
+          <div className="rounded-lg border border-border bg-surface p-4 space-y-2.5">
+            {topScorers.rows.map((row, i) => (
+              <div key={row.name} className="flex items-center gap-3">
+                <span className="text-[13px] font-bold tabular-nums text-muted-foreground w-4 text-right">
+                  {i + 1}
+                </span>
+                <span className="text-[13px] text-foreground w-32 truncate" title={row.name}>
+                  {row.name}
+                </span>
+                <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full"
+                    style={{ width: `${(row.count / topScorers.max) * 100}%` }}
+                  />
+                </div>
+                <span className="text-[13px] font-bold tabular-nums text-foreground w-6 text-right">
+                  {row.count}
+                </span>
+              </div>
+            ))}
           </div>
         </section>
       )}
