@@ -5,7 +5,7 @@ export interface Team {
   group_code: string | null;
 }
 
-export type MatchStatus = 'scheduled' | 'live' | 'final';
+export type MatchStatus = 'scheduled' | 'live' | 'final' | 'suspended';
 export type MatchStage = 'group' | 'r32' | 'r16' | 'qf' | 'sf' | '3rd' | 'final';
 
 export interface Match {

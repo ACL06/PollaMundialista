@@ -36,6 +36,7 @@ const STATUS_LABEL: Record<MatchStatus, string> = {
   scheduled: 'Programado',
   live: 'En vivo',
   final: 'Final',
+  suspended: 'Suspendido',
 };
 
 function sanitizeScore(v: string): string {
@@ -267,7 +268,7 @@ export function KnockoutResultsEditor({ matches, teams }: KnockoutResultsEditorP
 
                 {/* Status */}
                 <div className="flex items-center gap-2">
-                  {(['scheduled', 'live', 'final'] as MatchStatus[]).map((s) => (
+                  {(['scheduled', 'live', 'final', 'suspended'] as MatchStatus[]).map((s) => (
                     <button
                       key={s}
                       type="button"
@@ -282,7 +283,9 @@ export function KnockoutResultsEditor({ matches, teams }: KnockoutResultsEditorP
                             ? 'border-primary bg-primary/10 text-foreground'
                             : s === 'live'
                               ? 'border-destructive bg-destructive/10 text-destructive'
-                              : 'border-foreground/30 bg-muted text-foreground'
+                              : s === 'suspended'
+                                ? 'border-amber-500 bg-amber-500/10 text-amber-600'
+                                : 'border-foreground/30 bg-muted text-foreground'
                           : 'border-border bg-surface text-muted-foreground hover:text-foreground',
                       )}
                     >

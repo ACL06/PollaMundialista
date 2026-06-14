@@ -28,21 +28,38 @@ export interface PredictionPick {
   top_scorer: string | null;
 }
 
-export type ReactionKey = 'like' | 'laugh' | 'fire' | 'shock';
+export type ReactionKey =
+  | 'like'
+  | 'laugh'
+  | 'fire'
+  | 'shock'
+  | 'dislike'
+  | 'eyes'
+  | 'clap'
+  | 'love';
 
-/** Set de reacciones disponibles (orden de display). */
+/** Set de reacciones disponibles (orden de display). Debe coincidir con el
+ *  CHECK de `prediction_reactions.reaction` en la BD. */
 export const REACTIONS: ReadonlyArray<{ key: ReactionKey; emoji: string; label: string }> = [
   { key: 'like', emoji: '👍', label: 'Me gusta' },
+  { key: 'dislike', emoji: '👎', label: 'No me gusta' },
   { key: 'laugh', emoji: '😂', label: 'Jaja' },
   { key: 'fire', emoji: '🔥', label: 'Crack' },
   { key: 'shock', emoji: '😱', label: 'No way' },
+  { key: 'eyes', emoji: '👀', label: 'Atento' },
+  { key: 'clap', emoji: '👏', label: 'Aplausos' },
+  { key: 'love', emoji: '❤️', label: 'Me encanta' },
 ];
 
 export const REACTION_EMOJI: Record<ReactionKey, string> = {
   like: '👍',
+  dislike: '👎',
   laugh: '😂',
   fire: '🔥',
   shock: '😱',
+  eyes: '👀',
+  clap: '👏',
+  love: '❤️',
 };
 
 export interface ReactionRow {

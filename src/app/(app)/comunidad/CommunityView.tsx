@@ -735,16 +735,19 @@ function MatchPredictions({
   });
 
   const isLive = match.status === 'live';
+  const isSuspended = match.status === 'suspended';
 
   return (
     <article
       className={cn(
         'border bg-surface rounded-lg overflow-hidden transition-colors',
-        // En vivo: borde + halo rojos como la card del calendario. Solo el
-        // contorno y la cabecera — el contenido expandido no se tiñe.
+        // En vivo (rojo) / suspendido (ámbar): borde + halo como en el
+        // calendario. Solo el contorno y la cabecera — el contenido no se tiñe.
         isLive
           ? 'border-secondary shadow-[0_0_0_1px_hsl(var(--secondary)/0.25)]'
-          : 'border-border',
+          : isSuspended
+            ? 'border-amber-500/50 shadow-[0_0_0_1px_theme(colors.amber.500/0.25)]'
+            : 'border-border',
       )}
     >
       {/* Cabecera clickeable: expande/colapsa los marcadores de todos */}
@@ -754,7 +757,11 @@ function MatchPredictions({
         aria-expanded={isOpen}
         className={cn(
           'w-full px-4 py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-tertiary',
-          isLive ? 'bg-secondary/5 hover:bg-secondary/10' : 'bg-muted/30 hover:bg-muted/50',
+          isLive
+            ? 'bg-secondary/5 hover:bg-secondary/10'
+            : isSuspended
+              ? 'bg-amber-500/5 hover:bg-amber-500/10'
+              : 'bg-muted/30 hover:bg-muted/50',
         )}
       >
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-3 items-center">
@@ -779,6 +786,11 @@ function MatchPredictions({
                   <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
                   En vivo
                 </span>
+              </span>
+            ) : match.status === 'suspended' ? (
+              <span className="inline-flex flex-col items-center gap-0.5">
+                <span>{formatMatchTime(new Date(match.kicks_off_at))}</span>
+                <span className="text-[10px] font-semibold text-amber-600">Suspendido</span>
               </span>
             ) : (
               formatMatchTime(new Date(match.kicks_off_at))

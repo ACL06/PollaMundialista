@@ -36,6 +36,7 @@ export function MatchCard({ match }: { match: Match }) {
         // - final: fondo desaturado y opacity baja, "ya quedó atrás"
         match.status === 'scheduled' && 'border-border bg-surface',
         match.status === 'live' && 'border-secondary bg-secondary/5 shadow-[0_0_0_1px_hsl(var(--secondary)/0.25)]',
+        match.status === 'suspended' && 'border-amber-500/50 bg-amber-500/5 shadow-[0_0_0_1px_theme(colors.amber.500/0.25)]',
         match.status === 'final' && 'border-border bg-muted/40 opacity-75',
       )}
     >
