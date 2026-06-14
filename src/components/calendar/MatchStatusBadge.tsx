@@ -22,5 +22,13 @@ export function MatchStatusBadge({ status }: MatchStatusBadgeProps) {
     );
   }
 
+  if (status === 'suspended') {
+    return (
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-amber-500/15 text-amber-600 whitespace-nowrap">
+        Suspendido
+      </span>
+    );
+  }
+
   return null;
 }
