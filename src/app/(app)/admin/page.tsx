@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { AdminPanel } from './AdminPanel';
 import type { EnrollmentUser } from './EnrollmentEditor';
+import type { GroupStandingOverride } from '@/lib/compute-standings';
 import type { Match, Team } from '@/lib/types/match';
 
 export const metadata = { title: 'Panel admin' };
@@ -21,7 +22,8 @@ export default async function AdminPage() {
     .maybeSingle();
   if (!profile?.is_admin) redirect('/home');
 
-  const [matchesResult, teamsResult, settingsResult, enrollmentResult] = await Promise.all([
+  const [matchesResult, teamsResult, settingsResult, enrollmentResult, groupStandingsResult] =
+    await Promise.all([
     supabase
       .from('matches')
       .select(
@@ -43,6 +45,7 @@ export default async function AdminPage() {
     supabase
       .from('public_profiles')
       .select('id, nickname, first_name, last_name, avatar_url, is_enrolled'),
+    supabase.from('group_standings').select('team_code, position, third_qualifies'),
   ]);
 
   const allMatches = (matchesResult.data ?? []).map((row) => {
@@ -60,6 +63,7 @@ export default async function AdminPage() {
   const teams = (teamsResult.data ?? []) as Team[];
   const initialTopScorer = (settingsResult.data?.top_scorer as string | undefined) ?? null;
   const enrollmentUsers = (enrollmentResult.data ?? []) as EnrollmentUser[];
+  const groupOverrides = (groupStandingsResult.data ?? []) as GroupStandingOverride[];
 
   return (
     <AdminPanel
@@ -68,6 +72,7 @@ export default async function AdminPage() {
       teams={teams}
       initialTopScorer={initialTopScorer}
       enrollmentUsers={enrollmentUsers}
+      groupOverrides={groupOverrides}
     />
   );
 }

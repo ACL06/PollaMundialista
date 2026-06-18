@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { computeGroupStandings } from './compute-standings';
+import {
+  computeGroupStandings,
+  rankGroup,
+  type GroupStandingOverride,
+  type Standing,
+} from './compute-standings';
 import type { Match, Team } from '@/lib/types/match';
 
 function team(code: string, group: string): Team {
@@ -89,5 +94,60 @@ describe('computeGroupStandings', () => {
     const g = computeGroupStandings([], [A, B]).get('A')!;
     expect(g).toHaveLength(2);
     expect(g.every((s) => s.played === 0)).toBe(true);
+  });
+});
+
+describe('rankGroup (override del admin)', () => {
+  const mk = (code: string): Standing => ({
+    team: team(code, 'A'),
+    played: 0,
+    wins: 0,
+    draws: 0,
+    losses: 0,
+    goalsFor: 0,
+    goalsAgainst: 0,
+    goalDifference: 0,
+    points: 0,
+  });
+  // Orden automático de entrada: A, B, C, D.
+  const auto = [mk('A'), mk('B'), mk('C'), mk('D')];
+
+  it('sin override: conserva el orden y clasifican 1° y 2°', () => {
+    const r = rankGroup(auto, new Map());
+    expect(r.map((s) => s.team.code)).toEqual(['A', 'B', 'C', 'D']);
+    expect(r.map((s) => s.qualifies)).toEqual([true, true, false, false]);
+  });
+
+  it('override completo: reordena por la posición manual', () => {
+    const ov = new Map<string, GroupStandingOverride>([
+      ['A', { team_code: 'A', position: 3, third_qualifies: false }],
+      ['B', { team_code: 'B', position: 1, third_qualifies: false }],
+      ['C', { team_code: 'C', position: 2, third_qualifies: false }],
+      ['D', { team_code: 'D', position: 4, third_qualifies: false }],
+    ]);
+    const r = rankGroup(auto, ov);
+    expect(r.map((s) => s.team.code)).toEqual(['B', 'C', 'A', 'D']);
+    // Clasifican B(1°), C(2°); A es 3° sin marcar → no clasifica.
+    expect(r.map((s) => s.qualifies)).toEqual([true, true, false, false]);
+  });
+
+  it('tercero marcado clasifica', () => {
+    const ov = new Map<string, GroupStandingOverride>([
+      ['A', { team_code: 'A', position: 1, third_qualifies: false }],
+      ['B', { team_code: 'B', position: 2, third_qualifies: false }],
+      ['C', { team_code: 'C', position: 3, third_qualifies: true }],
+      ['D', { team_code: 'D', position: 4, third_qualifies: false }],
+    ]);
+    const r = rankGroup(auto, ov);
+    expect(r.find((s) => s.team.code === 'C')!.qualifies).toBe(true);
+    expect(r.find((s) => s.team.code === 'D')!.qualifies).toBe(false);
+  });
+
+  it('override parcial (no todos los equipos): usa el orden automático', () => {
+    const ov = new Map<string, GroupStandingOverride>([
+      ['A', { team_code: 'A', position: 4, third_qualifies: false }],
+    ]);
+    const r = rankGroup(auto, ov);
+    expect(r.map((s) => s.team.code)).toEqual(['A', 'B', 'C', 'D']); // sin reordenar
   });
 });

@@ -11,10 +11,12 @@ import {
 } from '@/lib/format-date';
 import { useCenterActiveTab } from '@/lib/use-center-active-tab';
 import { cn } from '@/lib/utils';
+import type { GroupStandingOverride } from '@/lib/compute-standings';
 import type { Match, MatchStatus, Team } from '@/lib/types/match';
 import { saveMatchResult, saveTopScorer } from './actions';
 import { KnockoutResultsEditor } from './KnockoutResultsEditor';
 import { EnrollmentEditor, type EnrollmentUser } from './EnrollmentEditor';
+import { GroupStandingsEditor } from './GroupStandingsEditor';
 
 interface AdminPanelProps {
   groupMatches: Match[];
@@ -22,12 +24,14 @@ interface AdminPanelProps {
   teams: Team[];
   initialTopScorer: string | null;
   enrollmentUsers: EnrollmentUser[];
+  groupOverrides: GroupStandingOverride[];
 }
 
-type AdminView = 'grupos' | 'eliminatorias' | 'inscripciones';
+type AdminView = 'grupos' | 'posiciones' | 'eliminatorias' | 'inscripciones';
 
 const VIEW_LABEL: Record<AdminView, string> = {
   grupos: 'Fase de grupos',
+  posiciones: 'Posiciones',
   eliminatorias: 'Eliminatorias',
   inscripciones: 'Inscripciones',
 };
@@ -67,6 +71,7 @@ export function AdminPanel({
   teams,
   initialTopScorer,
   enrollmentUsers,
+  groupOverrides,
 }: AdminPanelProps) {
   const [view, setView] = useState<AdminView>('grupos');
   const [drafts, setDrafts] = useState<Map<string, Draft>>(() => {
@@ -242,9 +247,9 @@ export function AdminPanel({
         </div>
       </section>
 
-      {/* Switcher Grupos / Eliminatorias / Inscripciones */}
-      <div className="inline-flex gap-1 p-1 bg-muted rounded-lg self-start">
-        {(['grupos', 'eliminatorias', 'inscripciones'] as AdminView[]).map((v) => (
+      {/* Switcher Grupos / Posiciones / Eliminatorias / Inscripciones */}
+      <div className="flex flex-wrap gap-1 p-1 bg-muted rounded-lg self-start">
+        {(['grupos', 'posiciones', 'eliminatorias', 'inscripciones'] as AdminView[]).map((v) => (
           <button
             key={v}
             type="button"
@@ -263,6 +268,12 @@ export function AdminPanel({
         <KnockoutResultsEditor matches={knockoutMatches} teams={teams} />
       ) : view === 'inscripciones' ? (
         <EnrollmentEditor users={enrollmentUsers} />
+      ) : view === 'posiciones' ? (
+        <GroupStandingsEditor
+          groupMatches={groupMatches}
+          teams={teams}
+          initialOverrides={groupOverrides}
+        />
       ) : (
         <>
       {/* Tabs por día */}

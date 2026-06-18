@@ -1,5 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
-import { computeGroupStandings } from '@/lib/compute-standings';
+import {
+  computeGroupStandings,
+  rankGroup,
+  type GroupStandingOverride,
+} from '@/lib/compute-standings';
 import { GroupTable } from '@/components/groups/GroupTable';
 import type { Match, Team } from '@/lib/types/match';
 
@@ -10,7 +14,7 @@ export default async function GruposPage() {
 
   // Para calcular standings necesitamos los equipos con su group_code
   // y los partidos de la fase de grupos.
-  const [teamsResult, matchesResult] = await Promise.all([
+  const [teamsResult, matchesResult, overridesResult] = await Promise.all([
     supabase
       .from('teams')
       .select('code, name, flag, group_code')
@@ -28,6 +32,9 @@ export default async function GruposPage() {
       `,
       )
       .eq('stage', 'group'),
+    // Override manual del admin. Tolerante: si la tabla aún no existe / falla,
+    // se degrada al orden automático (no rompe /grupos).
+    supabase.from('group_standings').select('team_code, position, third_qualifies'),
   ]);
 
   if (teamsResult.error || matchesResult.error) {
@@ -52,8 +59,14 @@ export default async function GruposPage() {
     return { ...row, home_team: homeTeam, away_team: awayTeam };
   }) as unknown as Match[];
 
+  const overrides = (overridesResult.data ?? []) as GroupStandingOverride[];
+  const overrideByTeam = new Map(overrides.map((o) => [o.team_code, o]));
+
   const standingsByGroup = computeGroupStandings(matches, teams);
-  const groupCodes = Array.from(standingsByGroup.keys()).sort();
+  const rankedByGroup = new Map(
+    Array.from(standingsByGroup, ([code, list]) => [code, rankGroup(list, overrideByTeam)] as const),
+  );
+  const groupCodes = Array.from(rankedByGroup.keys()).sort();
 
   return (
     <div className="max-w-[880px] mx-auto px-5 py-9 sm:py-10 flex flex-col gap-7">
@@ -71,7 +84,7 @@ export default async function GruposPage() {
           <GroupTable
             key={code}
             groupCode={code}
-            standings={standingsByGroup.get(code) ?? []}
+            standings={rankedByGroup.get(code) ?? []}
           />
         ))}
       </div>
