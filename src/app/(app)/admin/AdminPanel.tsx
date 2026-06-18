@@ -9,6 +9,7 @@ import {
   formatMatchDateShort,
   formatMatchTime,
 } from '@/lib/format-date';
+import { useCenterActiveTab } from '@/lib/use-center-active-tab';
 import { cn } from '@/lib/utils';
 import type { Match, MatchStatus, Team } from '@/lib/types/match';
 import { saveMatchResult, saveTopScorer } from './actions';
@@ -111,6 +112,10 @@ export function AdminPanel({
     return (upcoming ?? days[days.length - 1]).key;
   });
   const selectedDay = days.find((d) => d.key === selectedDayKey) ?? days[0];
+
+  // Centra el tab del día activo en el scroll horizontal (como Comunidad).
+  const { containerRef: dayTabsRef, activeRef: activeDayRef } =
+    useCenterActiveTab<HTMLButtonElement>(selectedDay?.key);
 
   const finalCount = useMemo(() => {
     let n = 0;
@@ -261,13 +266,14 @@ export function AdminPanel({
       ) : (
         <>
       {/* Tabs por día */}
-      <div className="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1" role="tablist">
+      <div ref={dayTabsRef} className="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1 scroll-smooth" role="tablist">
         {days.map((day) => {
           const finals = day.matches.filter((m) => drafts.get(m.id)?.status === 'final').length;
           const isActive = day.key === selectedDay?.key;
           return (
             <button
               key={day.key}
+              ref={isActive ? activeDayRef : undefined}
               type="button"
               onClick={() => setSelectedDayKey(day.key)}
               className={cn(
