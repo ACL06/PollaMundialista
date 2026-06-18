@@ -2,12 +2,15 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { isPredictionsLocked } from '@/lib/predictions-lock';
+import { REACTIONS } from './shared';
 
 interface ActionResult {
   error?: string;
 }
 
-const VALID_REACTIONS = new Set(['like', 'laugh', 'fire', 'shock']);
+// Derivado de REACTIONS (única fuente de verdad) para no desincronizarse al
+// agregar emojis — debe coincidir con el CHECK de prediction_reactions en BD.
+const VALID_REACTIONS = new Set<string>(REACTIONS.map((r) => r.key));
 
 /**
  * Alterna la reacción del usuario sobre el pronóstico (marcador) de otro
