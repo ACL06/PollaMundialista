@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import { AlertCircle, CheckCircle2, Info, Lock } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, Info, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TeamLabel } from '@/components/calendar/TeamLabel';
 import { BracketSlot } from '@/components/calendar/BracketSlot';
@@ -162,6 +162,13 @@ export function KnockoutScoresPanel({ matches, initialScores, nowIso }: Knockout
     })).filter((s) => s.matches.length > 0);
   }, [matches]);
 
+  // Progreso sobre los cruces que YA se pueden pronosticar (open): registrados
+  // vs los que aún faltan. Los `pending` (sin equipos) no cuentan: no se pueden.
+  const openMatches = matches.filter((m) => knockoutMatchState(m, now) === 'open');
+  const openTotal = openMatches.length;
+  const openSaved = openMatches.filter((m) => savedIds.has(m.id)).length;
+  const openMissing = openTotal - openSaved;
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col gap-7">
       <header className="space-y-2">
@@ -174,6 +181,26 @@ export function KnockoutScoresPanel({ matches, initialScores, nowIso }: Knockout
           equipos y se cierra cuando arranca. Son los cruces reales del torneo, independientes de tu
           bracket.
         </p>
+        {openTotal > 0 && (
+          <div
+            className={cn(
+              'flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border p-3 text-sm',
+              openMissing > 0
+                ? 'border-amber-500/40 bg-amber-500/5 text-foreground'
+                : 'border-primary/30 bg-primary/5 text-foreground',
+            )}
+          >
+            <span className="font-semibold tabular-nums">
+              {openSaved}/{openTotal}
+            </span>
+            <span className="text-muted-foreground">cruces abiertos con marcador.</span>
+            {openMissing > 0 && (
+              <span className="font-medium text-amber-600">
+                Te {openMissing === 1 ? 'falta' : 'faltan'} {openMissing} por pronosticar.
+              </span>
+            )}
+          </div>
+        )}
       </header>
 
       {sections.length === 0 ? (
@@ -202,18 +229,28 @@ export function KnockoutScoresPanel({ matches, initialScores, nowIso }: Knockout
                 </span>
               </div>
               <div className="flex flex-col gap-2.5">
-                {stageMatches.map((match) => (
-                  <KnockoutMatchCard
-                    key={match.id}
-                    match={match}
-                    state={knockoutMatchState(match, now)}
-                    draft={draft.get(match.id) ?? { home: '', away: '' }}
-                    isSaved={savedIds.has(match.id)}
-                    errorMessage={errors.get(match.id) ?? null}
-                    onChange={(side, value) => handleChange(match.id, side, value)}
-                    onBlur={() => handleBlur(match.id)}
-                  />
-                ))}
+                {stageMatches.map((match) => {
+                  const mState = knockoutMatchState(match, now);
+                  const saved = savedIds.has(match.id);
+                  // Urgente: abierto, sin marcador y arranca en menos de 24h.
+                  const urgent =
+                    mState === 'open' &&
+                    !saved &&
+                    new Date(match.kicks_off_at).getTime() - now.getTime() < 24 * 60 * 60 * 1000;
+                  return (
+                    <KnockoutMatchCard
+                      key={match.id}
+                      match={match}
+                      state={mState}
+                      urgent={urgent}
+                      draft={draft.get(match.id) ?? { home: '', away: '' }}
+                      isSaved={saved}
+                      errorMessage={errors.get(match.id) ?? null}
+                      onChange={(side, value) => handleChange(match.id, side, value)}
+                      onBlur={() => handleBlur(match.id)}
+                    />
+                  );
+                })}
               </div>
             </section>
           );
@@ -233,6 +270,8 @@ export function KnockoutScoresPanel({ matches, initialScores, nowIso }: Knockout
 interface KnockoutMatchCardProps {
   match: Match;
   state: KnockoutMatchState;
+  /** Abierto, sin marcador y arranca en <24h → resaltar la urgencia. */
+  urgent: boolean;
   draft: ScoreDraft;
   isSaved: boolean;
   errorMessage: string | null;
@@ -243,6 +282,7 @@ interface KnockoutMatchCardProps {
 function KnockoutMatchCard({
   match,
   state,
+  urgent,
   draft,
   isSaved,
   errorMessage,
@@ -256,6 +296,8 @@ function KnockoutMatchCard({
   const isPartial = state === 'open' && !hasError && homeFilled !== awayFilled;
   const hasPrediction = homeFilled && awayFilled;
   const readOnly = state !== 'open';
+  // Urgencia (rojo) solo si está realmente vacío: no pisar partial/saved/error.
+  const showUrgent = urgent && !hasError && !isPartial && !isSaved;
 
   return (
     <article
@@ -264,7 +306,8 @@ function KnockoutMatchCard({
         hasError && 'border-destructive bg-destructive/5',
         !hasError && isPartial && 'border-amber-500 bg-amber-500/5',
         !hasError && !isPartial && state === 'open' && isSaved && 'border-primary/40 bg-primary/[0.03]',
-        !hasError && !isPartial && !(state === 'open' && isSaved) && 'border-border bg-surface',
+        showUrgent && 'border-destructive bg-destructive/5',
+        !hasError && !isPartial && !(state === 'open' && isSaved) && !showUrgent && 'border-border bg-surface',
       )}
     >
       {/* Hora + estado */}
@@ -291,6 +334,11 @@ function KnockoutMatchCard({
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-amber-500">
             <AlertCircle className="h-3 w-3" />
             Falta un lado
+          </span>
+        ) : showUrgent ? (
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-destructive">
+            <Clock className="h-3 w-3" />
+            Cierra pronto
           </span>
         ) : null}
       </div>
