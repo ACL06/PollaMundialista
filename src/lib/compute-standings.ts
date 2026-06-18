@@ -104,3 +104,49 @@ export function computeGroupStandings(
 
   return byGroup;
 }
+
+/**
+ * Override manual de posiciones que define el admin (tabla `group_standings`).
+ * Solo afecta el DISPLAY de `/grupos`; el scoring de clasificados se deriva
+ * aparte (de los equipos asignados a los cruces de R32).
+ */
+export interface GroupStandingOverride {
+  team_code: string;
+  position: number; // 1-4 dentro del grupo
+  third_qualifies: boolean; // marca al 3° que clasifica como mejor tercero
+}
+
+/** Standing + si el equipo clasifica a la siguiente ronda (1°, 2° o 3° elegido). */
+export interface RankedStanding extends Standing {
+  position: number;
+  qualifies: boolean;
+}
+
+/**
+ * Aplica el override del admin a las standings calculadas de UN grupo:
+ *   - Si los 4 equipos tienen override → ordena por la posición manual;
+ *     si no, conserva el orden automático (el tie-break simplificado).
+ *   - `qualifies` = posición 1 o 2, o posición 3 marcada como mejor tercero.
+ * El orden de entrada es el de `computeGroupStandings` (ya ordenado).
+ */
+export function rankGroup(
+  standings: Standing[],
+  overrideByTeam: Map<string, GroupStandingOverride>,
+): RankedStanding[] {
+  const allOverridden =
+    standings.length > 0 && standings.every((s) => overrideByTeam.has(s.team.code));
+
+  const ordered = allOverridden
+    ? [...standings].sort(
+        (a, b) =>
+          overrideByTeam.get(a.team.code)!.position - overrideByTeam.get(b.team.code)!.position,
+      )
+    : standings;
+
+  return ordered.map((s, i) => {
+    const ov = overrideByTeam.get(s.team.code);
+    const position = allOverridden ? ov!.position : i + 1;
+    const qualifies = position <= 2 || (position === 3 && (ov?.third_qualifies ?? false));
+    return { ...s, position, qualifies };
+  });
+}

@@ -207,3 +207,47 @@ export async function saveTopScorer(name: string | null): Promise<ActionResult> 
   revalidateResultViews();
   return {};
 }
+
+/**
+ * Guarda el orden manual de un grupo (override del admin) + los terceros que
+ * clasifican. Solo afecta el DISPLAY de `/grupos`; no toca el scoring. Recibe
+ * las 4 posiciones de un grupo y hace upsert en `group_standings`.
+ */
+export async function saveGroupStandings(input: {
+  entries: { teamCode: string; position: number; thirdQualifies: boolean }[];
+}): Promise<ActionResult> {
+  const { entries } = input;
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return { error: 'Datos inválidos' };
+  }
+  for (const e of entries) {
+    if (!/^[A-Z]{2,4}$/.test(e.teamCode)) return { error: 'Código de equipo inválido' };
+    if (!Number.isInteger(e.position) || e.position < 1 || e.position > 4) {
+      return { error: 'Posición fuera de rango (1–4)' };
+    }
+  }
+
+  const admin = await requireAdmin();
+  if ('error' in admin) return { error: admin.error };
+
+  const { error, count } = await admin.supabase.from('group_standings').upsert(
+    entries.map((e) => ({
+      team_code: e.teamCode,
+      position: e.position,
+      third_qualifies: e.thirdQualifies,
+      updated_at: new Date().toISOString(),
+    })),
+    { count: 'exact' },
+  );
+
+  if (error) {
+    console.error('[saveGroupStandings]', error.message);
+    return { error: 'No pudimos guardar el orden. Intenta de nuevo.' };
+  }
+  if ((count ?? 0) === 0) {
+    console.error('[saveGroupStandings] 0 filas afectadas (¿RLS?)');
+    return { error: 'No se guardó: la base de datos no aplicó el cambio (permisos/RLS).' };
+  }
+  revalidateResultViews();
+  return {};
+}

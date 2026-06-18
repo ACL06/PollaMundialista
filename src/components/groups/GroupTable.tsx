@@ -1,9 +1,9 @@
 import { cn } from '@/lib/utils';
-import type { Standing } from '@/lib/compute-standings';
+import type { RankedStanding, Standing } from '@/lib/compute-standings';
 
 interface GroupTableProps {
   groupCode: string;
-  standings: Standing[];
+  standings: RankedStanding[];
 }
 
 const STAT_COLS: Array<{ key: keyof Standing; label: string; title: string }> = [
@@ -48,17 +48,16 @@ export function GroupTable({ groupCode, standings }: GroupTableProps) {
                 key={s.team.code}
                 className={cn(
                   'border-b border-border/50 last:border-b-0',
-                  // Las dos primeras posiciones clasifican directo a R32.
-                  // Se marcan con tinte de fondo en vez de border-l porque
-                  // el border-collapse de la tabla hacía que el borde de
-                  // la fila 2 se viera también sobre la fila 3.
-                  i < 2 && 'bg-primary/10',
+                  // Clasifican (1°, 2° o el 3° marcado como mejor tercero): tinte
+                  // de fondo en vez de border-l (el border-collapse hacía que el
+                  // borde de una fila se viera sobre la siguiente).
+                  s.qualifies && 'bg-primary/10',
                 )}
               >
                 <td
                   className={cn(
                     'pl-1 pr-2 py-2.5 text-xs tabular-nums',
-                    i < 2 ? 'text-primary font-semibold' : 'text-muted-foreground',
+                    s.qualifies ? 'text-primary font-semibold' : 'text-muted-foreground',
                   )}
                 >
                   {i + 1}

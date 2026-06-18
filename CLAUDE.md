@@ -47,7 +47,7 @@
 - Tabla `teams`: 48 equipos WC 2026 + banderas ISO + grupo (A-L)
 - Tabla `matches`: 104 partidos (72 grupos con equipos/sedes/horarios en TZ Bogotá + 32 eliminatorias con equipos nullable y metadata `bracket_source_*`)
 - `/calendar`: filtros por fase (Todos, Hoy, Por jugar, Eliminatorias de 32, Octavos, Cuartos, Semis, Tercer lugar, Final). `MatchCard` colorea por status (scheduled/live/final). `BracketSlot` con tooltip en hover
-- `/grupos`: 12 tablas de posiciones (PJ, G, E, P, GF, GC, DG, Pts) con tie-break FIFA simplificado. Helper puro `compute-standings.ts`
+- `/grupos`: 12 tablas de posiciones (PJ, G, E, P, GF, GC, DG, Pts) con tie-break FIFA simplificado. Helper puro `compute-standings.ts`. **Override manual del admin** (pestaña *Posiciones* del panel, `GroupStandingsEditor`): cuando los criterios automáticos empatan, el admin reordena con flechas ↑↓ y marca los **8 mejores terceros** (tope global). Se guarda en `group_standings` (`saveGroupStandings`) y `/grupos` lo aplica vía `rankGroup` (resalta 1°/2° + 3° elegido). **Solo display** — NO toca el scoring (los clasificados para puntos salen de los equipos asignados a los cruces de R32). La lectura del override es tolerante: si la tabla no existe aún, degrada al orden automático.
 - **Nomenclatura de rondas:** Fase de grupos → Eliminatorias de 32 (R32) → Octavos de Final → Cuartos de Final → Semifinales → Tercer lugar → Final
 
 #### Pronósticos (Fase 4 completa: 4A–4E)
