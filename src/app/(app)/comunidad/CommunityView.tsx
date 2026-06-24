@@ -12,10 +12,11 @@ import {
   formatMatchDateShort,
   formatMatchTime,
 } from '@/lib/format-date';
-import { SCORING, normalizeScorer } from '@/lib/scoring';
+import { SCORING, deriveOfficialResults, normalizeScorer } from '@/lib/scoring';
 import { useCenterActiveTab } from '@/lib/use-center-active-tab';
 import { cn } from '@/lib/utils';
-import type { Match, Team } from '@/lib/types/match';
+import type { Match, MatchStage, Team } from '@/lib/types/match';
+import type { PredictionBracketEntry } from '@/lib/types/prediction';
 import type { DailyFactToday } from '@/lib/daily-facts';
 import {
   displayName,
@@ -30,6 +31,7 @@ import { WelcomeModal } from '@/components/app/WelcomeModal';
 import { AutoRefresh } from '@/components/app/AutoRefresh';
 import { toggleReaction } from './actions';
 import { DailyFactCapsule } from './DailyFactCapsule';
+import { QualifiedSection } from './QualifiedSection';
 
 /** Bienvenida one-time de la sección (localStorage, por dispositivo). */
 const WELCOME_ITEMS = [
@@ -41,8 +43,11 @@ const WELCOME_ITEMS = [
 ];
 
 interface CommunityViewProps {
-  groupMatches: Match[];
+  /** Todos los partidos (grupos + eliminatorias). La vista filtra cuáles listar. */
+  matches: Match[];
   scores: CommunityScore[];
+  /** Bracket de clasificados de todos (para la sección "Clasificados"). */
+  bracket: PredictionBracketEntry[];
   profiles: PublicProfile[];
   participants: PublicProfile[];
   teams: Team[];
@@ -76,6 +81,16 @@ function officialResult(m: Match): { home: number; away: number } | null {
   return null;
 }
 
+/**
+ * Un cruce de eliminatoria "arrancó" — y por tanto sus pronósticos ya son
+ * públicos (la RLS los abre en el kickoff) — cuando está en vivo/finalizado o
+ * su hora ya pasó. Antes de eso no se lista en Comunidad: ni revela nada ni
+ * inunda la vista de días futuros con cruces aún sin definir.
+ */
+function hasKnockoutStarted(m: Match, now: Date): boolean {
+  return m.status === 'live' || m.status === 'final' || new Date(m.kicks_off_at) <= now;
+}
+
 type Verdict = 'exact' | 'outcome' | 'miss';
 
 /** Compara un marcador pronosticado contra el resultado real. */
@@ -85,13 +100,19 @@ function verdictOf(predHome: number, predAway: number, real: { home: number; awa
   return 'miss';
 }
 
-function verdictPoints(v: Verdict): number {
-  return v === 'exact' ? SCORING.groupExact : v === 'outcome' ? SCORING.groupOutcome : 0;
+/** Puntos de un acierto, según el stage (grupos y eliminatoria comparten 5/2,
+ *  pero se resuelve por stage para no acoplar el display a esa coincidencia). */
+function verdictPoints(v: Verdict, stage: MatchStage): number {
+  if (v === 'miss') return 0;
+  const isGroup = stage === 'group';
+  if (v === 'exact') return isGroup ? SCORING.groupExact : SCORING.knockoutExact;
+  return isGroup ? SCORING.groupOutcome : SCORING.knockoutOutcome;
 }
 
 export function CommunityView({
-  groupMatches,
+  matches,
   scores,
+  bracket,
   profiles,
   participants,
   teams,
@@ -120,6 +141,8 @@ export function CommunityView({
   // Lista de participantes: colapsada por defecto (en móvil su scroll interno
   // atrapaba el dedo y nadie llegaba a los partidos / tabla del día).
   const [showParticipants, setShowParticipants] = useState(false);
+  // Tabla del día: colapsada por defecto, para darle protagonismo a Clasificados.
+  const [showDayBoard, setShowDayBoard] = useState(false);
   const [, startReact] = useTransition();
 
   const handleReact = (targetUserId: string, matchId: string, reaction: ReactionKey) => {
@@ -232,15 +255,24 @@ export function CommunityView({
   }, [scores]);
 
   const days = useMemo(() => {
+    const now = new Date(nowIso);
     const grouped = new Map<string, { key: string; label: string; matches: Match[] }>();
-    for (const m of groupMatches) {
+    for (const m of matches) {
+      // La final no usa marcadores de eliminatoria (tiene su propio bonus) → no
+      // se lista. Los cruces de eliminatoria solo cuando ya arrancaron.
+      if (m.stage === 'final') continue;
+      if (m.stage !== 'group' && !hasKnockoutStarted(m, now)) continue;
       const date = new Date(m.kicks_off_at);
       const key = formatMatchDateKey(date);
       if (!grouped.has(key)) grouped.set(key, { key, label: formatMatchDateLong(date), matches: [] });
       grouped.get(key)!.matches.push(m);
     }
     return Array.from(grouped.values());
-  }, [groupMatches]);
+  }, [matches, nowIso]);
+
+  // Clasificados reales por ronda (equipos asignados a los cruces de cada
+  // ronda). Misma fuente que el scoring → coherente con los puntos.
+  const advancers = useMemo(() => deriveOfficialResults(matches).advancers, [matches]);
 
   // Día por defecto = hoy si tiene partidos; si no, el próximo día con
   // partidos; si ya pasaron todos, el último. (las keys son YYYY-MM-DD,
@@ -315,7 +347,7 @@ export function CommunityView({
         const v = verdictOf(p.home, p.away, real);
         const cur =
           perUser.get(p.userId) ?? { points: 0, exact: 0, predicted: 0, correct: 0 };
-        cur.points += verdictPoints(v);
+        cur.points += verdictPoints(v, m.stage);
         cur.predicted += 1;
         if (v === 'exact') cur.exact += 1;
         if (v !== 'miss') cur.correct += 1;
@@ -507,59 +539,116 @@ export function CommunityView({
         </div>
       )}
 
-      {/* Tabla del día: al FINAL, después de los partidos del día (solo cuando
-          hay resultados en el día seleccionado). */}
+      {/* Tabla del día: colapsable (cerrada por defecto) para darle
+          protagonismo a Clasificados. Mismo patrón que la lista de
+          participantes — cabecera tipo CTA con avatares del top como gancho +
+          cuerpo animado (grid-rows 0fr↔1fr) con scroll interno acotado. */}
       {dayBoard && (
-        <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            <ListOrdered className="h-4 w-4 text-primary" />
-            Tabla del día
-            <span className="font-normal normal-case tracking-normal tabular-nums">
-              {dayBoard.finalsCount}/{dayBoard.totalCount} con resultado
+        <section>
+          <button
+            type="button"
+            onClick={() => setShowDayBoard((v) => !v)}
+            aria-expanded={showDayBoard}
+            className={cn(
+              'w-full flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-left',
+              'transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+            )}
+          >
+            {/* Avatares del top como anticipo de quién va ganando hoy. */}
+            <span className="flex -space-x-2 flex-shrink-0">
+              {dayBoard.rows.slice(0, 5).map((row) => {
+                const p = profileById.get(row.userId);
+                return p ? (
+                  <span key={row.userId} className="inline-flex rounded-full ring-2 ring-surface">
+                    <Avatar profile={p} size={26} />
+                  </span>
+                ) : null;
+              })}
             </span>
-          </h2>
-          <div className="rounded-lg border border-border bg-surface divide-y divide-border/60 overflow-hidden">
-            {dayBoard.rows.map((row, i) => {
-              const profile = profileById.get(row.userId);
-              const isYou = row.userId === currentUserId;
-              return (
-                <div
-                  key={row.userId}
-                  className={cn(
-                    'flex items-center gap-2.5 px-4 py-2',
-                    isYou && 'bg-primary/5',
-                  )}
-                >
-                  <span className="text-[13px] font-bold tabular-nums text-muted-foreground w-5 text-right">
-                    {i + 1}
-                  </span>
-                  {profile && <Avatar profile={profile} size={22} />}
-                  <span className="text-[14px] text-foreground truncate flex-1">
-                    {displayName(profile ?? {})}
-                  </span>
-                  {isYou && (
-                    <span className="text-[10px] font-bold uppercase text-primary">Tú</span>
-                  )}
-                  {row.pleno && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-500">
-                      <Sparkles className="h-3 w-3" />
-                      Pleno
-                    </span>
-                  )}
-                  {row.exact > 0 && (
-                    <span className="text-[11px] text-muted-foreground tabular-nums">
-                      {row.exact} exacto{row.exact > 1 ? 's' : ''}
-                    </span>
-                  )}
-                  <span className="text-[14px] font-bold tabular-nums text-foreground w-12 text-right">
-                    {row.points} pts
-                  </span>
-                </div>
-              );
-            })}
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <ListOrdered className="h-4 w-4 flex-shrink-0 text-primary" />
+                Tabla del día
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                <span className="tabular-nums">
+                  {dayBoard.finalsCount}/{dayBoard.totalCount}
+                </span>{' '}
+                con resultado ·{' '}
+                {showDayBoard ? 'toca para ocultar' : 'toca para ver quién va ganando hoy'}
+              </span>
+            </span>
+            <ChevronDown
+              className={cn(
+                'h-5 w-5 flex-shrink-0 text-primary transition-transform',
+                showDayBoard && 'rotate-180',
+              )}
+            />
+          </button>
+
+          <div
+            className={cn(
+              'grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none',
+              showDayBoard ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+            )}
+          >
+            <div className="overflow-hidden" inert={showDayBoard ? undefined : true}>
+              <div className="rounded-lg border border-border bg-surface divide-y divide-border/60 max-h-72 overflow-y-auto overscroll-contain mt-2">
+                {dayBoard.rows.map((row, i) => {
+                  const profile = profileById.get(row.userId);
+                  const isYou = row.userId === currentUserId;
+                  return (
+                    <div
+                      key={row.userId}
+                      className={cn(
+                        'flex items-center gap-2.5 px-4 py-2',
+                        isYou && 'bg-primary/5',
+                      )}
+                    >
+                      <span className="text-[13px] font-bold tabular-nums text-muted-foreground w-5 text-right">
+                        {i + 1}
+                      </span>
+                      {profile && <Avatar profile={profile} size={22} />}
+                      <span className="text-[14px] text-foreground truncate flex-1">
+                        {displayName(profile ?? {})}
+                      </span>
+                      {isYou && (
+                        <span className="text-[10px] font-bold uppercase text-primary">Tú</span>
+                      )}
+                      {row.pleno && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-500">
+                          <Sparkles className="h-3 w-3" />
+                          Pleno
+                        </span>
+                      )}
+                      {row.exact > 0 && (
+                        <span className="text-[11px] text-muted-foreground tabular-nums">
+                          {row.exact} exacto{row.exact > 1 ? 's' : ''}
+                        </span>
+                      )}
+                      <span className="text-[14px] font-bold tabular-nums text-foreground w-12 text-right">
+                        {row.points} pts
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </section>
       )}
+
+      {/* Clasificados por ronda + estadísticas del bracket (entre la tabla del
+          día y el Top 5). Se autogestiona: si ninguna ronda tiene clasificados
+          aún, no se muestra. */}
+      <QualifiedSection
+        advancers={advancers}
+        bracket={bracket}
+        teamsByCode={teamsByCode}
+        profileById={profileById}
+        totalParticipants={participants.length}
+        currentUserId={currentUserId}
+      />
 
       {/* Top 5 de la polla — al final de la sección (campeón, finalistas,
           goleadores más elegidos). */}
