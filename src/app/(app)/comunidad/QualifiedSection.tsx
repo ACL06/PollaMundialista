@@ -244,7 +244,7 @@ function VotersModal({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-sm max-h-[85vh] overflow-y-auto rounded-2xl border border-border bg-surface p-6 shadow-xl"
+        className="relative w-full max-w-sm max-h-[85vh] flex flex-col rounded-2xl border border-border bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -256,63 +256,69 @@ function VotersModal({
           <X className="h-4 w-4" />
         </button>
 
-        {onBack && (
-          <button
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-1 mb-3 rounded text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Estadísticas
-          </button>
-        )}
+        {/* Cabecera fija */}
+        <div className="flex-shrink-0 p-6 pb-3">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center gap-1 mb-3 rounded text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Estadísticas
+            </button>
+          )}
 
-        <div className="flex items-center gap-3 pr-8">
-          <span
-            className={cn(`fi fi-${team.flag} rounded-sm flex-shrink-0`, 'shadow-[0_0_0_1px_hsl(var(--border))]')}
-            style={{ width: 34, height: 25 }}
-            aria-hidden="true"
-          />
-          <div className="min-w-0">
-            <h2 className="text-base font-bold text-foreground truncate">{team.name}</h2>
-            <p className="text-xs text-muted-foreground">{BRACKET_ROUND_LABEL[round]}</p>
+          <div className="flex items-center gap-3 pr-8">
+            <span
+              className={cn(`fi fi-${team.flag} rounded-sm flex-shrink-0`, 'shadow-[0_0_0_1px_hsl(var(--border))]')}
+              style={{ width: 34, height: 25 }}
+              aria-hidden="true"
+            />
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-foreground truncate">{team.name}</h2>
+              <p className="text-xs text-muted-foreground">{BRACKET_ROUND_LABEL[round]}</p>
+            </div>
           </div>
+
+          <p className="mt-4 text-sm text-foreground">
+            <strong className="tabular-nums">{voterIds.length}</strong>{' '}
+            {voterIds.length === 1 ? 'persona lo eligió' : 'personas lo eligieron'}{' '}
+            <span className="text-muted-foreground">({pct}% de la polla)</span>
+            {qualified && (
+              <span className="text-primary font-medium"> · +{SCORING.bracket[round]} pts c/u</span>
+            )}
+          </p>
         </div>
 
-        <p className="mt-4 text-sm text-foreground">
-          <strong className="tabular-nums">{voterIds.length}</strong>{' '}
-          {voterIds.length === 1 ? 'persona lo eligió' : 'personas lo eligieron'}{' '}
-          <span className="text-muted-foreground">({pct}% de la polla)</span>
-          {qualified && (
-            <span className="text-primary font-medium"> · +{SCORING.bracket[round]} pts c/u</span>
+        {/* Lista (lo único que scrollea; la cabecera queda siempre visible) */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+          {voters.length > 0 ? (
+            <ul className="flex flex-col gap-0.5">
+              {voters.map(({ id, profile }) => (
+                <li
+                  key={id}
+                  className={cn(
+                    'flex items-center gap-2.5 px-2 py-1.5 rounded-md',
+                    id === currentUserId && 'bg-primary/5',
+                  )}
+                >
+                  <Avatar profile={profile} size={24} />
+                  <span className="text-sm text-foreground truncate flex-1">
+                    {displayName(profile ?? {})}
+                  </span>
+                  {id === currentUserId && (
+                    <span className="text-[10px] font-bold uppercase text-primary">Tú</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              Nadie eligió este equipo en esta ronda.
+            </p>
           )}
-        </p>
-
-        {voters.length > 0 ? (
-          <ul className="mt-3 flex flex-col gap-0.5">
-            {voters.map(({ id, profile }) => (
-              <li
-                key={id}
-                className={cn(
-                  'flex items-center gap-2.5 px-2 py-1.5 rounded-md',
-                  id === currentUserId && 'bg-primary/5',
-                )}
-              >
-                <Avatar profile={profile} size={24} />
-                <span className="text-sm text-foreground truncate flex-1">
-                  {displayName(profile ?? {})}
-                </span>
-                {id === currentUserId && (
-                  <span className="text-[10px] font-bold uppercase text-primary">Tú</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-3 text-sm text-muted-foreground italic">
-            Nadie eligió este equipo en esta ronda.
-          </p>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -366,7 +372,7 @@ function StatsModal({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-xl"
+        className="relative w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl border border-border bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -378,7 +384,8 @@ function StatsModal({
           <X className="h-4 w-4" />
         </button>
 
-        <div className="pr-8">
+        {/* Cabecera fija */}
+        <div className="flex-shrink-0 p-5 sm:p-6 pb-3 pr-8">
           <h2 className="flex items-center gap-2 text-base font-bold text-foreground">
             <BarChart3 className="h-4 w-4 text-tertiary" />
             Estadísticas del bracket
@@ -389,9 +396,10 @@ function StatsModal({
           </p>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
+        {/* Tabla (lo único que scrollea; encabezados de columna sticky) */}
+        <div className="flex-1 min-h-0 overflow-auto px-5 sm:px-6 pb-5 sm:pb-6">
           <table className="w-full border-collapse text-sm">
-            <thead>
+            <thead className="sticky top-0 bg-surface">
               <tr className="border-b border-border text-[11px] text-muted-foreground">
                 <th className="text-left font-medium py-2 pr-2">Equipo</th>
                 {BRACKET_ROUNDS.map((round) => (
