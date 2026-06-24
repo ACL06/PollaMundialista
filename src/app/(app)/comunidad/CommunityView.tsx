@@ -12,10 +12,11 @@ import {
   formatMatchDateShort,
   formatMatchTime,
 } from '@/lib/format-date';
-import { SCORING, normalizeScorer } from '@/lib/scoring';
+import { SCORING, deriveOfficialResults, normalizeScorer } from '@/lib/scoring';
 import { useCenterActiveTab } from '@/lib/use-center-active-tab';
 import { cn } from '@/lib/utils';
-import type { Match, Team } from '@/lib/types/match';
+import type { Match, MatchStage, Team } from '@/lib/types/match';
+import type { PredictionBracketEntry } from '@/lib/types/prediction';
 import type { DailyFactToday } from '@/lib/daily-facts';
 import {
   displayName,
@@ -30,6 +31,7 @@ import { WelcomeModal } from '@/components/app/WelcomeModal';
 import { AutoRefresh } from '@/components/app/AutoRefresh';
 import { toggleReaction } from './actions';
 import { DailyFactCapsule } from './DailyFactCapsule';
+import { QualifiedSection } from './QualifiedSection';
 
 /** Bienvenida one-time de la sección (localStorage, por dispositivo). */
 const WELCOME_ITEMS = [
@@ -41,8 +43,11 @@ const WELCOME_ITEMS = [
 ];
 
 interface CommunityViewProps {
-  groupMatches: Match[];
+  /** Todos los partidos (grupos + eliminatorias). La vista filtra cuáles listar. */
+  matches: Match[];
   scores: CommunityScore[];
+  /** Bracket de clasificados de todos (para la sección "Clasificados"). */
+  bracket: PredictionBracketEntry[];
   profiles: PublicProfile[];
   participants: PublicProfile[];
   teams: Team[];
@@ -76,6 +81,16 @@ function officialResult(m: Match): { home: number; away: number } | null {
   return null;
 }
 
+/**
+ * Un cruce de eliminatoria "arrancó" — y por tanto sus pronósticos ya son
+ * públicos (la RLS los abre en el kickoff) — cuando está en vivo/finalizado o
+ * su hora ya pasó. Antes de eso no se lista en Comunidad: ni revela nada ni
+ * inunda la vista de días futuros con cruces aún sin definir.
+ */
+function hasKnockoutStarted(m: Match, now: Date): boolean {
+  return m.status === 'live' || m.status === 'final' || new Date(m.kicks_off_at) <= now;
+}
+
 type Verdict = 'exact' | 'outcome' | 'miss';
 
 /** Compara un marcador pronosticado contra el resultado real. */
@@ -85,13 +100,19 @@ function verdictOf(predHome: number, predAway: number, real: { home: number; awa
   return 'miss';
 }
 
-function verdictPoints(v: Verdict): number {
-  return v === 'exact' ? SCORING.groupExact : v === 'outcome' ? SCORING.groupOutcome : 0;
+/** Puntos de un acierto, según el stage (grupos y eliminatoria comparten 5/2,
+ *  pero se resuelve por stage para no acoplar el display a esa coincidencia). */
+function verdictPoints(v: Verdict, stage: MatchStage): number {
+  if (v === 'miss') return 0;
+  const isGroup = stage === 'group';
+  if (v === 'exact') return isGroup ? SCORING.groupExact : SCORING.knockoutExact;
+  return isGroup ? SCORING.groupOutcome : SCORING.knockoutOutcome;
 }
 
 export function CommunityView({
-  groupMatches,
+  matches,
   scores,
+  bracket,
   profiles,
   participants,
   teams,
@@ -232,15 +253,24 @@ export function CommunityView({
   }, [scores]);
 
   const days = useMemo(() => {
+    const now = new Date(nowIso);
     const grouped = new Map<string, { key: string; label: string; matches: Match[] }>();
-    for (const m of groupMatches) {
+    for (const m of matches) {
+      // La final no usa marcadores de eliminatoria (tiene su propio bonus) → no
+      // se lista. Los cruces de eliminatoria solo cuando ya arrancaron.
+      if (m.stage === 'final') continue;
+      if (m.stage !== 'group' && !hasKnockoutStarted(m, now)) continue;
       const date = new Date(m.kicks_off_at);
       const key = formatMatchDateKey(date);
       if (!grouped.has(key)) grouped.set(key, { key, label: formatMatchDateLong(date), matches: [] });
       grouped.get(key)!.matches.push(m);
     }
     return Array.from(grouped.values());
-  }, [groupMatches]);
+  }, [matches, nowIso]);
+
+  // Clasificados reales por ronda (equipos asignados a los cruces de cada
+  // ronda). Misma fuente que el scoring → coherente con los puntos.
+  const advancers = useMemo(() => deriveOfficialResults(matches).advancers, [matches]);
 
   // Día por defecto = hoy si tiene partidos; si no, el próximo día con
   // partidos; si ya pasaron todos, el último. (las keys son YYYY-MM-DD,
@@ -315,7 +345,7 @@ export function CommunityView({
         const v = verdictOf(p.home, p.away, real);
         const cur =
           perUser.get(p.userId) ?? { points: 0, exact: 0, predicted: 0, correct: 0 };
-        cur.points += verdictPoints(v);
+        cur.points += verdictPoints(v, m.stage);
         cur.predicted += 1;
         if (v === 'exact') cur.exact += 1;
         if (v !== 'miss') cur.correct += 1;
@@ -560,6 +590,18 @@ export function CommunityView({
           </div>
         </section>
       )}
+
+      {/* Clasificados por ronda + estadísticas del bracket (entre la tabla del
+          día y el Top 5). Se autogestiona: si ninguna ronda tiene clasificados
+          aún, no se muestra. */}
+      <QualifiedSection
+        advancers={advancers}
+        bracket={bracket}
+        teamsByCode={teamsByCode}
+        profileById={profileById}
+        totalParticipants={participants.length}
+        currentUserId={currentUserId}
+      />
 
       {/* Top 5 de la polla — al final de la sección (campeón, finalistas,
           goleadores más elegidos). */}

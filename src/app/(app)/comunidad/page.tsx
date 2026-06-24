@@ -16,6 +16,7 @@ import {
   type ReactionRow,
 } from './shared';
 import type { Match, Team } from '@/lib/types/match';
+import type { PredictionBracketEntry } from '@/lib/types/prediction';
 
 export const metadata = { title: 'Comunidad' };
 
@@ -64,23 +65,27 @@ export default async function ComunidadPage() {
   const [
     matchesResult,
     scoresResult,
+    knockoutScoresResult,
+    bracketResult,
     predictionsResult,
     profilesResult,
     teamsResult,
     reactionsResult,
   ] = await Promise.all([
+      // Todos los partidos (grupos + eliminatorias). La vista decide qué
+      // mostrar por día; los cruces de eliminatoria solo aparecen cuando
+      // arrancan (sus pronósticos ya son públicos por RLS).
       supabase
         .from('matches')
         .select(
           `
           id, match_number, stage, group_code,
           bracket_source_home, bracket_source_away,
-          kicks_off_at, venue, home_score, away_score, status,
+          kicks_off_at, venue, home_score, away_score, winner_code, status,
           home_team:teams!matches_home_team_code_fkey(code, name, flag, group_code),
           away_team:teams!matches_away_team_code_fkey(code, name, flag, group_code)
         `,
         )
-        .eq('stage', 'group')
         .order('kicks_off_at', { ascending: true }),
       // Lectura global (~40 usuarios × 72 marcadores ≈ 2.900 filas): supera el
       // "Max Rows" de PostgREST → fetchAll pagina; el .order() la hace estable.
@@ -90,6 +95,24 @@ export default async function ComunidadPage() {
           .select('user_id, match_id, home_score, away_score')
           .order('user_id')
           .order('match_id'),
+      ),
+      // Marcadores de eliminatoria. La RLS solo devuelve los de cruces ya
+      // arrancados (+ los propios) → la visibilidad correcta viene sola.
+      fetchAll(() =>
+        supabase
+          .from('prediction_knockout_scores')
+          .select('user_id, match_id, home_score, away_score')
+          .order('user_id')
+          .order('match_id'),
+      ),
+      // Bracket de clasificados (para la sección "Clasificados" + estadísticas).
+      fetchAll(() =>
+        supabase
+          .from('prediction_bracket')
+          .select('user_id, round, team_code')
+          .order('user_id')
+          .order('round')
+          .order('team_code'),
       ),
       supabase.from('predictions').select('user_id, champion_code, runner_up_code, top_scorer'),
       supabase
@@ -110,7 +133,7 @@ export default async function ComunidadPage() {
       ),
     ]);
 
-  const groupMatches = (matchesResult.data ?? []).map((row) => {
+  const matches = (matchesResult.data ?? []).map((row) => {
     const homeTeam = Array.isArray(row.home_team)
       ? (row.home_team[0] ?? null)
       : (row.home_team ?? null);
@@ -125,8 +148,14 @@ export default async function ComunidadPage() {
   // desaparecen de Comunidad.
   const enrolledIds = new Set(allProfiles.filter((p) => p.is_enrolled).map((p) => p.id));
   const profiles = allProfiles.filter((p) => p.is_enrolled);
-  const scores = ((scoresResult.data ?? []) as CommunityScore[]).filter((s) =>
-    enrolledIds.has(s.user_id),
+  // Grupos + eliminatoria comparten la misma forma {user_id, match_id, home, away}
+  // y conviven en el mismo Map por match_id (la vista distingue por el stage del
+  // partido). Se combinan en un solo arreglo de scores.
+  const groupScores = (scoresResult.data ?? []) as CommunityScore[];
+  const knockoutScores = (knockoutScoresResult.data ?? []) as CommunityScore[];
+  const scores = [...groupScores, ...knockoutScores].filter((s) => enrolledIds.has(s.user_id));
+  const bracket = ((bracketResult.data ?? []) as PredictionBracketEntry[]).filter((b) =>
+    enrolledIds.has(b.user_id),
   );
   const teams = (teamsResult.data ?? []) as Team[];
   const picks = ((predictionsResult.data ?? []) as PredictionPick[]).filter((p) =>
@@ -151,8 +180,9 @@ export default async function ComunidadPage() {
 
   return (
     <CommunityView
-      groupMatches={groupMatches}
+      matches={matches}
       scores={scores}
+      bracket={bracket}
       profiles={profiles}
       participants={participants}
       teams={teams}

@@ -7,12 +7,16 @@ import { getViewerAccess } from '@/lib/access';
 import { SpectatorBlocked } from '@/components/app/SpectatorBlocked';
 import { PredictionView } from '../../pronosticos/PredictionView';
 import { displayName } from '../shared';
-import type { Match, Team } from '@/lib/types/match';
+import type { Match, MatchStage, Team } from '@/lib/types/match';
 import type {
   Prediction,
   PredictionBracketEntry,
   PredictionGroupScore,
+  PredictionKnockoutScore,
 } from '@/lib/types/prediction';
+
+/** Stages de eliminatoria con marcador puntuable (la final no: tiene su bonus). */
+const KNOCKOUT_STAGES: ReadonlySet<MatchStage> = new Set(['r32', 'r16', 'qf', 'sf', '3rd']);
 
 export const metadata = { title: 'Pronóstico · Comunidad' };
 
@@ -38,11 +42,21 @@ export default async function ComunidadUserPage({
   const lockAt = await getPredictionsLockAt();
   if (!isLockedAt(lockAt) && !isAdmin) redirect('/comunidad');
 
-  const [predictionResult, scoresResult, bracketResult, matchesResult, teamsResult, profileResult] =
-    await Promise.all([
+  const [
+    predictionResult,
+    scoresResult,
+    bracketResult,
+    knockoutScoresResult,
+    matchesResult,
+    teamsResult,
+    profileResult,
+  ] = await Promise.all([
       supabase.from('predictions').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('prediction_group_scores').select('*').eq('user_id', userId),
       supabase.from('prediction_bracket').select('*').eq('user_id', userId),
+      // Marcadores de eliminatoria del usuario. La RLS solo devuelve los de
+      // cruces ya arrancados (salvo que seas tú o admin) → visibilidad correcta.
+      supabase.from('prediction_knockout_scores').select('*').eq('user_id', userId),
       supabase
         .from('matches')
         .select(
@@ -54,7 +68,6 @@ export default async function ComunidadUserPage({
           away_team:teams!matches_away_team_code_fkey(code, name, flag, group_code)
         `,
         )
-        .eq('stage', 'group')
         .order('kicks_off_at', { ascending: true }),
       supabase
         .from('teams')
@@ -94,9 +107,10 @@ export default async function ComunidadUserPage({
   const prediction = (predictionResult.data ?? null) as Prediction | null;
   const groupScores = (scoresResult.data ?? []) as PredictionGroupScore[];
   const bracket = (bracketResult.data ?? []) as PredictionBracketEntry[];
+  const knockoutScores = (knockoutScoresResult.data ?? []) as PredictionKnockoutScore[];
   const teams = (teamsResult.data ?? []) as Team[];
 
-  const groupMatches = (matchesResult.data ?? []).map((row) => {
+  const allMatches = (matchesResult.data ?? []).map((row) => {
     const homeTeam = Array.isArray(row.home_team)
       ? (row.home_team[0] ?? null)
       : (row.home_team ?? null);
@@ -105,6 +119,18 @@ export default async function ComunidadUserPage({
       : (row.away_team ?? null);
     return { ...row, home_team: homeTeam, away_team: awayTeam };
   }) as unknown as Match[];
+
+  const groupMatches = allMatches.filter((m) => m.stage === 'group');
+  // Cruces de eliminatoria a mostrar: con ambos equipos asignados y ya
+  // arrancados (sus marcadores ya son públicos; antes la RLS los oculta).
+  const now = Date.now();
+  const knockoutMatches = allMatches.filter(
+    (m) =>
+      KNOCKOUT_STAGES.has(m.stage) &&
+      m.home_team != null &&
+      m.away_team != null &&
+      (m.status === 'live' || m.status === 'final' || new Date(m.kicks_off_at).getTime() <= now),
+  );
 
   return (
     <div>
@@ -122,6 +148,8 @@ export default async function ComunidadUserPage({
         groupScores={groupScores}
         bracket={bracket}
         groupMatches={groupMatches}
+        knockoutScores={knockoutScores}
+        knockoutMatches={knockoutMatches}
         teams={teams}
         isSubmitted={prediction?.locked_at != null}
         isLocked

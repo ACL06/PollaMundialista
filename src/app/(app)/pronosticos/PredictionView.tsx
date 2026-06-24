@@ -8,6 +8,7 @@ import type {
   Prediction,
   PredictionBracketEntry,
   PredictionGroupScore,
+  PredictionKnockoutScore,
 } from '@/lib/types/prediction';
 
 interface PredictionViewProps {
@@ -16,6 +17,13 @@ interface PredictionViewProps {
   bracket: PredictionBracketEntry[];
   groupMatches: Match[];
   teams: Team[];
+  /**
+   * Marcadores de eliminatoria del usuario (R32..3er lugar) y los cruces a
+   * mostrar. Opcionales: solo Comunidad los pasa (en /pronosticos los
+   * marcadores de eliminatoria viven en su propia pestaña).
+   */
+  knockoutScores?: PredictionKnockoutScore[];
+  knockoutMatches?: Match[];
   /** El usuario envió su pronóstico (locked_at != null). */
   isSubmitted: boolean;
   /** El plazo global ya cerró (kickoff del match #1). */
@@ -25,6 +33,22 @@ interface PredictionViewProps {
    * encabezado dice "Pronóstico de {ownerName}". Si se omite, es el propio.
    */
   ownerName?: string;
+}
+
+/** Agrupa partidos por día (vienen ordenados por kickoff). */
+function groupByDay(matches: Match[]): Array<{ key: string; label: string; matches: Match[] }> {
+  const days: Array<{ key: string; label: string; matches: Match[] }> = [];
+  const dayIndex = new Map<string, number>();
+  for (const m of matches) {
+    const date = new Date(m.kicks_off_at);
+    const key = formatMatchDateKey(date);
+    if (!dayIndex.has(key)) {
+      dayIndex.set(key, days.length);
+      days.push({ key, label: formatMatchDateLong(date), matches: [] });
+    }
+    days[dayIndex.get(key)!].matches.push(m);
+  }
+  return days;
 }
 
 /**
@@ -38,6 +62,8 @@ export function PredictionView({
   bracket,
   groupMatches,
   teams,
+  knockoutScores,
+  knockoutMatches,
   isSubmitted,
   isLocked,
   ownerName,
@@ -47,19 +73,13 @@ export function PredictionView({
   // Marcadores: match_id → score
   const scoreByMatch = new Map(groupScores.map((s) => [s.match_id, s]));
   const scoredCount = groupScores.length;
+  const days = groupByDay(groupMatches);
 
-  // Marcadores agrupados por día (groupMatches viene ordenado por kickoff)
-  const days: Array<{ key: string; label: string; matches: Match[] }> = [];
-  const dayIndex = new Map<string, number>();
-  for (const m of groupMatches) {
-    const date = new Date(m.kicks_off_at);
-    const key = formatMatchDateKey(date);
-    if (!dayIndex.has(key)) {
-      dayIndex.set(key, days.length);
-      days.push({ key, label: formatMatchDateLong(date), matches: [] });
-    }
-    days[dayIndex.get(key)!].matches.push(m);
-  }
+  // Marcadores de eliminatoria (R32..3er lugar), agrupados por día.
+  const koMatches = knockoutMatches ?? [];
+  const koScoreByMatch = new Map((knockoutScores ?? []).map((s) => [s.match_id, s]));
+  const koDays = groupByDay(koMatches);
+  const koScored = koMatches.filter((m) => koScoreByMatch.has(m.id)).length;
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col gap-7">
@@ -138,6 +158,58 @@ export function PredictionView({
           ))}
         </div>
       </section>
+
+      {/* Marcadores de eliminatoria (R32..3er lugar). Solo aparece cuando hay
+          cruces ya arrancados; la final no entra (tiene su bonus en el embudo). */}
+      {koMatches.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Marcadores de eliminatoria
+            <span className="ml-2 font-normal tabular-nums text-foreground">
+              {koScored}/{koMatches.length}
+            </span>
+          </h2>
+          <div className="flex flex-col gap-5">
+            {koDays.map((day) => (
+              <div key={day.key} className="space-y-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  {day.label}
+                </h3>
+                <div className="flex flex-col gap-1.5">
+                  {day.matches.map((match) => {
+                    const score = koScoreByMatch.get(match.id);
+                    return (
+                      <div
+                        key={match.id}
+                        className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-3 items-center px-3 py-2 rounded-md border border-border bg-surface"
+                      >
+                        {match.home_team ? (
+                          <TeamLabel team={match.home_team} align="right" />
+                        ) : (
+                          <span className="text-sm text-muted-foreground text-right">—</span>
+                        )}
+                        <span
+                          className={cn(
+                            'font-mono font-bold text-[15px] tabular-nums px-2',
+                            score ? 'text-foreground' : 'text-muted-foreground',
+                          )}
+                        >
+                          {score ? `${score.home_score} – ${score.away_score}` : '–'}
+                        </span>
+                        {match.away_team ? (
+                          <TeamLabel team={match.away_team} align="left" />
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
