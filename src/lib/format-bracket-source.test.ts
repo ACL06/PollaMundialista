@@ -13,21 +13,13 @@ describe('formatBracketSource', () => {
     expect(formatBracketSource('3CDFGH')).toBe('Tercer Lugar Grupos C/D/F/G/H');
   });
 
-  it('ganador/perdedor con ronda inferida por match_number', () => {
-    expect(formatBracketSource('W73')).toBe('Ganador Eliminatorias de 32');
-    expect(formatBracketSource('W88')).toBe('Ganador Eliminatorias de 32');
-    expect(formatBracketSource('W89')).toBe('Ganador Octavos de Final');
-    expect(formatBracketSource('W96')).toBe('Ganador Octavos de Final');
-    expect(formatBracketSource('W97')).toBe('Ganador Cuartos de Final');
-    expect(formatBracketSource('W100')).toBe('Ganador Cuartos de Final');
-    expect(formatBracketSource('W101')).toBe('Ganador Semifinales');
-    expect(formatBracketSource('L101')).toBe('Perdedor Semifinales');
-    expect(formatBracketSource('L102')).toBe('Perdedor Semifinales');
-  });
-
-  it('match_number fuera de rango conocido cae a "partido N"', () => {
-    expect(formatBracketSource('W50')).toBe('Ganador partido 50');
-    expect(formatBracketSource('L120')).toBe('Perdedor partido 120');
+  it('ganador/perdedor muestran el número del partido de origen (estilo FIFA)', () => {
+    expect(formatBracketSource('W73')).toBe('Ganador del partido 73');
+    expect(formatBracketSource('W75')).toBe('Ganador del partido 75');
+    expect(formatBracketSource('W89')).toBe('Ganador del partido 89');
+    expect(formatBracketSource('W101')).toBe('Ganador del partido 101');
+    expect(formatBracketSource('L101')).toBe('Perdedor del partido 101');
+    expect(formatBracketSource('L102')).toBe('Perdedor del partido 102');
   });
 
   it('código desconocido se devuelve tal cual', () => {
