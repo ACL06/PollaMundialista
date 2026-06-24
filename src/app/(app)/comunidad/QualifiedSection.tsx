@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { BarChart3, Medal, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, Medal, X } from 'lucide-react';
 import {
   BRACKET_ROUNDS,
   BRACKET_ROUND_LABEL,
@@ -70,9 +70,13 @@ export function QualifiedSection({
   );
 
   const hasBracket = bracket.length > 0;
-  const [detail, setDetail] = useState<{ round: PredictionBracketRound; code: string } | null>(
-    null,
-  );
+  // `fromStats` recuerda si el detalle de electores se abrió desde el modal de
+  // estadísticas → entonces ofrece "volver" a estadísticas en vez de solo cerrar.
+  const [detail, setDetail] = useState<{
+    round: PredictionBracketRound;
+    code: string;
+    fromStats: boolean;
+  } | null>(null);
   const [showStats, setShowStats] = useState(false);
 
   // Nada que mostrar: ni clasificados reales ni pronósticos de bracket.
@@ -122,7 +126,7 @@ export function QualifiedSection({
                       <button
                         key={team.code}
                         type="button"
-                        onClick={() => setDetail({ round, code: team.code })}
+                        onClick={() => setDetail({ round, code: team.code, fromStats: false })}
                         title={`${team.name} · ${n} ${n === 1 ? 'lo eligió' : 'lo eligieron'}`}
                         className="flex-shrink-0 inline-flex flex-col items-center gap-1 rounded-md border border-border bg-background px-2 py-1.5 hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary"
                       >
@@ -166,6 +170,14 @@ export function QualifiedSection({
           currentUserId={currentUserId}
           totalParticipants={totalParticipants}
           onClose={() => setDetail(null)}
+          onBack={
+            detail.fromStats
+              ? () => {
+                  setDetail(null);
+                  setShowStats(true);
+                }
+              : undefined
+          }
         />
       )}
 
@@ -177,7 +189,7 @@ export function QualifiedSection({
           onClose={() => setShowStats(false)}
           onPickTeam={(round, code) => {
             setShowStats(false);
-            setDetail({ round, code });
+            setDetail({ round, code, fromStats: true });
           }}
         />
       )}
@@ -195,6 +207,7 @@ function VotersModal({
   currentUserId,
   totalParticipants,
   onClose,
+  onBack,
 }: {
   round: PredictionBracketRound;
   team: Team;
@@ -204,6 +217,8 @@ function VotersModal({
   currentUserId: string;
   totalParticipants: number;
   onClose: () => void;
+  /** Si se pasa, el modal se abrió desde Estadísticas → ofrece volver allá. */
+  onBack?: () => void;
 }) {
   useBodyScrollLock(true);
   useEffect(() => {
@@ -240,6 +255,17 @@ function VotersModal({
         >
           <X className="h-4 w-4" />
         </button>
+
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1 mb-3 rounded text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Estadísticas
+          </button>
+        )}
 
         <div className="flex items-center gap-3 pr-8">
           <span
@@ -358,8 +384,8 @@ function StatsModal({
             Estadísticas del bracket
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            % de la polla que predijo que cada equipo llegaría a esa ronda. Toca una celda para ver
-            quiénes.
+            % de la polla que predijo que cada equipo llegaría a esa ronda. Toca un porcentaje para
+            ver quiénes.
           </p>
         </div>
 
