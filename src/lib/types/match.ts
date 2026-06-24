@@ -5,7 +5,10 @@ export interface Team {
   group_code: string | null;
 }
 
-export type MatchStatus = 'scheduled' | 'live' | 'final' | 'suspended';
+/** Estados posibles de un partido. Fuente de verdad (runtime) para validar
+ *  en las server actions; debe coincidir con el CHECK de `matches.status`. */
+export const MATCH_STATUSES = ['scheduled', 'live', 'final', 'suspended'] as const;
+export type MatchStatus = (typeof MATCH_STATUSES)[number];
 export type MatchStage = 'group' | 'r32' | 'r16' | 'qf' | 'sf' | '3rd' | 'final';
 
 export interface Match {

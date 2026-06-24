@@ -119,8 +119,11 @@ export function AdminPanel({
   const selectedDay = days.find((d) => d.key === selectedDayKey) ?? days[0];
 
   // Centra el tab del día activo en el scroll horizontal (como Comunidad).
+  // Se incluye `view` en la key para RE-centrar al volver a "grupos" desde
+  // otra pestaña: el div de tabs se remonta, pero sin esto el efecto no se
+  // redispararía (la key del día no cambió) y el activo quedaba descentrado.
   const { containerRef: dayTabsRef, activeRef: activeDayRef } =
-    useCenterActiveTab<HTMLButtonElement>(selectedDay?.key);
+    useCenterActiveTab<HTMLButtonElement>(view === 'grupos' ? selectedDay?.key : null);
 
   const finalCount = useMemo(() => {
     let n = 0;

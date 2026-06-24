@@ -2,12 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { MATCH_STATUSES } from '@/lib/types/match';
 
 interface ActionResult {
   error?: string;
 }
 
-const VALID_STATUS = new Set(['scheduled', 'live', 'final']);
+// Derivado de MATCH_STATUSES (única fuente de verdad) — incluye 'suspended'.
+const VALID_STATUS = new Set<string>(MATCH_STATUSES);
 
 // Vistas que dependen de los resultados/estado oficiales del torneo. Tras una
 // mutación del admin las marcamos obsoletas para que reflejen el cambio en la
