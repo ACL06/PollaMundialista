@@ -274,6 +274,21 @@ export function CommunityView({
   // ronda). Misma fuente que el scoring → coherente con los puntos.
   const advancers = useMemo(() => deriveOfficialResults(matches).advancers, [matches]);
 
+  // ¿Hay actividad ahora? Partido en vivo o dentro de la ventana de un partido
+  // (~30 min antes → 4 h después del kickoff, margen para que el admin cargue/
+  // corrija). Cuando la hay, el auto-refresco va rápido (60s); si no, va lento
+  // (10 min) para no gastar Active CPU de balde. `now` es la hora del servidor.
+  const hasActivity = useMemo(() => {
+    const now = new Date(nowIso).getTime();
+    const BEFORE_MS = 30 * 60 * 1000;
+    const AFTER_MS = 4 * 60 * 60 * 1000;
+    return matches.some((m) => {
+      if (m.status === 'live') return true;
+      const ko = new Date(m.kicks_off_at).getTime();
+      return now >= ko - BEFORE_MS && now <= ko + AFTER_MS;
+    });
+  }, [matches, nowIso]);
+
   // Día por defecto = hoy si tiene partidos; si no, el próximo día con
   // partidos; si ya pasaron todos, el último. (las keys son YYYY-MM-DD,
   // comparables lexicográficamente porque van en orden cronológico).
@@ -377,8 +392,9 @@ export function CommunityView({
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col gap-7">
       {/* Refresca solo (sin recargar) para que el estado de los partidos y los
-          aciertos que carga el admin se reflejen mientras miras Comunidad. */}
-      <AutoRefresh />
+          aciertos que carga el admin se reflejen mientras miras Comunidad.
+          Consciente de actividad: 60s cerca de los partidos, 10 min en reposo. */}
+      <AutoRefresh active={hasActivity} idleIntervalMs={600_000} />
 
       {/* Bienvenida one-time a la sección (se muestra una sola vez por dispositivo). */}
       <WelcomeModal
