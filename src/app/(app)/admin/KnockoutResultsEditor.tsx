@@ -272,10 +272,7 @@ export function KnockoutResultsEditor({ matches, teams }: KnockoutResultsEditorP
                     <button
                       key={s}
                       type="button"
-                      onClick={() => {
-                        update(match.id, { status: s });
-                        setTimeout(() => persist(match.id), 0);
-                      }}
+                      onClick={() => changeAndPersist(match.id, { status: s })}
                       className={cn(
                         'px-2.5 py-1 rounded-full text-[12px] font-medium border transition-colors',
                         d.status === s
