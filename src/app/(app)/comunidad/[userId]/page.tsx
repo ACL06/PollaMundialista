@@ -121,16 +121,16 @@ export default async function ComunidadUserPage({
   }) as unknown as Match[];
 
   const groupMatches = allMatches.filter((m) => m.stage === 'group');
-  // Cruces de eliminatoria a mostrar: con ambos equipos asignados y ya
-  // arrancados (sus marcadores ya son públicos; antes la RLS los oculta).
+  // Cruces de eliminatoria a mostrar: con ambos equipos asignados. Participantes:
+  // solo los ya arrancados (sus marcadores son públicos por RLS). Admin
+  // (organizador): también los abiertos, para monitorear antes del cierre.
   const now = Date.now();
-  const knockoutMatches = allMatches.filter(
-    (m) =>
-      KNOCKOUT_STAGES.has(m.stage) &&
-      m.home_team != null &&
-      m.away_team != null &&
-      (m.status === 'live' || m.status === 'final' || new Date(m.kicks_off_at).getTime() <= now),
-  );
+  const knockoutMatches = allMatches.filter((m) => {
+    if (!KNOCKOUT_STAGES.has(m.stage)) return false;
+    if (m.home_team == null || m.away_team == null) return false;
+    if (isAdmin) return true;
+    return m.status === 'live' || m.status === 'final' || new Date(m.kicks_off_at).getTime() <= now;
+  });
 
   return (
     <div>
