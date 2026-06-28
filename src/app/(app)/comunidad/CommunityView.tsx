@@ -54,6 +54,9 @@ interface CommunityViewProps {
   picks: PredictionPick[];
   reactions: ReactionRow[];
   currentUserId: string;
+  /** El organizador (no compite): ve también los cruces de eliminatoria aún no
+   *  arrancados, para monitorear los marcadores que van entrando. */
+  isAdmin: boolean;
   /** Hora del servidor (ISO) para elegir el día por defecto sin desfasar SSR. */
   nowIso: string;
   /** Datos curiosos del día 1 al actual (server-side, TZ Bogotá). Vacío fuera de los 40 días. */
@@ -119,6 +122,7 @@ export function CommunityView({
   picks,
   reactions,
   currentUserId,
+  isAdmin,
   nowIso,
   dailyFacts,
 }: CommunityViewProps) {
@@ -258,17 +262,25 @@ export function CommunityView({
     const now = new Date(nowIso);
     const grouped = new Map<string, { key: string; label: string; matches: Match[] }>();
     for (const m of matches) {
-      // La final no usa marcadores de eliminatoria (tiene su propio bonus) → no
-      // se lista. Los cruces de eliminatoria solo cuando ya arrancaron.
+      // La final no usa marcadores de eliminatoria (tiene su propio bonus).
       if (m.stage === 'final') continue;
-      if (m.stage !== 'group' && !hasKnockoutStarted(m, now)) continue;
+      if (m.stage !== 'group') {
+        const teamsKnown = m.home_team != null && m.away_team != null;
+        // Participantes: solo cruces ya arrancados (sus pronósticos ya son
+        // públicos por RLS). Admin (preview de organizador, no compite): también
+        // los cruces abiertos con equipos, para monitorear lo que van
+        // registrando antes del cierre — la RLS `is_admin()` le entrega esos
+        // marcadores. Los `pending` (sin equipos) no se muestran a nadie.
+        const visible = isAdmin ? teamsKnown : hasKnockoutStarted(m, now);
+        if (!visible) continue;
+      }
       const date = new Date(m.kicks_off_at);
       const key = formatMatchDateKey(date);
       if (!grouped.has(key)) grouped.set(key, { key, label: formatMatchDateLong(date), matches: [] });
       grouped.get(key)!.matches.push(m);
     }
     return Array.from(grouped.values());
-  }, [matches, nowIso]);
+  }, [matches, nowIso, isAdmin]);
 
   // Clasificados reales por ronda (equipos asignados a los cruces de cada
   // ronda). Misma fuente que el scoring → coherente con los puntos.

@@ -189,6 +189,7 @@ export default async function ComunidadPage() {
       picks={picks}
       reactions={reactions}
       currentUserId={user.id}
+      isAdmin={isAdmin}
       nowIso={new Date().toISOString()}
       dailyFacts={dailyFacts}
     />
