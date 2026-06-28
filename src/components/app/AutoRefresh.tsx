@@ -29,7 +29,8 @@ interface AutoRefreshProps {
  * `intervalMs` (corto) cerca de los partidos y `idleIntervalMs` (largo) el
  * resto del tiempo, que es cuando nada cambia. Polling deliberado en vez de
  * Supabase Realtime: más simple y suficiente para una polla; se pausa al
- * ocultar la pestaña.
+ * ocultar la pestaña y, al volver a ella, refresca de inmediato (catch-up) para
+ * que el usuario vea lo último sin esperar el próximo tick ni recargar.
  */
 export function AutoRefresh({
   intervalMs = 60_000,
@@ -46,6 +47,17 @@ export function AutoRefresh({
     }, effective);
     return () => window.clearInterval(id);
   }, [router, intervalMs, idleIntervalMs, active]);
+
+  // Catch-up al volver a la pestaña: si estaba oculta y vuelve a ser visible,
+  // refresca de inmediato (un refresco puntual, no un bucle) para que el usuario
+  // vea lo último sin esperar el próximo tick del intervalo.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') router.refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [router]);
 
   return null;
 }
