@@ -405,8 +405,14 @@ export function CommunityView({
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col gap-7">
       {/* Refresca solo (sin recargar) para que el estado de los partidos y los
           aciertos que carga el admin se reflejen mientras miras Comunidad.
-          Consciente de actividad: 60s cerca de los partidos, 10 min en reposo. */}
-      <AutoRefresh active={hasActivity} idleIntervalMs={600_000} />
+          Consciente de actividad: 60s cerca de los partidos, 10 min en reposo, y
+          en reposo solo entre 11am–11pm Bogotá (de madrugada no hay partidos). */}
+      <AutoRefresh
+        active={hasActivity}
+        idleIntervalMs={600_000}
+        activeStartHour={11}
+        activeEndHour={23}
+      />
 
       {/* Bienvenida one-time a la sección (se muestra una sola vez por dispositivo). */}
       <WelcomeModal
